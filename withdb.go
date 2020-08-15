@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 type BaseConfig struct {
 	ID        primitive.ObjectID `bson:"_id" json:"id"`
+	SBID      primitive.ObjectID `bson:"accountId" json:"-"`
 	Name      string             `bson:"name" json:"name"`
 	Whitelist []string           `bson:"whitelist" json:"whitelist"`
 }
@@ -37,6 +39,7 @@ func withDB(next http.Handler) http.Handler {
 			// let's try to see if they are allow to use a database
 			db := client.Database("sbsys")
 
+			fmt.Println("key", key)
 			oid, err := primitive.ObjectIDFromHex(key)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

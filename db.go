@@ -7,12 +7,38 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func dbreq(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		add(w, r)
+	} else if r.Method == http.MethodPut {
+		update(w, r)
+	} else if r.Method == http.MethodDelete {
+		del(w, r)
+	} else if r.Method == http.MethodGet {
+		p := r.URL.Path
+		if strings.HasSuffix(p, "/") == false {
+			p += "/"
+		}
+
+		parts := strings.Split(p, "/")
+
+		if len(parts) == 4 {
+			list(w, r)
+		} else {
+			get(w, r)
+		}
+	} else {
+		http.Error(w, "not found", http.StatusNotFound)
+	}
+}
 
 func add(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := extract(r, true)
@@ -23,7 +49,8 @@ func add(w http.ResponseWriter, r *http.Request) {
 
 	db := client.Database(conf.Name)
 
-	col := r.URL.Path[5:]
+	_, r.URL.Path = ShiftPath(r.URL.Path)
+	col, _ := ShiftPath(r.URL.Path)
 
 	var v interface{}
 	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
@@ -79,7 +106,8 @@ func list(w http.ResponseWriter, r *http.Request) {
 
 	db := client.Database(conf.Name)
 
-	col := r.URL.Path[6:]
+	_, r.URL.Path = ShiftPath(r.URL.Path)
+	col, _ := ShiftPath(r.URL.Path)
 
 	result := PagedResult{
 		Page: page,
@@ -181,6 +209,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 func query(w http.ResponseWriter, r *http.Request) {
 	var clauses [][]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&clauses); err != nil {
+		fmt.Println("error parsing body", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -188,18 +217,21 @@ func query(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{}
 	for i, clause := range clauses {
 		if len(clause) != 3 {
+			fmt.Println("clause len not 3 got", len(clause))
 			http.Error(w, fmt.Sprintf("The %d query clause did not contains the required 3 parameters (field, operator, value)", i+1), http.StatusBadRequest)
 			return
 		}
 
 		field, ok := clause[0].(string)
 		if !ok {
+			fmt.Println("clause[0] not a string", clause[0])
 			http.Error(w, fmt.Sprintf("The %d query clause's field parameter must be a string: %v", i+1, clause[0]), http.StatusBadRequest)
 			return
 		}
 
 		op, ok := clause[1].(string)
 		if !ok {
+			fmt.Println("clause[1] not a string", clause[1])
 			http.Error(w, fmt.Sprintf("The %d query clause's operator must be a string: %v", i+1, clause[1]), http.StatusBadRequest)
 			return
 		}
@@ -222,6 +254,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 		case "!in", "nin":
 			filter[field] = bson.M{"$nin": clause[2]}
 		default:
+			fmt.Println("unrecognize operation", op)
 			http.Error(w, fmt.Sprintf("The %d query clause's operator: %s is not supported at the moment.", i+1, op), http.StatusBadRequest)
 			return
 		}
@@ -231,6 +264,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 
 	conf, auth, err := extract(r, true)
 	if err != nil {
+		fmt.Println("error extracting conf and auth", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -247,7 +281,9 @@ func query(w http.ResponseWriter, r *http.Request) {
 		Size: size,
 	}
 
-	filter["accountId"] = auth.AccountID
+	if strings.HasPrefix(col, "pub_") == false {
+		filter["accountId"] = auth.AccountID
+	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	count, err := db.Collection(col).CountDocuments(ctx, filter)
@@ -258,11 +294,25 @@ func query(w http.ResponseWriter, r *http.Request) {
 
 	payload.Total = count
 
+	if count == 0 {
+		payload.Results = make([]interface{}, 0)
+		respond(w, http.StatusOK, payload)
+		return
+	}
+
 	skips := size * (page - 1)
+
+	sort := r.URL.Query().Get("sort")
+	if len(sort) == 0 {
+		sort = "_id"
+	}
+
+	sortBy := bson.M{sort: -1}
 
 	opt := options.Find()
 	opt.SetSkip(skips)
 	opt.SetLimit(size)
+	opt.SetSort(sortBy)
 
 	cur, err := db.Collection(col).Find(ctx, filter, opt)
 	if err != nil {

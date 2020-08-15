@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 )
 
@@ -15,4 +16,9 @@ func respond(w http.ResponseWriter, code int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(b)
+}
+
+func parseBody(body io.ReadCloser, v interface{}) error {
+	defer body.Close()
+	return json.NewDecoder(body).Decode(v)
 }
