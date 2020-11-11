@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -12,6 +15,15 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+const (
+	FromEmail = "support@staticbackend.com"
+	FromName  = "StaticBackend Support"
+)
+
+var (
+	letterRunes = []rune("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2345679")
 )
 
 type accounts struct{}
@@ -78,10 +90,26 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// make sure the DB name is unique
+	retry := 10
+	dbName := randStringRunes(12)
+	for {
+		count, err = db.Collection("bases").CountDocuments(ctx, bson.M{"name": dbName})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if count > 0 {
+			retry--
+			dbName = randStringRunes(12)
+			continue
+		}
+		break
+	}
+
 	base := BaseConfig{
 		ID:        primitive.NewObjectID(),
 		SBID:      acctID,
-		Name:      email,
+		Name:      dbName,
 		Whitelist: []string{"localhost"},
 	}
 
@@ -90,7 +118,15 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: send email with their new base key.
+	// we create an admin user
+	// we make sure to switch DB
+	db = client.Database(dbName)
+	pw := randStringRunes(6)
+
+	if _, err := createAccountAndUser(db, email, pw, 100); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	params := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(cus.ID),
@@ -102,6 +138,37 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond(w, http.StatusOK, s.URL)
+	body := fmt.Sprintf(`
+	<p>Hey there,</p>
+	<p>Thanks for creating your account.</p>
+	<p>Your SB-PUBLIC-KEY is required on all your API requests:</p>
+	<p>SB-PUBLUC-KEY: <strong>%s</strong></p>
+	<p>We've created an admin user for your new database:</p>
+	<p>email: %s<br />
+	password: %s</p>
+	<p>Make sure you complete your account creation by entering a valid credit 
+	card via the email you got when issuing the account create command.</p>
+	<p>If you have any questions, please reply to this email.</p>
+	<p>Good luck with your projects.</p>
+	<p>Dominic<br />Founder</p>
+	`, base.ID.Hex(), email, pw)
 
+	fmt.Println("sending email to new user", email)
+	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, "")
+	if err != nil {
+		log.Println("error sending email", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, s.URL)
+}
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+
+	return string(b)
 }
