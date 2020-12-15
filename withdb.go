@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -39,7 +38,6 @@ func withDB(next http.Handler) http.Handler {
 			// let's try to see if they are allow to use a database
 			db := client.Database("sbsys")
 
-			fmt.Println("key", key)
 			oid, err := primitive.ObjectIDFromHex(key)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

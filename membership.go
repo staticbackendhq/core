@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -75,17 +76,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	sr := db.Collection("sb_tokens").FindOne(ctx, bson.M{"email": l.Email})
-
-	var tok Token
-	if err := sr.Decode(&tok); err != nil {
+	tok, err := validateUserPassword(db, l.Email, l.Password)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(tok.Password), []byte(l.Password)); err != nil {
-		http.Error(w, "invalid email/password", http.StatusNotFound)
 		return
 	}
 
@@ -102,9 +95,26 @@ func login(w http.ResponseWriter, r *http.Request) {
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
+		Role:      tok.Role,
 	}
 
 	respond(w, http.StatusOK, string(jwtBytes))
+}
+
+func validateUserPassword(db *mongo.Database, email, password string) (*Token, error) {
+	ctx := context.Background()
+	sr := db.Collection("sb_tokens").FindOne(ctx, bson.M{"email": email})
+
+	var tok Token
+	if err := sr.Decode(&tok); err != nil {
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(tok.Password), []byte(password)); err != nil {
+		return nil, errors.New("invalid email/password")
+	}
+
+	return &tok, nil
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -208,6 +218,55 @@ func setRole(w http.ResponseWriter, r *http.Request) {
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	filter := bson.M{"email": data.Email}
 	update := bson.M{"$set": bson.M{"role": data.Role}}
+	if _, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
+
+func setPassword(w http.ResponseWriter, r *http.Request) {
+	a, ok := r.Context().Value(ContextAuth).(Auth)
+	if !ok || a.Role < 100 {
+		http.Error(w, "insufficient priviledges", http.StatusUnauthorized)
+		return
+	}
+
+	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
+	if !ok {
+		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
+		log.Println("invalid StaticBackend key")
+		return
+	}
+
+	var data = new(struct {
+		Email       string `json:"email"`
+		OldPassword string `json:"oldPassword"`
+		NewPassword string `json:"newPassword"`
+	})
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := client.Database(conf.Name)
+
+	tok, err := validateUserPassword(db, data.Email, data.OldPassword)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	newpw, err := bcrypt.GenerateFromPassword([]byte(data.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ctx := context.Background()
+	filter := bson.M{"_id": tok.ID}
+	update := bson.M{"$set": bson.M{"pw": string(newpw)}}
 	if _, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

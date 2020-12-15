@@ -50,7 +50,8 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		name = primitive.NewObjectID().Hex()
 	}
 
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
+	session.NewSession()
+	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/stripe/stripe-go/v71"
@@ -64,7 +65,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Customer: stripe.String(cus.ID),
 		Items: []*stripe.SubscriptionItemsParams{
 			{
-				Price: stripe.String("price_1HExopLi4uPpotEYCGblikpg"),
+				Price: stripe.String(os.Getenv("STRIPE_PRICEID")),
 			},
 		},
 		TrialPeriodDays: stripe.Int64(14),
@@ -153,7 +154,6 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>Dominic<br />Founder</p>
 	`, base.ID.Hex(), email, pw)
 
-	fmt.Println("sending email to new user", email)
 	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, "")
 	if err != nil {
 		log.Println("error sending email", err)

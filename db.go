@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+const (
+	fieldID        = "_id"
+	fieldAccountID = "accountId"
+	fieldOwnerID   = "sb_owner"
+	fieldToken     = "token"
 )
 
 func dbreq(w http.ResponseWriter, r *http.Request) {
@@ -65,11 +73,13 @@ func add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	delete(doc, "id")
-	delete(doc, "_id")
-	delete(doc, "accountId")
+	delete(doc, fieldID)
+	delete(doc, fieldAccountID)
+	delete(doc, fieldOwnerID)
 
-	doc["_id"] = primitive.NewObjectID()
-	doc["accountId"] = auth.AccountID
+	doc[fieldID] = primitive.NewObjectID()
+	doc[fieldAccountID] = auth.AccountID
+	doc[fieldOwnerID] = auth.UserID
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	if _, err := db.Collection(col).InsertOne(ctx, v); err != nil {
@@ -77,8 +87,8 @@ func add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc["id"] = doc["_id"]
-	delete(doc, "_id")
+	doc["id"] = doc[fieldID]
+	delete(doc, fieldID)
 
 	respond(w, http.StatusCreated, doc)
 }
@@ -114,7 +124,14 @@ func list(w http.ResponseWriter, r *http.Request) {
 		Size: size,
 	}
 
-	filter := bson.M{"accountId": auth.AccountID}
+	filter := bson.M{}
+
+	switch readPermission(col) {
+	case permGroup:
+		filter = bson.M{"accountId": auth.AccountID}
+	case permOwner:
+		filter = bson.M{"accountId": auth.AccountID, fieldOwnerID: auth.UserID}
+	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	count, err := db.Collection(col).CountDocuments(ctx, filter)
@@ -169,9 +186,9 @@ func list(w http.ResponseWriter, r *http.Request) {
 }
 
 func get(w http.ResponseWriter, r *http.Request) {
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
-		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
+	conf, auth, err := extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -189,9 +206,18 @@ func get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filter := bson.M{fieldID: oid}
+	switch readPermission(col) {
+	case permGroup:
+		filter[fieldAccountID] = auth.AccountID
+	case permOwner:
+		filter[fieldAccountID] = auth.AccountID
+		filter[fieldOwnerID] = auth.UserID
+	}
+
 	var result bson.M
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	sr := db.Collection(col).FindOne(ctx, bson.M{"_id": oid})
+	sr := db.Collection(col).FindOne(ctx, filter)
 	if err := sr.Decode(&result); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -282,7 +308,14 @@ func query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(col, "pub_") == false {
-		filter["accountId"] = auth.AccountID
+		switch readPermission(col) {
+		case permGroup:
+			filter[fieldAccountID] = auth.AccountID
+		case permOwner:
+			filter[fieldAccountID] = auth.AccountID
+			filter[fieldOwnerID] = auth.UserID
+		}
+
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
@@ -383,10 +416,22 @@ func update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	delete(doc, "id")
-	delete(doc, "_id")
-	delete(doc, "accountId")
+	delete(doc, fieldID)
+	delete(doc, fieldAccountID)
+	delete(doc, fieldOwnerID)
 
-	filter := bson.M{"_id": oid, "accountId": auth.AccountID}
+	filter := bson.M{fieldID: oid}
+
+	// if they are not "root", we use permission
+	if auth.Role < 100 {
+		switch writePermission(col) {
+		case permGroup:
+			filter[fieldAccountID] = auth.AccountID
+		case permOwner:
+			filter[fieldAccountID] = auth.AccountID
+			filter[fieldOwnerID] = auth.UserID
+		}
+	}
 
 	newProps := bson.M{}
 	for k, v := range doc {
@@ -395,7 +440,7 @@ func update(w http.ResponseWriter, r *http.Request) {
 
 	update := bson.M{"$set": newProps}
 
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx := context.Background()
 	res := db.Collection(col).FindOneAndUpdate(ctx, filter, update)
 	if err := res.Err(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -426,6 +471,15 @@ func del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filter := bson.M{}
+	switch writePermission(col) {
+	case permGroup:
+		filter[fieldAccountID] = auth.AccountID
+	case permOwner:
+		filter[fieldAccountID] = auth.AccountID
+		filter[fieldOwnerID] = auth.UserID
+
+	}
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	res, err := db.Collection(col).DeleteOne(ctx, bson.M{"_id": oid, "accountId": auth.AccountID})
 	if err != nil {
@@ -455,4 +509,78 @@ func getPagination(u *url.URL) (page int64, size int64) {
 	}
 
 	return
+}
+
+type permissionLevel int
+
+const (
+	permOwner permissionLevel = iota
+	permGroup
+	permEveryone
+)
+
+func getPermission(col string) (owner string, group string, everyone string) {
+	// default permission
+	owner, group, everyone = "7", "4", "0"
+
+	re := regexp.MustCompile(`_\d\d\d_$`)
+	if re.MatchString(col) == false {
+		return
+	}
+
+	results := re.FindAllString(col, -1)
+	if len(results) != 1 {
+		return
+	}
+
+	perm := strings.Replace(results[0], "_", "", -1)
+
+	if len(perm) != 3 {
+		return
+	}
+
+	owner = string(perm[0])
+	group = string(perm[1])
+	everyone = string(perm[2])
+	return
+}
+
+func writePermission(col string) permissionLevel {
+	_, g, e := getPermission(col)
+
+	if canWrite(e) {
+		return permEveryone
+	}
+	if canWrite(g) {
+		return permGroup
+	}
+	return permOwner
+}
+
+func readPermission(col string) permissionLevel {
+	_, g, e := getPermission(col)
+
+	if canRead(e) {
+		return permEveryone
+	}
+	if canRead(g) {
+		return permGroup
+	}
+	return permOwner
+}
+
+func canWrite(s string) bool {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return false
+	}
+	return uint8(i)&uint8(2) != 0
+}
+
+func canRead(s string) bool {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return uint8(i)&uint8(4) != 0
 }

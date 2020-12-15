@@ -38,6 +38,7 @@ func main() {
 	// database routes
 	http.Handle("/db/", chain(http.HandlerFunc(dbreq), auth, withDB, cors))
 	http.Handle("/query/", chain(http.HandlerFunc(query), auth, withDB, cors))
+	http.Handle("/sudo/", chain(http.HandlerFunc(dbreq), requireRoot, withDB))
 	http.Handle("/newid", chain(http.HandlerFunc(newID), auth, withDB, cors))
 
 	// forms routes
