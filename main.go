@@ -38,11 +38,13 @@ func main() {
 	// database routes
 	http.Handle("/db/", chain(http.HandlerFunc(dbreq), auth, withDB, cors))
 	http.Handle("/query/", chain(http.HandlerFunc(query), auth, withDB, cors))
+	http.Handle("/sudoquery/", chain(http.HandlerFunc(query), requireRoot, withDB))
 	http.Handle("/sudo/", chain(http.HandlerFunc(dbreq), requireRoot, withDB))
 	http.Handle("/newid", chain(http.HandlerFunc(newID), auth, withDB, cors))
 
 	// forms routes
 	http.Handle("/postform/", chain(http.HandlerFunc(submitForm), withDB, cors))
+	http.Handle("/form", chain(http.HandlerFunc(listForm), requireRoot, withDB))
 
 	// storage
 	http.Handle("/storage/upload", chain(http.HandlerFunc(upload), auth, withDB, cors))

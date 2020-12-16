@@ -126,11 +126,14 @@ func list(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{}
 
-	switch readPermission(col) {
-	case permGroup:
-		filter = bson.M{"accountId": auth.AccountID}
-	case permOwner:
-		filter = bson.M{"accountId": auth.AccountID, fieldOwnerID: auth.UserID}
+	// if they're not root
+	if auth.Role < 100 {
+		switch readPermission(col) {
+		case permGroup:
+			filter = bson.M{"accountId": auth.AccountID}
+		case permOwner:
+			filter = bson.M{"accountId": auth.AccountID, fieldOwnerID: auth.UserID}
+		}
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
@@ -167,7 +170,8 @@ func list(w http.ResponseWriter, r *http.Request) {
 		}
 
 		result["id"] = result["_id"]
-		delete(result, "_id")
+		delete(result, fieldID)
+		delete(result, fieldOwnerID)
 
 		results = append(results, result)
 	}
@@ -207,12 +211,16 @@ func get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := bson.M{fieldID: oid}
-	switch readPermission(col) {
-	case permGroup:
-		filter[fieldAccountID] = auth.AccountID
-	case permOwner:
-		filter[fieldAccountID] = auth.AccountID
-		filter[fieldOwnerID] = auth.UserID
+
+	// if they're not root
+	if auth.Role < 100 {
+		switch readPermission(col) {
+		case permGroup:
+			filter[fieldAccountID] = auth.AccountID
+		case permOwner:
+			filter[fieldAccountID] = auth.AccountID
+			filter[fieldOwnerID] = auth.UserID
+		}
 	}
 
 	var result bson.M
@@ -227,7 +235,8 @@ func get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result["id"] = result["_id"]
-	delete(result, "_id")
+	delete(result, fieldID)
+	delete(result, fieldOwnerID)
 
 	respond(w, http.StatusOK, result)
 }
@@ -307,7 +316,8 @@ func query(w http.ResponseWriter, r *http.Request) {
 		Size: size,
 	}
 
-	if strings.HasPrefix(col, "pub_") == false {
+	// either not a public repo or not root
+	if strings.HasPrefix(col, "pub_") == false && auth.Role < 100 {
 		switch readPermission(col) {
 		case permGroup:
 			filter[fieldAccountID] = auth.AccountID
@@ -364,7 +374,9 @@ func query(w http.ResponseWriter, r *http.Request) {
 		}
 
 		result["id"] = result["_id"]
-		delete(result, "_id")
+		delete(result, fieldID)
+		delete(result, fieldOwnerID)
+
 		results = append(results, result)
 	}
 
@@ -471,17 +483,21 @@ func del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{}
-	switch writePermission(col) {
-	case permGroup:
-		filter[fieldAccountID] = auth.AccountID
-	case permOwner:
-		filter[fieldAccountID] = auth.AccountID
-		filter[fieldOwnerID] = auth.UserID
+	filter := bson.M{fieldID: oid}
 
+	// if they're not root
+	if auth.Role < 100 {
+		switch writePermission(col) {
+		case permGroup:
+			filter[fieldAccountID] = auth.AccountID
+		case permOwner:
+			filter[fieldAccountID] = auth.AccountID
+			filter[fieldOwnerID] = auth.UserID
+
+		}
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	res, err := db.Collection(col).DeleteOne(ctx, bson.M{"_id": oid, "accountId": auth.AccountID})
+	res, err := db.Collection(col).DeleteOne(ctx, filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
