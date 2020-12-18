@@ -139,6 +139,15 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sr := db.Collection("sb_tokens").FindOne(context.Background(), bson.M{"email": email})
+	var token Token
+	if err := sr.Decode(&token); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rootToken := fmt.Sprintf("%s|%s|%s", token.ID.Hex(), token.AccountID.Hex(), token.Token)
+
 	body := fmt.Sprintf(`
 	<p>Hey there,</p>
 	<p>Thanks for creating your account.</p>
@@ -147,16 +156,49 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>We've created an admin user for your new database:</p>
 	<p>email: %s<br />
 	password: %s</p>
+	<p>This is your root token key. You'll need this to manage your database and 
+	execute "sudo" commands from your backend functions</p>
+	<p>ROOT TOKEN: <strong>%s</strong></p>
 	<p>Make sure you complete your account creation by entering a valid credit 
-	card via the email you got when issuing the account create command.</p>
+	card via the link you got when issuing the account create command.</p>
 	<p>If you have any questions, please reply to this email.</p>
 	<p>Good luck with your projects.</p>
 	<p>Dominic<br />Founder</p>
-	`, base.ID.Hex(), email, pw)
+	`, base.ID.Hex(), email, pw, rootToken)
 
 	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, "")
 	if err != nil {
 		log.Println("error sending email", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, s.URL)
+}
+
+func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := client.Database("sbsys")
+
+	var cus Customer
+	filter := bson.M{fieldID: conf.SBID}
+	sr := db.Collection("accounts").FindOne(context.Background(), filter)
+	if err := sr.Decode(&cus); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	params := &stripe.BillingPortalSessionParams{
+		Customer:  stripe.String(cus.StripeID),
+		ReturnURL: stripe.String("https://staticbackend.com/stripe"),
+	}
+	s, err := session.New(params)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

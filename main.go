@@ -52,6 +52,7 @@ func main() {
 	// account
 	acct := &accounts{}
 	http.HandleFunc("/account/init", acct.create)
+	http.Handle("/account/portal", chain(http.HandlerFunc(acct.portal), requireRoot, withDB))
 
 	// stripe webhooks
 	swh := stripeWebhook{}
