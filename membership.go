@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -266,6 +267,93 @@ func setPassword(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	filter := bson.M{"_id": tok.ID}
+	update := bson.M{"$set": bson.M{"pw": string(newpw)}}
+	if _, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
+
+func resetPassword(w http.ResponseWriter, r *http.Request) {
+	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
+	if !ok {
+		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
+		return
+	}
+
+	db := client.Database(conf.Name)
+
+	var data = new(struct {
+		Email string `json:"email"`
+	})
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	filter := bson.M{"email": strings.ToLower(data.Email)}
+	count, err := db.Collection("sb_tokens").CountDocuments(context.Background(), filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if count == 0 {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	code := randStringRunes(6)
+	update := bson.M{"%set": bson.M{"sb_reset_code": code}}
+	if _, err := db.Collection("sb_tokens").UpdateOne(context.Background(), filter, update); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	body := fmt.Sprintf(`Your reset code is: %s`, code)
+	if err := sendMail(data.Email, "", FromEmail, FromName, "Your password reset code", body, ""); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
+
+func changePassword(w http.ResponseWriter, r *http.Request) {
+	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
+	if !ok {
+		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
+		return
+	}
+
+	db := client.Database(conf.Name)
+
+	var data = new(struct {
+		Email    string `json:"email"`
+		Code     string `json:"code"`
+		Password string `json:"password"`
+	})
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	filter := bson.M{"email": strings.ToLower(data.Email), "sb_reset_code": data.Code}
+	var tok Token
+	sr := db.Collection("sb_tokens").FindOne(context.Background(), filter)
+	if err := sr.Decode(&tok); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	newpw, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ctx := context.Background()
+	filter = bson.M{fieldID: tok.ID}
 	update := bson.M{"$set": bson.M{"pw": string(newpw)}}
 	if _, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

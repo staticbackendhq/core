@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -69,7 +68,7 @@ func (wh *stripeWebhook) sourceCreated(params interface{}) error {
 	}
 
 	db := client.Database("sbsys")
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx := context.Background()
 
 	var acct Customer
 	sr := db.Collection("accounts").FindOne(ctx, bson.M{"stripeId": stripeID})
@@ -88,5 +87,12 @@ func (wh *stripeWebhook) sourceCreated(params interface{}) error {
 	update := bson.M{"$set": bson.M{"active": true}}
 
 	res := db.Collection("accounts").FindOneAndUpdate(ctx, filter, update)
+	if err := res.Err(); err != nil {
+		fmt.Println("error while saving account: %v %s %s", err, stripeID, acct.ID.Hex())
+		return err
+	}
+
+	filter = bson.M{fieldAccountID: acct.ID}
+	res = db.Collection("bases").FindOneAndUpdate(ctx, filter, update)
 	return res.Err()
 }

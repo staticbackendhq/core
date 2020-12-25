@@ -36,6 +36,12 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// if there's something in the _hp_ field, it's a bot
+	if len(r.Form.Get("_hp_")) > 0 {
+		http.Error(w, "invalid form field present", http.StatusBadRequest)
+		return
+	}
+
 	for key, val := range r.Form {
 		k := strings.ToLower(key)
 		if k != "_id" && k != "form" {

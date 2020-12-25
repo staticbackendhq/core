@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/stripe/stripe-go/v71"
@@ -39,10 +40,15 @@ type Customer struct {
 }
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
+	email := strings.ToLower(r.URL.Query().Get("email"))
+	// cheap email validation
+	if len(email) < 4 || strings.Index(email, "@") == -1 || strings.Index(email, ".") == -1 {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
 
 	db := client.Database("sbsys")
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx := context.Background()
 	count, err := db.Collection("accounts").CountDocuments(ctx, bson.M{"email": email})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
