@@ -182,6 +182,16 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, s.URL)
 }
 
+func (a *accounts) auth(w http.ResponseWriter, r *http.Request) {
+	_, auth, err := extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respond(w, http.StatusOK, auth.Email)
+}
+
 func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := extract(r, true)
 	if err != nil {
