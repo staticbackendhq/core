@@ -88,7 +88,7 @@ func (wh *stripeWebhook) sourceCreated(params interface{}) error {
 
 	res := db.Collection("accounts").FindOneAndUpdate(ctx, filter, update)
 	if err := res.Err(); err != nil {
-		fmt.Println("error while saving account: %v %s %s", err, stripeID, acct.ID.Hex())
+		fmt.Printf("error while saving account: %v %s %s\n", err, stripeID, acct.ID.Hex())
 		return err
 	}
 

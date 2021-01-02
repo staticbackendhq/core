@@ -38,13 +38,13 @@ func main() {
 	// database routes
 	http.Handle("/db/", chain(http.HandlerFunc(dbreq), auth, withDB, cors))
 	http.Handle("/query/", chain(http.HandlerFunc(query), auth, withDB, cors))
-	http.Handle("/sudoquery/", chain(http.HandlerFunc(query), requireRoot, withDB))
-	http.Handle("/sudo/", chain(http.HandlerFunc(dbreq), requireRoot, withDB))
+	http.Handle("/sudoquery/", chain(http.HandlerFunc(query), requireRoot, withDB, cors))
+	http.Handle("/sudo/", chain(http.HandlerFunc(dbreq), requireRoot, withDB, cors))
 	http.Handle("/newid", chain(http.HandlerFunc(newID), auth, withDB, cors))
 
 	// forms routes
 	http.Handle("/postform/", chain(http.HandlerFunc(submitForm), withDB, cors))
-	http.Handle("/form", chain(http.HandlerFunc(listForm), requireRoot, withDB))
+	http.Handle("/form", chain(http.HandlerFunc(listForm), requireRoot, withDB, cors))
 
 	// storage
 	http.Handle("/storage/upload", chain(http.HandlerFunc(upload), auth, withDB, cors))
@@ -52,8 +52,8 @@ func main() {
 	// account
 	acct := &accounts{}
 	http.HandleFunc("/account/init", acct.create)
-	http.Handle("/account/auth", chain(http.HandlerFunc(acct.auth), requireRoot, withDB))
-	http.Handle("/account/portal", chain(http.HandlerFunc(acct.portal), requireRoot, withDB))
+	http.Handle("/account/auth", chain(http.HandlerFunc(acct.auth), requireRoot, withDB, cors))
+	http.Handle("/account/portal", chain(http.HandlerFunc(acct.portal), requireRoot, withDB, cors))
 
 	// stripe webhooks
 	swh := stripeWebhook{}
