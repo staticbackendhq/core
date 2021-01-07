@@ -9,4 +9,4 @@ deploy:
 	scp staticbackend sb-poc:/home/dstpierre/sb
 
 test:
-	@JWT_SECRET=okdevmode go test
+	@JWT_SECRET=okdevmode go test --race

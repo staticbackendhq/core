@@ -61,6 +61,16 @@ func main() {
 
 	http.HandleFunc("/ping", ping)
 
+	cache := NewCache()
+
+	// websockets
+	hub := newHub(cache)
+	go hub.run()
+
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
+
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }
 
