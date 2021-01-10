@@ -30,17 +30,28 @@ func main() {
 		log.Fatal(err)
 	}
 
+	cache := NewCache()
+
+	// websockets
+	hub := newHub(cache)
+	go hub.run()
+
+	database := &Database{
+		client: client,
+		cache:  cache,
+	}
+
 	http.Handle("/login", chain(http.HandlerFunc(login), withDB, cors))
 	http.Handle("/register", chain(http.HandlerFunc(register), withDB, cors))
 	http.Handle("/email", chain(http.HandlerFunc(emailExists), withDB, cors))
 	http.Handle("/setrole", chain(http.HandlerFunc(setRole), withDB))
 
 	// database routes
-	http.Handle("/db/", chain(http.HandlerFunc(dbreq), auth, withDB, cors))
-	http.Handle("/query/", chain(http.HandlerFunc(query), auth, withDB, cors))
-	http.Handle("/sudoquery/", chain(http.HandlerFunc(query), requireRoot, withDB, cors))
-	http.Handle("/sudo/", chain(http.HandlerFunc(dbreq), requireRoot, withDB, cors))
-	http.Handle("/newid", chain(http.HandlerFunc(newID), auth, withDB, cors))
+	http.Handle("/db/", chain(http.HandlerFunc(database.dbreq), auth, withDB, cors))
+	http.Handle("/query/", chain(http.HandlerFunc(database.query), auth, withDB, cors))
+	http.Handle("/sudoquery/", chain(http.HandlerFunc(database.query), requireRoot, withDB, cors))
+	http.Handle("/sudo/", chain(http.HandlerFunc(database.dbreq), requireRoot, withDB, cors))
+	http.Handle("/newid", chain(http.HandlerFunc(database.newID), auth, withDB, cors))
 
 	// forms routes
 	http.Handle("/postform/", chain(http.HandlerFunc(submitForm), withDB, cors))
@@ -60,12 +71,6 @@ func main() {
 	http.HandleFunc("/stripe", swh.process)
 
 	http.HandleFunc("/ping", ping)
-
-	cache := NewCache()
-
-	// websockets
-	hub := newHub(cache)
-	go hub.run()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)

@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gorilla/websocket"
 )
 
@@ -36,6 +38,7 @@ type Command struct {
 	Type    string `json:"type"`
 	Data    string `json:"data"`
 	Channel string `json:"channel"`
+	Token   string `json:"token"`
 }
 
 func newHub(c *Cache) *Hub {
@@ -69,7 +72,9 @@ func (h *Hub) run() {
 				delete(h.sockets, sck)
 				delete(h.ids, sck.id)
 				delete(h.channels, sck)
+				//time.AfterFunc(500*time.Millisecond, func() {
 				close(sck.send)
+				//})
 			}
 		case msg := <-h.broadcast:
 			sockets, p := h.getTargets(msg)
@@ -89,15 +94,18 @@ func (h *Hub) run() {
 }
 
 const (
-	MsgTypeError   = "error"
-	MsgTypeOk      = "ok"
-	MsgTypeEcho    = "echo"
-	MsgTypeAuth    = "auth"
-	MsgTypeToken   = "token"
-	MsgTypeJoin    = "join"
-	MsgTypeJoined  = "joined"
-	MsgTypeChanIn  = "chan_in"
-	MsgTypeChanOut = "chan_out"
+	MsgTypeError     = "error"
+	MsgTypeOk        = "ok"
+	MsgTypeEcho      = "echo"
+	MsgTypeAuth      = "auth"
+	MsgTypeToken     = "token"
+	MsgTypeJoin      = "join"
+	MsgTypeJoined    = "joined"
+	MsgTypeChanIn    = "chan_in"
+	MsgTypeChanOut   = "chan_out"
+	MsgTypeDBCreated = "db_created"
+	MsgTypeDBUpdated = "db_updated"
+	MsgTypeDBDeleted = "db_deleted"
 )
 
 func (h *Hub) getTargets(msg Command) (sockets []*Socket, payload Command) {
@@ -113,11 +121,17 @@ func (h *Hub) getTargets(msg Command) (sockets []*Socket, payload Command) {
 		payload.Data = "echo: " + msg.Data
 	case MsgTypeAuth:
 		sockets = append(sockets, sender)
-		_, ok := tokens[msg.Data]
+		var pl JWTPayload
+		if _, err := jwt.Verify([]byte(msg.Data), hs, &pl); err != nil {
+			payload = Command{Type: MsgTypeError, Data: "invalid token"}
+			return
+		}
+
+		_, ok := tokens[pl.Token]
 		if !ok {
 			payload = Command{Type: MsgTypeError, Data: "invalid token"}
 		} else {
-			payload = Command{Type: MsgTypeToken, Data: msg.Data}
+			payload = Command{Type: MsgTypeToken, Data: pl.Token}
 		}
 	case MsgTypeJoin:
 		subs, ok := h.channels[sender]
@@ -137,6 +151,12 @@ func (h *Hub) getTargets(msg Command) (sockets []*Socket, payload Command) {
 
 		if len(msg.Channel) == 0 {
 			payload = Command{Type: MsgTypeError, Data: "no channel was specified"}
+			return
+		} else if strings.HasPrefix(strings.ToLower(msg.Channel), "db-") {
+			payload = Command{
+				Type: MsgTypeError,
+				Data: "you cannot write to database channel",
+			}
 			return
 		}
 
@@ -170,4 +190,12 @@ func (h *Hub) unsub(sck *Socket) {
 		sub <- true
 		close(sub)
 	}
+}
+
+func (msg Command) IsDBEvent() bool {
+	switch msg.Type {
+	case MsgTypeDBCreated, MsgTypeDBUpdated, MsgTypeDBDeleted:
+		return true
+	}
+	return false
 }

@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -47,7 +49,10 @@ func (c *Cache) Subscribe(send chan Command, channel string, close chan bool) {
 				return
 			}
 
-			msg.Type = MsgTypeChanOut
+			// for non DB events we change the type to MsgTypeChanOut
+			if !msg.IsDBEvent() {
+				msg.Type = MsgTypeChanOut
+			}
 			send <- msg
 		case _ = <-close:
 			_ = pubsub.Close()
@@ -61,5 +66,41 @@ func (c *Cache) Publish(msg Command) error {
 	if err != nil {
 		return err
 	}
-	return c.Rdb.Publish(c.Ctx, msg.Channel, string(b)).Err()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	return c.Rdb.Publish(ctx, msg.Channel, string(b)).Err()
+}
+
+func (c *Cache) publishDocument(channel, typ string, v interface{}) {
+	subs, err := c.Rdb.PubSubNumSub(c.Ctx, channel).Result()
+	if err != nil {
+		fmt.Println("error getting db subscribers for ", channel)
+		return
+	}
+
+	count, ok := subs[channel]
+	if !ok {
+		fmt.Println("cannot find channel in subs", channel)
+		return
+	} else if count == 0 {
+		return
+	}
+
+	b, err := json.Marshal(v)
+	if err != nil {
+		fmt.Println("error publishing db doc: ", err)
+		return
+	}
+
+	msg := Command{
+		Channel: channel,
+		Data:    string(b),
+		Type:    typ,
+	}
+
+	if err := c.Publish(msg); err != nil {
+		fmt.Println("unable to publish db doc events:", err)
+	}
 }

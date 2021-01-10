@@ -13,8 +13,14 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type Database struct {
+	client *mongo.Client
+	cache  *Cache
+}
 
 const (
 	fieldID        = "_id"
@@ -23,13 +29,13 @@ const (
 	fieldToken     = "token"
 )
 
-func dbreq(w http.ResponseWriter, r *http.Request) {
+func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		add(w, r)
+		database.add(w, r)
 	} else if r.Method == http.MethodPut {
-		update(w, r)
+		database.update(w, r)
 	} else if r.Method == http.MethodDelete {
-		del(w, r)
+		database.del(w, r)
 	} else if r.Method == http.MethodGet {
 		p := r.URL.Path
 		if strings.HasSuffix(p, "/") == false {
@@ -39,23 +45,23 @@ func dbreq(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(p, "/")
 
 		if len(parts) == 4 {
-			list(w, r)
+			database.list(w, r)
 		} else {
-			get(w, r)
+			database.get(w, r)
 		}
 	} else {
 		http.Error(w, "not found", http.StatusNotFound)
 	}
 }
 
-func add(w http.ResponseWriter, r *http.Request) {
+func (database *Database) add(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	db := client.Database(conf.Name)
+	db := database.client.Database(conf.Name)
 
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, _ := ShiftPath(r.URL.Path)
@@ -90,6 +96,8 @@ func add(w http.ResponseWriter, r *http.Request) {
 	doc["id"] = doc[fieldID]
 	delete(doc, fieldID)
 
+	database.cache.publishDocument("db-"+col, MsgTypeDBCreated, doc)
+
 	respond(w, http.StatusCreated, doc)
 }
 
@@ -100,7 +108,7 @@ type PagedResult struct {
 	Results []interface{} `json:"results"`
 }
 
-func list(w http.ResponseWriter, r *http.Request) {
+func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 	page, size := getPagination(r.URL)
 
 	sortBy := bson.M{"_id": 1}
@@ -114,7 +122,7 @@ func list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database(conf.Name)
+	db := database.client.Database(conf.Name)
 
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, _ := ShiftPath(r.URL.Path)
@@ -189,14 +197,14 @@ func list(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, result)
 }
 
-func get(w http.ResponseWriter, r *http.Request) {
+func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	db := client.Database(conf.Name)
+	db := database.client.Database(conf.Name)
 
 	col, id := "", ""
 
@@ -241,7 +249,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, result)
 }
 
-func query(w http.ResponseWriter, r *http.Request) {
+func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 	var clauses [][]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&clauses); err != nil {
 		fmt.Println("error parsing body", err)
@@ -304,7 +312,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database(conf.Name)
+	db := database.client.Database(conf.Name)
 
 	var col string
 
@@ -394,14 +402,14 @@ func query(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, payload)
 }
 
-func update(w http.ResponseWriter, r *http.Request) {
+func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	db := client.Database(conf.Name)
+	db := database.client.Database(conf.Name)
 
 	col, id := "", ""
 
@@ -459,17 +467,33 @@ func update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond(w, http.StatusOK, true)
+	var result bson.M
+	sr := db.Collection(col).FindOne(context.Background(), filter)
+	if err := sr.Decode(&result); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if err := sr.Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	result["id"] = result["_id"]
+	delete(result, fieldID)
+	delete(result, fieldOwnerID)
+
+	database.cache.publishDocument("db-"+col, MsgTypeDBUpdated, result)
+
+	respond(w, http.StatusOK, result)
 }
 
-func del(w http.ResponseWriter, r *http.Request) {
+func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	db := client.Database(conf.Name)
+	db := database.client.Database(conf.Name)
 
 	col, id := "", ""
 
@@ -503,10 +527,11 @@ func del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	database.cache.publishDocument("db-"+col, MsgTypeDBDeleted, id)
 	respond(w, http.StatusOK, res.DeletedCount)
 }
 
-func newID(w http.ResponseWriter, r *http.Request) {
+func (database *Database) newID(w http.ResponseWriter, r *http.Request) {
 	id := primitive.NewObjectID()
 	respond(w, http.StatusOK, id.Hex())
 }
