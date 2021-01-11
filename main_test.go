@@ -13,9 +13,11 @@ import (
 )
 
 const (
-	dbName   = "unittest"
-	email    = "unit@test.com"
-	password = "my_unittest_pw"
+	dbName       = "unittest"
+	email        = "unit@test.com"
+	password     = "my_unittest_pw"
+	userEmail    = "user@test.com"
+	userPassword = "another_fake_password"
 )
 
 var (
@@ -23,6 +25,7 @@ var (
 	wsURL      string
 	pubKey     string
 	adminToken string
+	userToken  string
 )
 
 func TestMain(m *testing.M) {
@@ -94,10 +97,17 @@ func deleteAndSetupTestAccount() {
 	pubKey = base.ID.Hex()
 
 	db := client.Database(dbName)
-	token, err := createAccountAndUser(db, email, password, 100)
+	token, acctID, err := createAccountAndUser(db, email, password, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	adminToken = string(token)
+
+	token, err = createUser(db, acctID, userEmail, userPassword, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	userToken = string(token)
 }

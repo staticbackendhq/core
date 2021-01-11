@@ -134,7 +134,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtBytes, err := createAccountAndUser(db, l.Email, l.Password, 0)
+	jwtBytes, _, err := createAccountAndUser(db, l.Email, l.Password, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -143,17 +143,29 @@ func register(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
-func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, error) {
+func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, primitive.ObjectID, error) {
+	acctID := primitive.NewObjectID()
+
 	a := Account{
-		ID:    primitive.NewObjectID(),
+		ID:    acctID,
 		Email: email,
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx := context.Background()
 	_, err := db.Collection("sb_accounts").InsertOne(ctx, a)
 	if err != nil {
-		return nil, err
+		return nil, acctID, err
 	}
+
+	jwtBytes, err := createUser(db, acctID, email, password, role)
+	if err != nil {
+		return nil, acctID, err
+	}
+	return jwtBytes, acctID, nil
+}
+
+func createUser(db *mongo.Database, accountID primitive.ObjectID, email, password string, role int) ([]byte, error) {
+	ctx := context.Background()
 
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -162,7 +174,7 @@ func createAccountAndUser(db *mongo.Database, email, password string, role int) 
 
 	tok := Token{
 		ID:        primitive.NewObjectID(),
-		AccountID: a.ID,
+		AccountID: accountID,
 		Email:     email,
 		Token:     primitive.NewObjectID().Hex(),
 		Password:  string(b),
@@ -188,6 +200,7 @@ func createAccountAndUser(db *mongo.Database, email, password string, role int) 
 		Email:     tok.Email,
 		Role:      role,
 	}
+
 	return jwtBytes, nil
 }
 

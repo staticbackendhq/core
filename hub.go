@@ -142,7 +142,7 @@ func (h *Hub) getTargets(msg Command) (sockets []*Socket, payload Command) {
 		closeSubChan := make(chan bool)
 		subs = append(subs, closeSubChan)
 
-		go h.cache.Subscribe(sender.send, msg.Data, closeSubChan)
+		go h.cache.Subscribe(sender.send, msg.Token, msg.Data, closeSubChan)
 
 		sockets = append(sockets, sender)
 		payload = Command{Type: MsgTypeJoined, Data: msg.Data}

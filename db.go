@@ -479,7 +479,6 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 
 	result["id"] = result["_id"]
 	delete(result, fieldID)
-	delete(result, fieldOwnerID)
 
 	database.cache.publishDocument("db-"+col, MsgTypeDBUpdated, result)
 

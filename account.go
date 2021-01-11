@@ -130,7 +130,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	db = client.Database(dbName)
 	pw := randStringRunes(6)
 
-	if _, err := createAccountAndUser(db, email, pw, 100); err != nil {
+	if _, _, err := createAccountAndUser(db, email, pw, 100); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

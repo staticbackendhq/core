@@ -29,7 +29,7 @@ func NewCache() *Cache {
 	}
 }
 
-func (c *Cache) Subscribe(send chan Command, channel string, close chan bool) {
+func (c *Cache) Subscribe(send chan Command, token, channel string, close chan bool) {
 	pubsub := c.Rdb.Subscribe(c.Ctx, channel)
 
 	if _, err := pubsub.Receive(c.Ctx); err != nil {
@@ -52,6 +52,8 @@ func (c *Cache) Subscribe(send chan Command, channel string, close chan bool) {
 			// for non DB events we change the type to MsgTypeChanOut
 			if !msg.IsDBEvent() {
 				msg.Type = MsgTypeChanOut
+			} else if c.hasPermission(token, channel, msg.Data) == false {
+				continue
 			}
 			send <- msg
 		case _ = <-close:
@@ -102,5 +104,37 @@ func (c *Cache) publishDocument(channel, typ string, v interface{}) {
 
 	if err := c.Publish(msg); err != nil {
 		fmt.Println("unable to publish db doc events:", err)
+	}
+}
+
+func (c *Cache) hasPermission(token, repo, payload string) bool {
+	me, ok := tokens[token]
+	if !ok {
+		return false
+	}
+
+	docs := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(payload), &docs); err != nil {
+		fmt.Println("error decoding docs for permissions check", err)
+		return false
+	}
+
+	switch readPermission(repo) {
+	case permGroup:
+		acctID, ok := docs[fieldAccountID]
+		if !ok {
+			return false
+		}
+
+		return fmt.Sprintf("%v", acctID) == me.AccountID.Hex()
+	case permOwner:
+		owner, ok := docs[fieldOwnerID]
+		if !ok {
+			return false
+		}
+
+		return fmt.Sprintf("%v", owner) == me.UserID.Hex()
+	default:
+		return true
 	}
 }
