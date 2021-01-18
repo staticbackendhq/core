@@ -535,6 +535,39 @@ func (database *Database) newID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, id.Hex())
 }
 
+func (database *Database) listCollections(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := database.client.Database(conf.Name)
+
+	ctx := context.Background()
+
+	cur, err := db.ListCollections(ctx, bson.D{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer cur.Close(ctx)
+
+	var names []string
+	for cur.Next(ctx) {
+		var result bson.M
+		err := cur.Decode(&result)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		names = append(names, fmt.Sprintf("%v", result["name"]))
+	}
+
+	respond(w, http.StatusOK, names)
+}
+
 func getPagination(u *url.URL) (page int64, size int64) {
 	var err error
 

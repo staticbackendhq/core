@@ -143,7 +143,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
-func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, primitive.ObjectID, error) {
+func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, Token, error) {
 	acctID := primitive.NewObjectID()
 
 	a := Account{
@@ -154,22 +154,22 @@ func createAccountAndUser(db *mongo.Database, email, password string, role int) 
 	ctx := context.Background()
 	_, err := db.Collection("sb_accounts").InsertOne(ctx, a)
 	if err != nil {
-		return nil, acctID, err
+		return nil, Token{}, err
 	}
 
-	jwtBytes, err := createUser(db, acctID, email, password, role)
+	jwtBytes, tok, err := createUser(db, acctID, email, password, role)
 	if err != nil {
-		return nil, acctID, err
+		return nil, Token{}, err
 	}
-	return jwtBytes, acctID, nil
+	return jwtBytes, tok, nil
 }
 
-func createUser(db *mongo.Database, accountID primitive.ObjectID, email, password string, role int) ([]byte, error) {
+func createUser(db *mongo.Database, accountID primitive.ObjectID, email, password string, role int) ([]byte, Token, error) {
 	ctx := context.Background()
 
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, Token{}, err
 	}
 
 	tok := Token{
@@ -183,7 +183,7 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 
 	_, err = db.Collection("sb_tokens").InsertOne(ctx, tok)
 	if err != nil {
-		return nil, err
+		return nil, tok, err
 	}
 
 	token := fmt.Sprintf("%s|%s", tok.ID.Hex(), tok.Token)
@@ -191,7 +191,7 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 	// Get their JWT
 	jwtBytes, err := getJWT(token)
 	if err != nil {
-		return nil, err
+		return nil, tok, err
 	}
 
 	tokens[token] = Auth{
@@ -201,7 +201,7 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 		Role:      role,
 	}
 
-	return jwtBytes, nil
+	return jwtBytes, tok, nil
 }
 
 func setRole(w http.ResponseWriter, r *http.Request) {

@@ -50,6 +50,7 @@ func main() {
 	http.Handle("/db/", chain(http.HandlerFunc(database.dbreq), auth, withDB, cors))
 	http.Handle("/query/", chain(http.HandlerFunc(database.query), auth, withDB, cors))
 	http.Handle("/sudoquery/", chain(http.HandlerFunc(database.query), requireRoot, withDB, cors))
+	http.Handle("/sudolistall/", chain(http.HandlerFunc(database.listCollections), requireRoot, withDB, cors))
 	http.Handle("/sudo/", chain(http.HandlerFunc(database.dbreq), requireRoot, withDB, cors))
 	http.Handle("/newid", chain(http.HandlerFunc(database.newID), auth, withDB, cors))
 

@@ -93,3 +93,34 @@ func TestDBCreate(t *testing.T) {
 		t.Errorf("expected title to be %s go %s", task.Title, saved.Title)
 	}
 }
+
+func TestDBListCollections(t *testing.T) {
+	req := httptest.NewRequest("GET", "/sudolistall", nil)
+	w := httptest.NewRecorder()
+
+	req.Header.Set("SB-PUBLIC-KEY", pubKey)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
+
+	h := chain(http.HandlerFunc(database.listCollections), requireRoot, withDB)
+
+	h.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Errorf("got error for list all collections: %s", string(b))
+	}
+
+	var names []string
+	if err := parseBody(resp.Body, &names); err != nil {
+		t.Fatal(err)
+	} else if len(names) < 2 {
+		t.Errorf("expected len to be > than 2 got %d", len(names))
+	}
+}

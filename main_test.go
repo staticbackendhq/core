@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,7 @@ var (
 	pubKey     string
 	adminToken string
 	userToken  string
+	rootToken  string
 )
 
 func TestMain(m *testing.M) {
@@ -97,14 +99,16 @@ func deleteAndSetupTestAccount() {
 	pubKey = base.ID.Hex()
 
 	db := client.Database(dbName)
-	token, acctID, err := createAccountAndUser(db, email, password, 100)
+	token, dbToken, err := createAccountAndUser(db, email, password, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	adminToken = string(token)
 
-	token, err = createUser(db, acctID, userEmail, userPassword, 0)
+	rootToken = fmt.Sprintf("%s|%s|%s", dbToken.ID.Hex(), dbToken.AccountID.Hex(), dbToken.Token)
+
+	token, _, err = createUser(db, dbToken.AccountID, userEmail, userPassword, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
