@@ -81,7 +81,7 @@ func main() {
 }
 
 func openDatabase(dbHost string) error {
-	uri := fmt.Sprintf("mongodb://app:%s@cluster0-shard-00-00.hq9ta.mongodb.net:27017,cluster0-shard-00-01.hq9ta.mongodb.net:27017,cluster0-shard-00-02.hq9ta.mongodb.net:27017/?ssl=true&replicaSet=atlas-xty9tn-shard-0&authSource=admin&retryWrites=true&w=majority", dbHost)
+	uri := os.Getenv("DATABASE_URL")
 	if dbHost == "localhost" {
 		uri = "mongodb://localhost:27017"
 	}
