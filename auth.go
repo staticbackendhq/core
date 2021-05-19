@@ -69,60 +69,67 @@ func auth(next http.Handler) http.Handler {
 
 		key = strings.Replace(key, "Bearer ", "", -1)
 
-		var pl JWTPayload
-		if _, err := jwt.Verify([]byte(key), hs, &pl); err != nil {
-			http.Error(w, fmt.Sprintf("could not verify your authentication token: %s", err.Error()), http.StatusBadRequest)
-			return
-		}
-
 		ctx := r.Context()
 
-		conf, ok := ctx.Value(ContextBase).(BaseConfig)
-		if !ok {
-			http.Error(w, "invalid StaticBackend public key", http.StatusUnauthorized)
+		auth, err := validateAuthKey(ctx, key)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		db := client.Database(conf.Name)
-
-		a, ok := tokens[pl.Token]
-		if ok {
-			ctx = context.WithValue(ctx, ContextAuth, a)
-		} else {
-			parts := strings.Split(key, "|")
-			if len(parts) != 2 {
-				http.Error(w, "invalid authentication token", http.StatusUnauthorized)
-				return
-			}
-
-			id, err := primitive.ObjectIDFromHex(parts[0])
-			if err != nil {
-				http.Error(w, "invalid API key format", http.StatusUnauthorized)
-				return
-			}
-
-			ctxAuth, _ := context.WithTimeout(context.Background(), 2*time.Second)
-			sr := db.Collection("sb_tokens").FindOne(ctxAuth, bson.M{"_id": id, "token": parts[1]})
-
-			var token Token
-			if err := sr.Decode(&token); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			a := Auth{
-				AccountID: token.AccountID,
-				UserID:    token.ID,
-				Email:     token.Email,
-				Role:      token.Role,
-			}
-			tokens[pl.Token] = a
-
-			ctx = context.WithValue(ctx, ContextAuth, a)
-		}
+		ctx = context.WithValue(ctx, ContextAuth, auth)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func validateAuthKey(ctx context.Context, key string) (Auth, error) {
+	a := Auth{}
+
+	var pl JWTPayload
+	if _, err := jwt.Verify([]byte(key), hs, &pl); err != nil {
+		return a, fmt.Errorf("could not verify your authentication token: %s", err.Error())
+	}
+
+	conf, ok := ctx.Value(ContextBase).(BaseConfig)
+	if !ok {
+		return a, fmt.Errorf("invalid StaticBackend public token")
+	}
+
+	db := client.Database(conf.Name)
+
+	auth, ok := tokens[pl.Token]
+	if ok {
+		return auth, nil
+	}
+
+	parts := strings.Split(key, "|")
+	if len(parts) != 2 {
+		return a, fmt.Errorf("invalid authentication token")
+	}
+
+	id, err := primitive.ObjectIDFromHex(parts[0])
+	if err != nil {
+		return a, fmt.Errorf("invalid API key format")
+	}
+
+	ctxAuth, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	sr := db.Collection("sb_tokens").FindOne(ctxAuth, bson.M{"_id": id, "token": parts[1]})
+
+	var token Token
+	if err := sr.Decode(&token); err != nil {
+		return a, fmt.Errorf("error retrieving your token: %s", err.Error())
+	}
+
+	a = Auth{
+		AccountID: token.AccountID,
+		UserID:    token.ID,
+		Email:     token.Email,
+		Role:      token.Role,
+	}
+	tokens[pl.Token] = a
+
+	return a, nil
 }
 
 func requireRoot(next http.Handler) http.Handler {

@@ -24,6 +24,11 @@ func withDB(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.Header.Get("SB-PUBLIC-KEY")
 
+		// we check in query string (used for SSE)
+		if len(key) == 0 {
+			key = r.URL.Query().Get("sbpk")
+		}
+
 		if len(key) == 0 {
 			http.Error(w, "invalid StaticBackend public key", http.StatusUnauthorized)
 			log.Println("invalid StaticBackend key")

@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"staticbackend/realtime"
 	"time"
 
 	"github.com/stripe/stripe-go/v71"
@@ -35,6 +37,14 @@ func main() {
 	// websockets
 	hub := newHub(cache)
 	go hub.run()
+
+	// Server Send Event, alternative to websocket
+	b := realtime.NewBroker(func(ctx context.Context, key string) (string, error) {
+		if _, err := validateAuthKey(ctx, key); err != nil {
+			return "", err
+		}
+		return key, nil
+	})
 
 	database := &Database{
 		client: client,
@@ -76,6 +86,20 @@ func main() {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
+
+	http.Handle("/sse/connect", chain(http.HandlerFunc(b.Accept), withDB, cors))
+	receiveMessage := func(w http.ResponseWriter, r *http.Request) {
+		var msg realtime.Command
+		if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		b.Broadcast <- msg
+
+		respond(w, http.StatusOK, true)
+	}
+	http.Handle("/sse/msg", chain(http.HandlerFunc(receiveMessage), cors))
 
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }
