@@ -50,7 +50,6 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		name = primitive.NewObjectID().Hex()
 	}
 
-	session.NewSession()
 	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,4 +95,37 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusOK, url)
+}
+
+func deleteFile(w http.ResponseWriter, r *http.Request) {
+	config, auth, err := extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := client.Database(config.Name)
+
+	// retrieve the file from DB
+
+	// remove this from the URL to get the storage key
+	fileKey := "https://cdn.staticbackend.com/"
+
+	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	svc := s3.New(sess)
+	obj := &s3.DeleteObjectInput{
+		Bucket: aws.String("files.staticbackend.com"),
+		Key: aws.String(fileKey)
+	}
+	if _, err := svc.DeleteObject(obj); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: delete file from DB
 }

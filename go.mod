@@ -14,8 +14,6 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
-	github.com/sourcegraph/go-ses v0.0.0-20160405160939-6bd8d17cf7c1
-	github.com/stretchr/testify v1.6.1
 	github.com/stripe/stripe-go/v71 v71.44.0
 	github.com/tidwall/pretty v1.0.0 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
@@ -24,5 +22,4 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )

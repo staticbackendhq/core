@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -38,7 +39,7 @@ type Login struct {
 }
 
 func emailExists(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("e")
+	email := strings.ToLower(r.URL.Query().Get("e"))
 	if len(email) == 0 {
 		respond(w, http.StatusOK, false)
 		return
@@ -77,6 +78,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	l.Email = strings.ToLower(l.Email)
+
 	tok, err := validateUserPassword(db, l.Email, l.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -103,6 +106,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateUserPassword(db *mongo.Database, email, password string) (*Token, error) {
+	email = strings.ToLower(email)
+
 	ctx := context.Background()
 	sr := db.Collection("sb_tokens").FindOne(ctx, bson.M{"email": email})
 
@@ -134,12 +139,23 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	l.Email = strings.ToLower(l.Email)
+
+	// make sure this email does not exists
+	count, err := db.Collection("sb_tokens").CountDocuments(context.Background(), bson.M{"email": l.Email})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if count > 0 {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
+
 	jwtBytes, _, err := createAccountAndUser(db, l.Email, l.Password, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
@@ -324,7 +340,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := fmt.Sprintf(`Your reset code is: %s`, code)
-	if err := sendMail(data.Email, "", FromEmail, FromName, "Your password reset code", body, ""); err != nil {
+	if err := sendMail(data.Email, "", FromEmail, FromName, "Your password reset code", body, nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -391,4 +407,69 @@ func getJWT(token string) ([]byte, error) {
 
 	return jwt.Sign(pl, hs)
 
+}
+
+func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := client.Database(conf.Name)
+
+	id := ""
+
+	_, r.URL.Path = ShiftPath(r.URL.Path)
+	id, r.URL.Path = ShiftPath(r.URL.Path)
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	filter := bson.M{fieldAccountID: oid}
+	ctx := context.Background()
+
+	opt := options.Find()
+	opt.SetLimit(1)
+	opt.SetSort(bson.M{fieldID: 1})
+
+	cur, err := db.Collection("sb_tokens").Find(ctx, filter, opt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer cur.Close(ctx)
+
+	var tok Token
+	if cur.Next(ctx) {
+		if err := cur.Decode(&tok); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if len(tok.Token) == 0 {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	token := fmt.Sprintf("%s|%s", tok.ID.Hex(), tok.Token)
+
+	jwtBytes, err := getJWT(token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tokens[token] = Auth{
+		AccountID: tok.AccountID,
+		UserID:    tok.ID,
+		Email:     tok.Email,
+		Role:      tok.Role,
+	}
+
+	respond(w, http.StatusOK, string(jwtBytes))
 }

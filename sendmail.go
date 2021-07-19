@@ -2,56 +2,72 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"html"
 	"html/template"
 	"strings"
 
-	ses "github.com/sourcegraph/go-ses"
-	"gopkg.in/gomail.v2"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ses"
 )
 
-// SendMail uses Amazon SES to send an HTML email, it will convert body to text automatically
-func sendMail(toEmail, toName, fromEmail, fromName, subject, body, replyTo string) error {
+// sendmail uses Amazon SES to send an HTML email, it will convert body to text automatically
+func sendMail(toEmail, toName, fromEmail, fromName, subject, body string, files []string) error {
 	if len(toEmail) == 0 || strings.Index(toEmail, "@") == -1 {
 		return fmt.Errorf("empty to email")
 	}
 
-	m := gomail.NewMessage()
-	m.SetHeader("To", toEmail)
-	if len(replyTo) > 0 {
-		m.SetHeader("From", fromName+" <"+replyTo+">")
-		m.SetHeader("Reply-To", replyTo)
-	} else {
-		m.SetHeader("From", fromName+" <"+fromEmail+">")
-	}
-	m.SetHeader("Subject", subject)
-	m.AddAlternative("text/plain", stripHTML(body))
-	m.SetBody("text/html", body)
+	charset := "UTF-8"
 
-	var b bytes.Buffer
-	m.WriteTo(&b)
-
-	res, err := ses.EnvConfig.SendRawEmail(b.Bytes())
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-1")},
+	)
 	if err != nil {
 		return err
-	} else if len(res) == 0 {
-		return errors.New("No email id returned by Amazon SES")
+	}
+
+	// Create an SES session.
+	svc := ses.New(sess)
+
+	// Assemble the email.
+	input := &ses.SendEmailInput{
+		Destination: &ses.Destination{
+			CcAddresses: []*string{},
+			ToAddresses: []*string{
+				aws.String(toEmail),
+			},
+		},
+		Message: &ses.Message{
+			Body: &ses.Body{
+				Html: &ses.Content{
+					Charset: aws.String(charset),
+					Data:    aws.String(body),
+				},
+				Text: &ses.Content{
+					Charset: aws.String(charset),
+					Data:    aws.String(stripHTML(body)),
+				},
+			},
+			Subject: &ses.Content{
+				Charset: aws.String(charset),
+				Data:    aws.String(subject),
+			},
+		},
+		Source: aws.String(fromEmail),
+		// Uncomment to use a configuration set
+		//ConfigurationSetName: aws.String(ConfigurationSet),
+	}
+
+	// Attempt to send the email.
+	if _, err := svc.SendEmail(input); err != nil {
+		return err
 	}
 
 	return nil
-
-	/*res, err := ses.EnvConfig.SendEmailHTML(fromEmail, toEmail, subject, StripHTML(body), body)
-	if err != nil {
-		return err
-	} else if len(res) == 0 {
-		return errors.New("No email id returned by Amazon SES")
-	}
-	return nil*/
 }
 
-// StripHTML returns a version of a string with no HTML
+// stripHTML returns a version of a string with no HTML tags.
 func stripHTML(s string) string {
 	output := ""
 

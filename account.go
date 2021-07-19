@@ -172,7 +172,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>Dominic<br />Founder</p>
 	`, base.ID.Hex(), email, pw, rootToken)
 
-	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, "")
+	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, nil)
 	if err != nil {
 		log.Println("error sending email", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

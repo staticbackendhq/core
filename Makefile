@@ -1,8 +1,11 @@
+include .env
+export $(shell sed 's/=.*//' .env)
+
 build:
-	go build
+	@rm -rf staticbaceknd && go build
 
 start: build
-	source ./.setenv.sh && ./staticbackend -host localhost
+	@./staticbackend -host localhost
 
 deploy:
 	CGO_ENABLED=0 go build

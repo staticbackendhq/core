@@ -135,7 +135,7 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{}
 
 	// if they're not root
-	if auth.Role < 100 {
+	if !strings.HasPrefix(col, "pub_") && auth.Role < 100 {
 		switch readPermission(col) {
 		case permGroup:
 			filter = bson.M{"accountId": auth.AccountID}
@@ -220,8 +220,8 @@ func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{fieldID: oid}
 
-	// if they're not root
-	if auth.Role < 100 {
+	// if they're not root and repo is not public
+	if !strings.HasPrefix(col, "pub_") && auth.Role < 100 {
 		switch readPermission(col) {
 		case permGroup:
 			filter[fieldAccountID] = auth.AccountID

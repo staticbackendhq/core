@@ -56,6 +56,8 @@ func main() {
 	http.Handle("/email", chain(http.HandlerFunc(emailExists), withDB, cors))
 	http.Handle("/setrole", chain(http.HandlerFunc(setRole), withDB))
 
+	http.Handle("/sudogettoken/", chain(http.HandlerFunc(sudoGetTokenFromAccountID), requireRoot, withDB))
+
 	// database routes
 	http.Handle("/db/", chain(http.HandlerFunc(database.dbreq), auth, withDB, cors))
 	http.Handle("/query/", chain(http.HandlerFunc(database.query), auth, withDB, cors))

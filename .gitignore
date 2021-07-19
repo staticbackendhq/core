@@ -1,4 +1,5 @@
 .setenv.sh
+.env
 mongodata/
 staticbackend
 
