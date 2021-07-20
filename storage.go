@@ -56,7 +56,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileKey := fmt.Sprintf("%s/%s/%s.%s",
+	fileKey := fmt.Sprintf("%s/%s/%s%s",
 		auth.AccountID.Hex(),
 		config.Name,
 		name,
@@ -89,16 +89,30 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	if _, err := db.Collection("sb_files").InsertOne(ctx, doc); err != nil {
+	res, err := db.Collection("sb_files").InsertOne(ctx, doc)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	respond(w, http.StatusOK, url)
+	newID, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		http.Error(w, "unable to retrived the inserted id", http.StatusInternalServerError)
+		return
+	}
+
+	data := new(struct {
+		ID  string `json:"id"`
+		URL string `json:"url"`
+	})
+	data.ID = newID.Hex()
+	data.URL = url
+
+	respond(w, http.StatusOK, data)
 }
 
 func deleteFile(w http.ResponseWriter, r *http.Request) {
-	config, auth, err := extract(r, true)
+	config, _, err := extract(r, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -106,26 +120,52 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	db := client.Database(config.Name)
 
-	// retrieve the file from DB
+	oid, err := primitive.ObjectIDFromHex(r.URL.Query().Get("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	// remove this from the URL to get the storage key
-	fileKey := "https://cdn.staticbackend.com/"
+	ctx := context.Background()
+	var result bson.M
+
+	filter := bson.M{fieldID: oid}
+
+	sr := db.Collection("sb_files").FindOne(ctx, filter)
+	if err := sr.Decode(&result); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if err := sr.Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fileKey, ok := result["key"].(string)
+	if !ok {
+		http.Error(w, "unable to retrive the file id", http.StatusInternalServerError)
+		return
+	}
 
 	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	
+
 	svc := s3.New(sess)
 	obj := &s3.DeleteObjectInput{
 		Bucket: aws.String("files.staticbackend.com"),
-		Key: aws.String(fileKey)
+		Key:    aws.String(fileKey),
 	}
 	if _, err := svc.DeleteObject(obj); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: delete file from DB
+	if _, err := db.Collection("sb_files").DeleteOne(ctx, filter); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
 }

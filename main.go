@@ -72,6 +72,7 @@ func main() {
 
 	// storage
 	http.Handle("/storage/upload", chain(http.HandlerFunc(upload), auth, withDB, cors))
+	http.Handle("/sudostorage/delete", chain(http.HandlerFunc(deleteFile), requireRoot, withDB))
 
 	// account
 	acct := &accounts{}
