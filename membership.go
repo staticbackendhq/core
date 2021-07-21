@@ -340,7 +340,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := fmt.Sprintf(`Your reset code is: %s`, code)
-	if err := sendMail(data.Email, "", FromEmail, FromName, "Your password reset code", body, nil); err != nil {
+	if err := sendMail(data.Email, "", FromEmail, FromName, "Your password reset code", body, ""); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

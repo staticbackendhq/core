@@ -2,20 +2,38 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html"
 	"html/template"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // sendmail uses Amazon SES to send an HTML email, it will convert body to text automatically
-func sendMail(toEmail, toName, fromEmail, fromName, subject, body string, files []string) error {
+func sendMail(toEmail, toName, fromEmail, fromName, subject, body string, replyTo string) error {
 	if len(toEmail) == 0 || strings.Index(toEmail, "@") == -1 {
 		return fmt.Errorf("empty to email")
+	}
+
+	if len(replyTo) == 0 {
+		replyTo = fromEmail
+	}
+
+	// we prints email in dev mode
+	if AppEnv == AppEnvDev {
+		fmt.Println("====== SENDING EMAIL ======")
+		fmt.Println("from: ", fromEmail)
+		fmt.Println("ReplyTo: ", replyTo)
+		fmt.Println("to: ", toEmail)
+		fmt.Println("subject: ", subject)
+		fmt.Printf("body\n%s\n\n", stripHTML(body))
+		fmt.Println("====== /SENDING EMAIL ======")
 	}
 
 	charset := "UTF-8"
@@ -54,7 +72,8 @@ func sendMail(toEmail, toName, fromEmail, fromName, subject, body string, files 
 				Data:    aws.String(subject),
 			},
 		},
-		Source: aws.String(fromEmail),
+		Source:           aws.String(fromEmail),
+		ReplyToAddresses: aws.StringSlice([]string{replyTo}),
 		// Uncomment to use a configuration set
 		//ConfigurationSetName: aws.String(ConfigurationSet),
 	}
@@ -147,4 +166,44 @@ func stripHTML(s string) string {
 	output = strings.Replace(output, "&amp;amp; ", "& ", -1) // NB space after
 
 	return output
+}
+
+type EmailData struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Body    string `json:"body"`
+	ReplyTo string `json:"replyTo"`
+}
+
+func sudoSendMail(w http.ResponseWriter, r *http.Request) {
+	var data EmailData
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := sendMail(data.To, data.To, data.From, data.From, data.Subject, data.Body, data.ReplyTo); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	config, _, err := extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := client.Database("sbsys")
+
+	ctx := context.Background()
+
+	filter := bson.M{fieldID: config.SBID}
+	update := bson.M{"$inc": bson.M{"mes": 1}}
+	if _, err := db.Collection("accounts").UpdateOne(ctx, filter, update); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
 }

@@ -29,6 +29,17 @@ func NewCache() *Cache {
 	}
 }
 
+func (c *Cache) Get(key string) (string, error) {
+	return c.Rdb.Get(c.Ctx, key).Result()
+}
+
+func (c *Cache) Set(key string, value string) error {
+	if _, err := c.Rdb.Set(c.Ctx, key, value, 3*time.Hour).Result(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Cache) Subscribe(send chan Command, token, channel string, close chan bool) {
 	pubsub := c.Rdb.Subscribe(c.Ctx, channel)
 

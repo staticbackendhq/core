@@ -19,29 +19,27 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-const (
-	FromEmail = "support@staticbackend.com"
-	FromName  = "StaticBackend Support"
-)
-
 var (
+	FromEmail   = os.Getenv("FROM_EMAIL")
+	FromName    = os.Getenv("FROM_NAME")
 	letterRunes = []rune("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2345679")
 )
 
 type accounts struct{}
 
 type Customer struct {
-	ID             primitive.ObjectID `bson:"_id" json:"id"`
-	Email          string             `bson:"email" json:"email"`
-	StripeID       string             `bson:"stripeId" json:"stripeId"`
-	SubscriptionID string             `bson:"subId" json:"subId"`
-	IsActive       bool               `bson:"active" json:"-"`
-	Created        time.Time          `bson:"created" json:"created"`
+	ID               primitive.ObjectID `bson:"_id" json:"id"`
+	Email            string             `bson:"email" json:"email"`
+	StripeID         string             `bson:"stripeId" json:"stripeId"`
+	SubscriptionID   string             `bson:"subId" json:"subId"`
+	IsActive         bool               `bson:"active" json:"-"`
+	MonthlyEmailSent int                `bson:"mes" json:"-"`
+	Created          time.Time          `bson:"created" json:"created"`
 }
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(r.URL.Query().Get("email"))
-	// cheap email validation
+	// TODO: cheap email validation
 	if len(email) < 4 || strings.Index(email, "@") == -1 || strings.Index(email, ".") == -1 {
 		http.Error(w, "invalid email", http.StatusBadRequest)
 		return
@@ -58,28 +56,36 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cusParams := &stripe.CustomerParams{
-		Email: stripe.String(email),
-	}
-	cus, err := customer.New(cusParams)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	stripeCustomerID, subID := "", ""
 
-	subParams := &stripe.SubscriptionParams{
-		Customer: stripe.String(cus.ID),
-		Items: []*stripe.SubscriptionItemsParams{
-			{
-				Price: stripe.String(os.Getenv("STRIPE_PRICEID")),
+	if AppEnv == AppEnvProd {
+		cusParams := &stripe.CustomerParams{
+			Email: stripe.String(email),
+		}
+		cus, err := customer.New(cusParams)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		stripeCustomerID = cus.ID
+
+		subParams := &stripe.SubscriptionParams{
+			Customer: stripe.String(cus.ID),
+			Items: []*stripe.SubscriptionItemsParams{
+				{
+					Price: stripe.String(os.Getenv("STRIPE_PRICEID")),
+				},
 			},
-		},
-		TrialPeriodDays: stripe.Int64(14),
-	}
-	newSub, err := sub.New(subParams)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+			TrialPeriodDays: stripe.Int64(14),
+		}
+		newSub, err := sub.New(subParams)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		subID = newSub.ID
 	}
 
 	// create the account
@@ -87,8 +93,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	doc := Customer{
 		ID:             acctID,
 		Email:          email,
-		StripeID:       cus.ID,
-		SubscriptionID: newSub.ID,
+		StripeID:       stripeCustomerID,
+		SubscriptionID: subID,
 		Created:        time.Now(),
 	}
 
@@ -135,14 +141,19 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := &stripe.BillingPortalSessionParams{
-		Customer:  stripe.String(cus.ID),
-		ReturnURL: stripe.String("https://staticbackend.com/stripe"),
-	}
-	s, err := session.New(params)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	signUpURL := "no need to sign up in dev mode"
+	if AppEnv == AppEnvProd {
+		params := &stripe.BillingPortalSessionParams{
+			Customer:  stripe.String(stripeCustomerID),
+			ReturnURL: stripe.String("https://staticbackend.com/stripe"),
+		}
+		s, err := session.New(params)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		signUpURL = s.URL
 	}
 
 	sr := db.Collection("sb_tokens").FindOne(context.Background(), bson.M{"email": email})
@@ -172,14 +183,14 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>Dominic<br />Founder</p>
 	`, base.ID.Hex(), email, pw, rootToken)
 
-	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, nil)
+	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, "")
 	if err != nil {
 		log.Println("error sending email", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	respond(w, http.StatusOK, s.URL)
+	respond(w, http.StatusOK, signUpURL)
 }
 
 func (a *accounts) auth(w http.ResponseWriter, r *http.Request) {

@@ -17,8 +17,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+const (
+	AppEnvDev  = "dev"
+	AppEnvProd = "prod"
+)
+
 var (
 	client *mongo.Client
+	cache  *Cache
+	AppEnv = os.Getenv("APP_ENV")
 )
 
 func main() {
@@ -32,7 +39,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cache := NewCache()
+	cache = NewCache()
 
 	// websockets
 	hub := newHub(cache)
@@ -73,6 +80,10 @@ func main() {
 	// storage
 	http.Handle("/storage/upload", chain(http.HandlerFunc(upload), auth, withDB, cors))
 	http.Handle("/sudostorage/delete", chain(http.HandlerFunc(deleteFile), requireRoot, withDB))
+
+	// sudo actions
+	http.Handle("/sudo/sendmail", chain(http.HandlerFunc(sudoSendMail), requireRoot, withDB))
+	http.Handle("/sudo/cache", chain(http.HandlerFunc(sudoCache), requireRoot))
 
 	// account
 	acct := &accounts{}
@@ -145,4 +156,32 @@ func ping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond(w, http.StatusOK, true)
+}
+
+func sudoCache(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		key := r.URL.Query().Get("key")
+		val, err := cache.Get(key)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		respond(w, http.StatusOK, val)
+	} else if r.Method == http.MethodPost {
+		data := new(struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		})
+		if err := parseBody(r.Body, &data); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := cache.Set(data.Key, data.Value); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		respond(w, http.StatusOK, true)
+	}
 }
