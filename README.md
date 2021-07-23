@@ -32,7 +32,7 @@ $> git clone git@github.com/staticbackendhq/core.git
 2. In a terminal start the docker services
 
 ```shell
-$> docker-compuse up
+$> docker-compose up
 ```
 
 3. Create a file named `.env` with the following environment variables:
