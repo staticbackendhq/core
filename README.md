@@ -77,5 +77,5 @@ information.
 
 ### Contributing
 
-This is still pre-v1 and API _might_ change. All contribution highly appreciated, 
+This is still pre-v1 and API _might_ change. All contributions highly appreciated, 
 please make sure to discuss before starting anything.
