@@ -2,7 +2,7 @@ include .env
 export $(shell sed 's/=.*//' .env)
 
 build:
-	@rm -rf staticbaceknd && go build
+	@rm -rf staticbackend && go build
 
 start: build
 	@./staticbackend -host localhost
