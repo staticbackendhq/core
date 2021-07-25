@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"staticbackend/internal"
+	"staticbackend/middleware"
 	"strconv"
 	"strings"
 	"time"
@@ -21,13 +23,6 @@ type Database struct {
 	client *mongo.Client
 	cache  *Cache
 }
-
-const (
-	fieldID        = "_id"
-	fieldAccountID = "accountId"
-	fieldOwnerID   = "sb_owner"
-	fieldToken     = "token"
-)
 
 func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -55,7 +50,7 @@ func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 }
 
 func (database *Database) add(w http.ResponseWriter, r *http.Request) {
-	conf, auth, err := extract(r, true)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -79,13 +74,13 @@ func (database *Database) add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	delete(doc, "id")
-	delete(doc, fieldID)
-	delete(doc, fieldAccountID)
-	delete(doc, fieldOwnerID)
+	delete(doc, internal.FieldID)
+	delete(doc, internal.FieldAccountID)
+	delete(doc, internal.FieldOwnerID)
 
-	doc[fieldID] = primitive.NewObjectID()
-	doc[fieldAccountID] = auth.AccountID
-	doc[fieldOwnerID] = auth.UserID
+	doc[internal.FieldID] = primitive.NewObjectID()
+	doc[internal.FieldAccountID] = auth.AccountID
+	doc[internal.FieldOwnerID] = auth.UserID
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	if _, err := db.Collection(col).InsertOne(ctx, v); err != nil {
@@ -93,8 +88,8 @@ func (database *Database) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc["id"] = doc[fieldID]
-	delete(doc, fieldID)
+	doc["id"] = doc[internal.FieldID]
+	delete(doc, internal.FieldID)
 
 	database.cache.publishDocument("db-"+col, MsgTypeDBCreated, doc)
 
@@ -116,7 +111,7 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 		sortBy["_id"] = -1
 	}
 
-	conf, auth, err := extract(r, true)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -140,7 +135,7 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 		case permGroup:
 			filter = bson.M{"accountId": auth.AccountID}
 		case permOwner:
-			filter = bson.M{"accountId": auth.AccountID, fieldOwnerID: auth.UserID}
+			filter = bson.M{internal.FieldAccountID: auth.AccountID, internal.FieldOwnerID: auth.UserID}
 		}
 	}
 
@@ -178,8 +173,8 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 		}
 
 		result["id"] = result["_id"]
-		delete(result, fieldID)
-		delete(result, fieldOwnerID)
+		delete(result, internal.FieldID)
+		delete(result, internal.FieldOwnerID)
 
 		results = append(results, result)
 	}
@@ -198,7 +193,7 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (database *Database) get(w http.ResponseWriter, r *http.Request) {
-	conf, auth, err := extract(r, true)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -218,16 +213,16 @@ func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{fieldID: oid}
+	filter := bson.M{internal.FieldID: oid}
 
 	// if they're not root and repo is not public
 	if !strings.HasPrefix(col, "pub_") && auth.Role < 100 {
 		switch readPermission(col) {
 		case permGroup:
-			filter[fieldAccountID] = auth.AccountID
+			filter[internal.FieldAccountID] = auth.AccountID
 		case permOwner:
-			filter[fieldAccountID] = auth.AccountID
-			filter[fieldOwnerID] = auth.UserID
+			filter[internal.FieldAccountID] = auth.AccountID
+			filter[internal.FieldOwnerID] = auth.UserID
 		}
 	}
 
@@ -243,8 +238,8 @@ func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result["id"] = result["_id"]
-	delete(result, fieldID)
-	delete(result, fieldOwnerID)
+	delete(result, internal.FieldID)
+	delete(result, internal.FieldOwnerID)
 
 	respond(w, http.StatusOK, result)
 }
@@ -305,7 +300,7 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 
 	page, size := getPagination(r.URL)
 
-	conf, auth, err := extract(r, true)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		fmt.Println("error extracting conf and auth", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -328,10 +323,10 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(col, "pub_") == false && auth.Role < 100 {
 		switch readPermission(col) {
 		case permGroup:
-			filter[fieldAccountID] = auth.AccountID
+			filter[internal.FieldAccountID] = auth.AccountID
 		case permOwner:
-			filter[fieldAccountID] = auth.AccountID
-			filter[fieldOwnerID] = auth.UserID
+			filter[internal.FieldAccountID] = auth.AccountID
+			filter[internal.FieldOwnerID] = auth.UserID
 		}
 
 	}
@@ -382,8 +377,8 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 		}
 
 		result["id"] = result["_id"]
-		delete(result, fieldID)
-		delete(result, fieldOwnerID)
+		delete(result, internal.FieldID)
+		delete(result, internal.FieldOwnerID)
 
 		results = append(results, result)
 	}
@@ -403,7 +398,7 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 }
 
 func (database *Database) update(w http.ResponseWriter, r *http.Request) {
-	conf, auth, err := extract(r, true)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -436,20 +431,20 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	delete(doc, "id")
-	delete(doc, fieldID)
-	delete(doc, fieldAccountID)
-	delete(doc, fieldOwnerID)
+	delete(doc, internal.FieldID)
+	delete(doc, internal.FieldAccountID)
+	delete(doc, internal.FieldOwnerID)
 
-	filter := bson.M{fieldID: oid}
+	filter := bson.M{internal.FieldID: oid}
 
 	// if they are not "root", we use permission
 	if auth.Role < 100 {
 		switch writePermission(col) {
 		case permGroup:
-			filter[fieldAccountID] = auth.AccountID
+			filter[internal.FieldAccountID] = auth.AccountID
 		case permOwner:
-			filter[fieldAccountID] = auth.AccountID
-			filter[fieldOwnerID] = auth.UserID
+			filter[internal.FieldAccountID] = auth.AccountID
+			filter[internal.FieldOwnerID] = auth.UserID
 		}
 	}
 
@@ -478,7 +473,7 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result["id"] = result["_id"]
-	delete(result, fieldID)
+	delete(result, internal.FieldID)
 
 	database.cache.publishDocument("db-"+col, MsgTypeDBUpdated, result)
 
@@ -486,7 +481,7 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (database *Database) del(w http.ResponseWriter, r *http.Request) {
-	conf, auth, err := extract(r, true)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -506,16 +501,16 @@ func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{fieldID: oid}
+	filter := bson.M{internal.FieldID: oid}
 
 	// if they're not root
 	if auth.Role < 100 {
 		switch writePermission(col) {
 		case permGroup:
-			filter[fieldAccountID] = auth.AccountID
+			filter[internal.FieldAccountID] = auth.AccountID
 		case permOwner:
-			filter[fieldAccountID] = auth.AccountID
-			filter[fieldOwnerID] = auth.UserID
+			filter[internal.FieldAccountID] = auth.AccountID
+			filter[internal.FieldOwnerID] = auth.UserID
 
 		}
 	}
@@ -536,7 +531,7 @@ func (database *Database) newID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (database *Database) listCollections(w http.ResponseWriter, r *http.Request) {
-	conf, _, err := extract(r, true)
+	conf, _, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

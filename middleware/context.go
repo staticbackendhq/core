@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ const (
 	ContextBase
 )
 
-func extract(r *http.Request, withAuth bool) (BaseConfig, Auth, error) {
+func Extract(r *http.Request, withAuth bool) (BaseConfig, Auth, error) {
 	ctx := r.Context()
 	conf, ok := ctx.Value(ContextBase).(BaseConfig)
 	if !ok {

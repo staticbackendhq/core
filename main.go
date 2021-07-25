@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"staticbackend/middleware"
 	"staticbackend/realtime"
 	"time"
 
@@ -47,7 +48,7 @@ func main() {
 
 	// Server Send Event, alternative to websocket
 	b := realtime.NewBroker(func(ctx context.Context, key string) (string, error) {
-		if _, err := validateAuthKey(ctx, key); err != nil {
+		if _, err := middleware.ValidateAuthKey(client, ctx, key); err != nil {
 			return "", err
 		}
 		return key, nil
@@ -58,38 +59,54 @@ func main() {
 		cache:  cache,
 	}
 
-	http.Handle("/login", chain(http.HandlerFunc(login), withDB, cors))
-	http.Handle("/register", chain(http.HandlerFunc(register), withDB, cors))
-	http.Handle("/email", chain(http.HandlerFunc(emailExists), withDB, cors))
-	http.Handle("/setrole", chain(http.HandlerFunc(setRole), withDB))
+	pubWithDB := []middleware.Middleware{
+		middleware.Cors(),
+		middleware.WithDB(client),
+	}
 
-	http.Handle("/sudogettoken/", chain(http.HandlerFunc(sudoGetTokenFromAccountID), requireRoot, withDB))
+	stdAuth := []middleware.Middleware{
+		middleware.Cors(),
+		middleware.RequireAuth(client),
+		middleware.WithDB(client),
+	}
+
+	stdRoot := []middleware.Middleware{
+		middleware.RequireRoot(client),
+		middleware.WithDB(client),
+	}
+
+	http.Handle("/login", middleware.Chain(http.HandlerFunc(login), pubWithDB...))
+	http.Handle("/register", middleware.Chain(http.HandlerFunc(register), pubWithDB...))
+	http.Handle("/email", middleware.Chain(http.HandlerFunc(emailExists), pubWithDB...))
+	//http.Handle("/setrole", chain(http.HandlerFunc(setRole), withDB))
+
+	http.Handle("/sudogettoken/", middleware.Chain(http.HandlerFunc(sudoGetTokenFromAccountID), stdRoot...))
 
 	// database routes
-	http.Handle("/db/", chain(http.HandlerFunc(database.dbreq), auth, withDB, cors))
-	http.Handle("/query/", chain(http.HandlerFunc(database.query), auth, withDB, cors))
-	http.Handle("/sudoquery/", chain(http.HandlerFunc(database.query), requireRoot, withDB, cors))
-	http.Handle("/sudolistall/", chain(http.HandlerFunc(database.listCollections), requireRoot, withDB, cors))
-	http.Handle("/sudo/", chain(http.HandlerFunc(database.dbreq), requireRoot, withDB, cors))
-	http.Handle("/newid", chain(http.HandlerFunc(database.newID), auth, withDB, cors))
+	http.Handle("/db/", middleware.Chain(http.HandlerFunc(database.dbreq), stdAuth...))
+	http.Handle("/query/", middleware.Chain(http.HandlerFunc(database.query), stdAuth...))
+	http.Handle("/sudoquery/", middleware.Chain(http.HandlerFunc(database.query), stdRoot...))
+	http.Handle("/sudolistall/", middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...))
+	http.Handle("/sudo/", middleware.Chain(http.HandlerFunc(database.dbreq), stdRoot...))
+	http.Handle("/newid", middleware.Chain(http.HandlerFunc(database.newID), stdAuth...))
 
 	// forms routes
-	http.Handle("/postform/", chain(http.HandlerFunc(submitForm), withDB, cors))
-	http.Handle("/form", chain(http.HandlerFunc(listForm), requireRoot, withDB, cors))
+	http.Handle("/postform/", middleware.Chain(http.HandlerFunc(submitForm), pubWithDB...))
+	http.Handle("/form", middleware.Chain(http.HandlerFunc(listForm), stdRoot...))
 
 	// storage
-	http.Handle("/storage/upload", chain(http.HandlerFunc(upload), auth, withDB, cors))
-	http.Handle("/sudostorage/delete", chain(http.HandlerFunc(deleteFile), requireRoot, withDB))
+	http.Handle("/storage/upload", middleware.Chain(http.HandlerFunc(upload), stdAuth...))
+	http.Handle("/sudostorage/delete", middleware.Chain(http.HandlerFunc(deleteFile), stdRoot...))
 
 	// sudo actions
-	http.Handle("/sudo/sendmail", chain(http.HandlerFunc(sudoSendMail), requireRoot, withDB))
-	http.Handle("/sudo/cache", chain(http.HandlerFunc(sudoCache), requireRoot))
+	http.Handle("/sudo/sendmail", middleware.Chain(http.HandlerFunc(sudoSendMail), stdRoot...))
+	http.Handle("/sudo/cache", middleware.Chain(http.HandlerFunc(sudoCache), stdRoot...))
 
 	// account
 	acct := &accounts{}
-	http.Handle("/account/init", chain(http.HandlerFunc(acct.create), cors))
-	http.Handle("/account/auth", chain(http.HandlerFunc(acct.auth), requireRoot, withDB, cors))
-	http.Handle("/account/portal", chain(http.HandlerFunc(acct.portal), requireRoot, withDB, cors))
+	http.Handle("/account/init", middleware.Chain(http.HandlerFunc(acct.create), pubWithDB...))
+	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
+	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))
 
 	// stripe webhooks
 	swh := stripeWebhook{}
@@ -101,7 +118,7 @@ func main() {
 		serveWs(hub, w, r)
 	})
 
-	http.Handle("/sse/connect", chain(http.HandlerFunc(b.Accept), withDB, cors))
+	http.Handle("/sse/connect", middleware.Chain(http.HandlerFunc(b.Accept), pubWithDB...))
 	receiveMessage := func(w http.ResponseWriter, r *http.Request) {
 		var msg realtime.Command
 		if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
@@ -113,7 +130,7 @@ func main() {
 
 		respond(w, http.StatusOK, true)
 	}
-	http.Handle("/sse/msg", chain(http.HandlerFunc(receiveMessage), cors))
+	http.Handle("/sse/msg", middleware.Chain(http.HandlerFunc(receiveMessage), pubWithDB...))
 
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }
@@ -136,16 +153,6 @@ func openDatabase(dbHost string) error {
 
 	client = cl
 	return nil
-}
-
-type chainer func(h http.Handler) http.Handler
-
-func chain(h http.Handler, middlewares ...chainer) http.Handler {
-	next := h
-	for _, m := range middlewares {
-		next = m(next)
-	}
-	return next
 }
 
 func ping(w http.ResponseWriter, r *http.Request) {

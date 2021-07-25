@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"net/http"
+	"staticbackend/internal"
+	"staticbackend/middleware"
 	"strings"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 )
 
 func submitForm(w http.ResponseWriter, r *http.Request) {
-	conf, _, err := extract(r, false)
+	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -59,7 +61,7 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func listForm(w http.ResponseWriter, r *http.Request) {
-	conf, _, err := extract(r, true)
+	conf, _, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -69,7 +71,7 @@ func listForm(w http.ResponseWriter, r *http.Request) {
 
 	opt := options.Find()
 	opt.SetLimit(100)
-	opt.SetSort(bson.M{fieldID: -1})
+	opt.SetSort(bson.M{internal.FieldID: -1})
 
 	filter := bson.M{}
 	if fn := r.URL.Query().Get("name"); len(fn) > 0 {
@@ -94,7 +96,7 @@ func listForm(w http.ResponseWriter, r *http.Request) {
 		}
 
 		result["id"] = result["_id"]
-		delete(result, fieldID)
+		delete(result, internal.FieldID)
 
 		results = append(results, result)
 	}

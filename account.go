@@ -10,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"staticbackend/internal"
+	"staticbackend/middleware"
+
 	"github.com/stripe/stripe-go/v71"
 	"github.com/stripe/stripe-go/v71/billingportal/session"
 	"github.com/stripe/stripe-go/v71/customer"
@@ -26,16 +29,6 @@ var (
 )
 
 type accounts struct{}
-
-type Customer struct {
-	ID               primitive.ObjectID `bson:"_id" json:"id"`
-	Email            string             `bson:"email" json:"email"`
-	StripeID         string             `bson:"stripeId" json:"stripeId"`
-	SubscriptionID   string             `bson:"subId" json:"subId"`
-	IsActive         bool               `bson:"active" json:"-"`
-	MonthlyEmailSent int                `bson:"mes" json:"-"`
-	Created          time.Time          `bson:"created" json:"created"`
-}
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(r.URL.Query().Get("email"))
@@ -90,7 +83,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	// create the account
 	acctID := primitive.NewObjectID()
-	doc := Customer{
+	doc := internal.Customer{
 		ID:             acctID,
 		Email:          email,
 		StripeID:       stripeCustomerID,
@@ -98,7 +91,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Created:        time.Now(),
 	}
 
-	if _, err := db.Collection("accounts").InsertOne(ctx, doc); err != nil {
+	if err := internal.CreateAccount(db, doc); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -119,7 +112,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		break
 	}
 
-	base := BaseConfig{
+	base := middleware.BaseConfig{
 		ID:        primitive.NewObjectID(),
 		SBID:      acctID,
 		Name:      dbName,
@@ -156,9 +149,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		signUpURL = s.URL
 	}
 
-	sr := db.Collection("sb_tokens").FindOne(context.Background(), bson.M{"email": email})
-	var token Token
-	if err := sr.Decode(&token); err != nil {
+	token, err := internal.FindTokenByEmail(db, email)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -194,7 +186,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *accounts) auth(w http.ResponseWriter, r *http.Request) {
-	_, auth, err := extract(r, true)
+	_, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -204,7 +196,7 @@ func (a *accounts) auth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
-	conf, _, err := extract(r, true)
+	conf, _, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -212,10 +204,8 @@ func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 
 	db := client.Database("sbsys")
 
-	var cus Customer
-	filter := bson.M{fieldID: conf.SBID}
-	sr := db.Collection("accounts").FindOne(context.Background(), filter)
-	if err := sr.Decode(&cus); err != nil {
+	cus, err := internal.FindAccount(db, conf.SBID)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

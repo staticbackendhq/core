@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"staticbackend/middleware"
 	"strings"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -121,7 +122,7 @@ func (h *Hub) getTargets(msg Command) (sockets []*Socket, payload Command) {
 		payload.Data = "echo: " + msg.Data
 	case MsgTypeAuth:
 		sockets = append(sockets, sender)
-		var pl JWTPayload
+		var pl middleware.JWTPayload
 		if _, err := jwt.Verify([]byte(msg.Data), hs, &pl); err != nil {
 			payload = Command{Type: MsgTypeError, Data: "invalid token"}
 			return

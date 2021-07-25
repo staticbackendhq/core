@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"staticbackend/middleware"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,25 +21,6 @@ import (
 	"github.com/gbrlsnchs/jwt/v3"
 )
 
-type Account struct {
-	ID    primitive.ObjectID `bson:"_id" json:"id"`
-	Email string             `bson:"email" json:"email"`
-}
-
-type Token struct {
-	ID        primitive.ObjectID `bson:"_id" json:"id"`
-	AccountID primitive.ObjectID `bson:"accountId" json:"accountId"`
-	Token     string             `bson:"token" json:"token"`
-	Email     string             `bson:"email" json:"email"`
-	Password  string             `bson:"pw" json:"-"`
-	Role      int                `bson:"role" json:"role"`
-}
-
-type Login struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 func emailExists(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(r.URL.Query().Get("e"))
 	if len(email) == 0 {
@@ -45,8 +28,8 @@ func emailExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
 		return
 	}
@@ -64,8 +47,8 @@ func emailExists(w http.ResponseWriter, r *http.Request) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
 		return
 	}
