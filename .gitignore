@@ -1,7 +1,6 @@
-.setenv.sh
 .env
 mongodata/
-staticbackend
+cmd/staticbackend
 
 # Binaries for programs and plugins
 *.exe

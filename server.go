@@ -1,4 +1,4 @@
-package main
+package staticbackend
 
 import (
 	"context"
@@ -8,9 +8,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"staticbackend/internal"
 	"staticbackend/middleware"
 	"staticbackend/realtime"
 	"time"
+
+	"staticbackend/cache"
 
 	"github.com/stripe/stripe-go/v71"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -24,12 +27,13 @@ const (
 )
 
 var (
-	client *mongo.Client
-	cache  *Cache
-	AppEnv = os.Getenv("APP_ENV")
+	client   *mongo.Client
+	volatile *cache.Cache
+	AppEnv   = os.Getenv("APP_ENV")
 )
 
-func main() {
+// Start starts the web server and all dependencies services
+func Start() {
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
 	dbHost := flag.String("host", "localhost", "Hostname for mongodb")
@@ -40,10 +44,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cache = NewCache()
+	volatile = cache.NewCache()
 
 	// websockets
-	hub := newHub(cache)
+	hub := newHub(volatile)
 	go hub.run()
 
 	// Server Send Event, alternative to websocket
@@ -56,7 +60,7 @@ func main() {
 
 	database := &Database{
 		client: client,
-		cache:  cache,
+		cache:  volatile,
 	}
 
 	pubWithDB := []middleware.Middleware{
@@ -120,7 +124,7 @@ func main() {
 
 	http.Handle("/sse/connect", middleware.Chain(http.HandlerFunc(b.Accept), pubWithDB...))
 	receiveMessage := func(w http.ResponseWriter, r *http.Request) {
-		var msg realtime.Command
+		var msg internal.Command
 		if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -168,7 +172,7 @@ func ping(w http.ResponseWriter, r *http.Request) {
 func sudoCache(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		key := r.URL.Query().Get("key")
-		val, err := cache.Get(key)
+		val, err := volatile.Get(key)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -185,7 +189,7 @@ func sudoCache(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := cache.Set(data.Key, data.Value); err != nil {
+		if err := volatile.Set(data.Key, data.Value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

@@ -1,4 +1,4 @@
-package main
+package staticbackend
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"html"
 	"html/template"
 	"net/http"
+	"staticbackend/internal"
+	"staticbackend/middleware"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -188,7 +190,7 @@ func sudoSendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, _, err := extract(r, false)
+	config, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -198,7 +200,7 @@ func sudoSendMail(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	filter := bson.M{fieldID: config.SBID}
+	filter := bson.M{internal.FieldID: config.SBID}
 	update := bson.M{"$inc": bson.M{"mes": 1}}
 	if _, err := db.Collection("accounts").UpdateOne(ctx, filter, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

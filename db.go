@@ -1,4 +1,4 @@
-package main
+package staticbackend
 
 import (
 	"context"
@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 	"strconv"
 	"strings"
 	"time"
+
+	"staticbackend/cache"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,7 +22,7 @@ import (
 
 type Database struct {
 	client *mongo.Client
-	cache  *Cache
+	cache  *cache.Cache
 }
 
 func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +92,7 @@ func (database *Database) add(w http.ResponseWriter, r *http.Request) {
 	doc["id"] = doc[internal.FieldID]
 	delete(doc, internal.FieldID)
 
-	database.cache.publishDocument("db-"+col, MsgTypeDBCreated, doc)
+	database.cache.PublishDocument("db-"+col, internal.MsgTypeDBCreated, doc)
 
 	respond(w, http.StatusCreated, doc)
 }
@@ -131,10 +132,10 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 
 	// if they're not root
 	if !strings.HasPrefix(col, "pub_") && auth.Role < 100 {
-		switch readPermission(col) {
-		case permGroup:
+		switch internal.ReadPermission(col) {
+		case internal.PermGroup:
 			filter = bson.M{"accountId": auth.AccountID}
-		case permOwner:
+		case internal.PermOwner:
 			filter = bson.M{internal.FieldAccountID: auth.AccountID, internal.FieldOwnerID: auth.UserID}
 		}
 	}
@@ -217,10 +218,10 @@ func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 
 	// if they're not root and repo is not public
 	if !strings.HasPrefix(col, "pub_") && auth.Role < 100 {
-		switch readPermission(col) {
-		case permGroup:
+		switch internal.ReadPermission(col) {
+		case internal.PermGroup:
 			filter[internal.FieldAccountID] = auth.AccountID
-		case permOwner:
+		case internal.PermOwner:
 			filter[internal.FieldAccountID] = auth.AccountID
 			filter[internal.FieldOwnerID] = auth.UserID
 		}
@@ -321,10 +322,10 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 
 	// either not a public repo or not root
 	if strings.HasPrefix(col, "pub_") == false && auth.Role < 100 {
-		switch readPermission(col) {
-		case permGroup:
+		switch internal.ReadPermission(col) {
+		case internal.PermGroup:
 			filter[internal.FieldAccountID] = auth.AccountID
-		case permOwner:
+		case internal.PermOwner:
 			filter[internal.FieldAccountID] = auth.AccountID
 			filter[internal.FieldOwnerID] = auth.UserID
 		}
@@ -439,10 +440,10 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 
 	// if they are not "root", we use permission
 	if auth.Role < 100 {
-		switch writePermission(col) {
-		case permGroup:
+		switch internal.WritePermission(col) {
+		case internal.PermGroup:
 			filter[internal.FieldAccountID] = auth.AccountID
-		case permOwner:
+		case internal.PermOwner:
 			filter[internal.FieldAccountID] = auth.AccountID
 			filter[internal.FieldOwnerID] = auth.UserID
 		}
@@ -475,7 +476,7 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 	result["id"] = result["_id"]
 	delete(result, internal.FieldID)
 
-	database.cache.publishDocument("db-"+col, MsgTypeDBUpdated, result)
+	database.cache.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
 
 	respond(w, http.StatusOK, result)
 }
@@ -505,10 +506,10 @@ func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 
 	// if they're not root
 	if auth.Role < 100 {
-		switch writePermission(col) {
-		case permGroup:
+		switch internal.WritePermission(col) {
+		case internal.PermGroup:
 			filter[internal.FieldAccountID] = auth.AccountID
-		case permOwner:
+		case internal.PermOwner:
 			filter[internal.FieldAccountID] = auth.AccountID
 			filter[internal.FieldOwnerID] = auth.UserID
 
@@ -521,7 +522,7 @@ func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	database.cache.publishDocument("db-"+col, MsgTypeDBDeleted, id)
+	database.cache.PublishDocument("db-"+col, internal.MsgTypeDBDeleted, id)
 	respond(w, http.StatusOK, res.DeletedCount)
 }
 
@@ -577,78 +578,4 @@ func getPagination(u *url.URL) (page int64, size int64) {
 	}
 
 	return
-}
-
-type permissionLevel int
-
-const (
-	permOwner permissionLevel = iota
-	permGroup
-	permEveryone
-)
-
-func getPermission(col string) (owner string, group string, everyone string) {
-	// default permission
-	owner, group, everyone = "7", "4", "0"
-
-	re := regexp.MustCompile(`_\d\d\d_$`)
-	if re.MatchString(col) == false {
-		return
-	}
-
-	results := re.FindAllString(col, -1)
-	if len(results) != 1 {
-		return
-	}
-
-	perm := strings.Replace(results[0], "_", "", -1)
-
-	if len(perm) != 3 {
-		return
-	}
-
-	owner = string(perm[0])
-	group = string(perm[1])
-	everyone = string(perm[2])
-	return
-}
-
-func writePermission(col string) permissionLevel {
-	_, g, e := getPermission(col)
-
-	if canWrite(e) {
-		return permEveryone
-	}
-	if canWrite(g) {
-		return permGroup
-	}
-	return permOwner
-}
-
-func readPermission(col string) permissionLevel {
-	_, g, e := getPermission(col)
-
-	if canRead(e) {
-		return permEveryone
-	}
-	if canRead(g) {
-		return permGroup
-	}
-	return permOwner
-}
-
-func canWrite(s string) bool {
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		return false
-	}
-	return uint8(i)&uint8(2) != 0
-}
-
-func canRead(s string) bool {
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return uint8(i)&uint8(4) != 0
 }

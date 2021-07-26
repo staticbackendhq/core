@@ -1,10 +1,12 @@
-package main
+package staticbackend
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"staticbackend/internal"
+	"staticbackend/middleware"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,7 +22,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, auth, err := extract(r, true)
+	config, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -112,7 +114,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteFile(w http.ResponseWriter, r *http.Request) {
-	config, _, err := extract(r, false)
+	config, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -129,7 +131,7 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	var result bson.M
 
-	filter := bson.M{fieldID: oid}
+	filter := bson.M{internal.FieldID: oid}
 
 	sr := db.Collection("sb_files").FindOne(ctx, filter)
 	if err := sr.Decode(&result); err != nil {

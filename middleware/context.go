@@ -3,6 +3,8 @@ package middleware
 import (
 	"errors"
 	"net/http"
+
+	"staticbackend/internal"
 )
 
 type ContextKey int
@@ -12,16 +14,16 @@ const (
 	ContextBase
 )
 
-func Extract(r *http.Request, withAuth bool) (BaseConfig, Auth, error) {
+func Extract(r *http.Request, withAuth bool) (internal.BaseConfig, internal.Auth, error) {
 	ctx := r.Context()
-	conf, ok := ctx.Value(ContextBase).(BaseConfig)
+	conf, ok := ctx.Value(ContextBase).(internal.BaseConfig)
 	if !ok {
-		return BaseConfig{}, Auth{}, errors.New("could not find config")
+		return internal.BaseConfig{}, internal.Auth{}, errors.New("could not find config")
 	}
 
-	auth, ok := ctx.Value(ContextAuth).(Auth)
+	auth, ok := ctx.Value(ContextAuth).(internal.Auth)
 	if !ok && withAuth {
-		return BaseConfig{}, Auth{}, errors.New("invalid StaticBackend key")
+		return internal.BaseConfig{}, internal.Auth{}, errors.New("invalid StaticBackend key")
 	}
 
 	return conf, auth, nil

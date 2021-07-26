@@ -1,10 +1,11 @@
-package main
+package staticbackend
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"staticbackend/internal"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -70,7 +71,7 @@ func (wh *stripeWebhook) sourceCreated(params interface{}) error {
 	db := client.Database("sbsys")
 	ctx := context.Background()
 
-	var acct Customer
+	var acct internal.Customer
 	sr := db.Collection("accounts").FindOne(ctx, bson.M{"stripeId": stripeID})
 	if err := sr.Decode(&acct); err != nil {
 		return err
@@ -92,7 +93,7 @@ func (wh *stripeWebhook) sourceCreated(params interface{}) error {
 		return err
 	}
 
-	filter = bson.M{fieldAccountID: acct.ID}
+	filter = bson.M{internal.FieldAccountID: acct.ID}
 	res = db.Collection("bases").FindOneAndUpdate(ctx, filter, update)
 	return res.Err()
 }

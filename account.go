@@ -1,4 +1,4 @@
-package main
+package staticbackend
 
 import (
 	"context"
@@ -112,7 +112,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		break
 	}
 
-	base := middleware.BaseConfig{
+	base := internal.BaseConfig{
 		ID:        primitive.NewObjectID(),
 		SBID:      acctID,
 		Name:      dbName,

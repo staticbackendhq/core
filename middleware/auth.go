@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"staticbackend/internal"
@@ -19,24 +18,6 @@ const (
 	RootRole = 100
 )
 
-// Auth represents an authenticated user.
-type Auth struct {
-	AccountID primitive.ObjectID
-	UserID    primitive.ObjectID
-	Email     string
-	Role      int
-}
-
-// JWTPayload contains the current user token
-type JWTPayload struct {
-	jwt.Payload
-	Token string `json:"token,omitempty"`
-}
-
-var hs = jwt.NewHS256([]byte(os.Getenv("JWT_SECRET")))
-
-var tokens map[string]Auth = make(map[string]Auth)
-
 func RequireAuth(client *mongo.Client) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +27,7 @@ func RequireAuth(client *mongo.Client) Middleware {
 				// if they requested a public repo we let them continue
 				// to next security check.
 				if strings.HasPrefix(r.URL.Path, "/db/pub_") || strings.HasPrefix(r.URL.Path, "/query/pub_") {
-					a := Auth{
+					a := internal.Auth{
 						AccountID: primitive.NewObjectID(),
 						UserID:    primitive.NewObjectID(),
 						Email:     "",
@@ -86,22 +67,22 @@ func RequireAuth(client *mongo.Client) Middleware {
 	}
 }
 
-func ValidateAuthKey(client *mongo.Client, ctx context.Context, key string) (Auth, error) {
-	a := Auth{}
+func ValidateAuthKey(client *mongo.Client, ctx context.Context, key string) (internal.Auth, error) {
+	a := internal.Auth{}
 
-	var pl JWTPayload
-	if _, err := jwt.Verify([]byte(key), hs, &pl); err != nil {
+	var pl internal.JWTPayload
+	if _, err := jwt.Verify([]byte(key), internal.HashSecret, &pl); err != nil {
 		return a, fmt.Errorf("could not verify your authentication token: %s", err.Error())
 	}
 
-	conf, ok := ctx.Value(ContextBase).(BaseConfig)
+	conf, ok := ctx.Value(ContextBase).(internal.BaseConfig)
 	if !ok {
 		return a, fmt.Errorf("invalid StaticBackend public token")
 	}
 
 	db := client.Database(conf.Name)
 
-	auth, ok := tokens[pl.Token]
+	auth, ok := internal.Tokens[pl.Token]
 	if ok {
 		return auth, nil
 	}
@@ -121,13 +102,13 @@ func ValidateAuthKey(client *mongo.Client, ctx context.Context, key string) (Aut
 		return a, fmt.Errorf("error retrieving your token: %s", err.Error())
 	}
 
-	a = Auth{
+	a = internal.Auth{
 		AccountID: token.AccountID,
 		UserID:    token.ID,
 		Email:     token.Email,
 		Role:      token.Role,
 	}
-	tokens[pl.Token] = a
+	internal.Tokens[pl.Token] = a
 
 	return a, nil
 }
@@ -171,7 +152,7 @@ func RequireRoot(client *mongo.Client) Middleware {
 			token := parts[2]
 
 			ctx := r.Context()
-			conf, ok := ctx.Value(ContextBase).(BaseConfig)
+			conf, ok := ctx.Value(ContextBase).(internal.BaseConfig)
 			if !ok {
 				http.Error(w, "invalid StaticBackend public key", http.StatusUnauthorized)
 				return
@@ -188,7 +169,7 @@ func RequireRoot(client *mongo.Client) Middleware {
 				return
 			}
 
-			a := Auth{
+			a := internal.Auth{
 				AccountID: tok.AccountID,
 				UserID:    tok.ID,
 				Email:     tok.Email,

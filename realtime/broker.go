@@ -6,50 +6,25 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"staticbackend/internal"
 	"strings"
 
 	"github.com/google/uuid"
 )
 
-const (
-	SystemID = "sb"
-
-	MsgTypeError     = "error"
-	MsgTypeOk        = "ok"
-	MsgTypeEcho      = "echo"
-	MsgTypeInit      = "init"
-	MsgTypeAuth      = "auth"
-	MsgTypeToken     = "token"
-	MsgTypeJoin      = "join"
-	MsgTypeJoined    = "joined"
-	MsgTypeChanIn    = "chan_in"
-	MsgTypeChanOut   = "chan_out"
-	MsgTypeDBCreated = "db_created"
-	MsgTypeDBUpdated = "db_updated"
-	MsgTypeDBDeleted = "db_deleted"
-)
-
-type Command struct {
-	SID     string `json:"sid"`
-	Type    string `json:"type"`
-	Data    string `json:"data"`
-	Channel string `json:"channel"`
-	Token   string `json:"token"`
-}
-
 type Validator func(context.Context, string) (string, error)
 
 type ConnectionData struct {
 	ctx      context.Context
-	messages chan Command
+	messages chan internal.Command
 }
 
 type Broker struct {
-	Broadcast          chan Command
+	Broadcast          chan internal.Command
 	newConnections     chan ConnectionData
-	closingConnections chan chan Command
-	clients            map[chan Command]string
-	ids                map[string]chan Command
+	closingConnections chan chan internal.Command
+	clients            map[chan internal.Command]string
+	ids                map[string]chan internal.Command
 	conf               map[string]context.Context
 	subscriptions      map[string][]string
 	validateAuth       Validator
@@ -57,11 +32,11 @@ type Broker struct {
 
 func NewBroker(v Validator) *Broker {
 	b := &Broker{
-		Broadcast:          make(chan Command, 1),
+		Broadcast:          make(chan internal.Command, 1),
 		newConnections:     make(chan ConnectionData),
-		closingConnections: make(chan chan Command),
-		clients:            make(map[chan Command]string),
-		ids:                make(map[string]chan Command),
+		closingConnections: make(chan chan internal.Command),
+		clients:            make(map[chan internal.Command]string),
+		ids:                make(map[string]chan internal.Command),
 		conf:               make(map[string]context.Context),
 		subscriptions:      make(map[string][]string),
 		validateAuth:       v,
@@ -85,8 +60,8 @@ func (b *Broker) start() {
 			b.ids[id.String()] = data.messages
 			b.conf[id.String()] = data.ctx
 
-			msg := Command{
-				Type: MsgTypeInit,
+			msg := internal.Command{
+				Type: internal.MsgTypeInit,
 				Data: id.String(),
 			}
 
@@ -102,7 +77,7 @@ func (b *Broker) start() {
 	}
 }
 
-func (b *Broker) unsub(c chan Command) {
+func (b *Broker) unsub(c chan internal.Command) {
 	defer delete(b.clients, c)
 
 	id, ok := b.clients[c]
@@ -128,7 +103,7 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 	//w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// each connection has their own message channel
-	messages := make(chan Command)
+	messages := make(chan internal.Command)
 	data := ConnectionData{
 		ctx:      r.Context(),
 		messages: messages,
@@ -164,8 +139,8 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (b *Broker) getTargets(msg Command) (sockets []chan Command, payload Command) {
-	if msg.SID != SystemID {
+func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Command, payload internal.Command) {
+	if msg.SID != internal.SystemID {
 		sender, ok := b.ids[msg.SID]
 		if !ok {
 			fmt.Println("cannot find sender socket", msg.SID)
@@ -175,23 +150,23 @@ func (b *Broker) getTargets(msg Command) (sockets []chan Command, payload Comman
 	}
 
 	switch msg.Type {
-	case MsgTypeEcho:
+	case internal.MsgTypeEcho:
 		payload = msg
 		payload.Data = "echo: " + msg.Data
-	case MsgTypeAuth:
+	case internal.MsgTypeAuth:
 		ctx, ok := b.conf[msg.SID]
 		if !ok {
-			payload = Command{Type: MsgTypeError, Data: "invalid request"}
+			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid request"}
 			return
 		}
 
 		if _, err := b.validateAuth(ctx, msg.Data); err != nil {
-			payload = Command{Type: MsgTypeError, Data: "invalid token"}
+			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid token"}
 			return
 		}
 
-		payload = Command{Type: MsgTypeToken, Data: msg.Data}
-	case MsgTypeJoin:
+		payload = internal.Command{Type: internal.MsgTypeToken, Data: msg.Data}
+	case internal.MsgTypeJoin:
 		members, ok := b.subscriptions[msg.Data]
 		if !ok {
 			members = make([]string, 0)
@@ -200,14 +175,14 @@ func (b *Broker) getTargets(msg Command) (sockets []chan Command, payload Comman
 		members = append(members, msg.SID)
 		b.subscriptions[msg.Data] = members
 
-		payload = Command{Type: MsgTypeJoined, Data: msg.Data}
-	case MsgTypeChanIn:
+		payload = internal.Command{Type: internal.MsgTypeJoined, Data: msg.Data}
+	case internal.MsgTypeChanIn:
 		if len(msg.Channel) == 0 {
-			payload = Command{Type: MsgTypeError, Data: "no channel was specified"}
+			payload = internal.Command{Type: internal.MsgTypeError, Data: "no channel was specified"}
 			return
 		} else if strings.HasPrefix(strings.ToLower(msg.Channel), "db-") {
-			payload = Command{
-				Type: MsgTypeError,
+			payload = internal.Command{
+				Type: internal.MsgTypeError,
 				Data: "you cannot write to database channel",
 			}
 			return
@@ -215,9 +190,9 @@ func (b *Broker) getTargets(msg Command) (sockets []chan Command, payload Comman
 
 		go b.Publish(msg, msg.Channel)
 
-		payload = Command{Type: MsgTypeOk}
+		payload = internal.Command{Type: internal.MsgTypeOk}
 	default:
-		payload.Type = MsgTypeError
+		payload.Type = internal.MsgTypeError
 		payload.Data = fmt.Sprintf(`%s command not found`, msg.Type)
 	}
 
@@ -225,9 +200,9 @@ func (b *Broker) getTargets(msg Command) (sockets []chan Command, payload Comman
 }
 
 // Publish sends a message to all socket in that channel
-func (b *Broker) Publish(msg Command, channel string) {
-	if msg.Type == MsgTypeChanIn {
-		msg.Type = MsgTypeChanOut
+func (b *Broker) Publish(msg internal.Command, channel string) {
+	if msg.Type == internal.MsgTypeChanIn {
+		msg.Type = internal.MsgTypeChanOut
 	}
 
 	members, ok := b.subscriptions[channel]

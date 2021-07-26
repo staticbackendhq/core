@@ -1,10 +1,12 @@
-package main
+package cache
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"staticbackend/internal"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -18,9 +20,9 @@ type Cache struct {
 // NewCache returns an initiated Redis client
 func NewCache() *Cache {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:     os.Getenv("REDIS_HOST"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       0, // use default DB
 	})
 
 	return &Cache{
@@ -40,7 +42,7 @@ func (c *Cache) Set(key string, value string) error {
 	return nil
 }
 
-func (c *Cache) Subscribe(send chan Command, token, channel string, close chan bool) {
+func (c *Cache) Subscribe(send chan internal.Command, token, channel string, close chan bool) {
 	pubsub := c.Rdb.Subscribe(c.Ctx, channel)
 
 	if _, err := pubsub.Receive(c.Ctx); err != nil {
@@ -53,7 +55,7 @@ func (c *Cache) Subscribe(send chan Command, token, channel string, close chan b
 	for {
 		select {
 		case m := <-ch:
-			var msg Command
+			var msg internal.Command
 			if err := json.Unmarshal([]byte(m.Payload), &msg); err != nil {
 				log.Println("error parsing JSON message", err)
 				_ = pubsub.Close()
@@ -62,8 +64,8 @@ func (c *Cache) Subscribe(send chan Command, token, channel string, close chan b
 
 			// for non DB events we change the type to MsgTypeChanOut
 			if !msg.IsDBEvent() {
-				msg.Type = MsgTypeChanOut
-			} else if c.hasPermission(token, channel, msg.Data) == false {
+				msg.Type = internal.MsgTypeChanOut
+			} else if c.HasPermission(token, channel, msg.Data) == false {
 				continue
 			}
 			send <- msg
@@ -74,7 +76,7 @@ func (c *Cache) Subscribe(send chan Command, token, channel string, close chan b
 	}
 }
 
-func (c *Cache) Publish(msg Command) error {
+func (c *Cache) Publish(msg internal.Command) error {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -86,7 +88,7 @@ func (c *Cache) Publish(msg Command) error {
 	return c.Rdb.Publish(ctx, msg.Channel, string(b)).Err()
 }
 
-func (c *Cache) publishDocument(channel, typ string, v interface{}) {
+func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 	subs, err := c.Rdb.PubSubNumSub(c.Ctx, channel).Result()
 	if err != nil {
 		fmt.Println("error getting db subscribers for ", channel)
@@ -107,7 +109,7 @@ func (c *Cache) publishDocument(channel, typ string, v interface{}) {
 		return
 	}
 
-	msg := Command{
+	msg := internal.Command{
 		Channel: channel,
 		Data:    string(b),
 		Type:    typ,
@@ -118,8 +120,8 @@ func (c *Cache) publishDocument(channel, typ string, v interface{}) {
 	}
 }
 
-func (c *Cache) hasPermission(token, repo, payload string) bool {
-	me, ok := tokens[token]
+func (c *Cache) HasPermission(token, repo, payload string) bool {
+	me, ok := internal.Tokens[token]
 	if !ok {
 		return false
 	}
@@ -130,16 +132,16 @@ func (c *Cache) hasPermission(token, repo, payload string) bool {
 		return false
 	}
 
-	switch readPermission(repo) {
-	case permGroup:
-		acctID, ok := docs[fieldAccountID]
+	switch internal.ReadPermission(repo) {
+	case internal.PermGroup:
+		acctID, ok := docs[internal.FieldAccountID]
 		if !ok {
 			return false
 		}
 
 		return fmt.Sprintf("%v", acctID) == me.AccountID.Hex()
-	case permOwner:
-		owner, ok := docs[fieldOwnerID]
+	case internal.PermOwner:
+		owner, ok := docs[internal.FieldOwnerID]
 		if !ok {
 			return false
 		}

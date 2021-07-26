@@ -1,8 +1,9 @@
-package main
+package staticbackend
 
 import (
 	"fmt"
-	"staticbackend/middleware"
+	"staticbackend/cache"
+	"staticbackend/internal"
 	"strings"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -22,7 +23,7 @@ type Hub struct {
 	channels map[*Socket][]chan bool
 
 	// Inbound messages from the clients.
-	broadcast chan Command
+	broadcast chan internal.Command
 
 	// Register requests from the clients.
 	register chan *Socket
@@ -31,26 +32,18 @@ type Hub struct {
 	unregister chan *Socket
 
 	// Cache used for keys and pub/sub (Redis)
-	cache *Cache
+	volatile *cache.Cache
 }
 
-type Command struct {
-	SID     string `json:"sid"`
-	Type    string `json:"type"`
-	Data    string `json:"data"`
-	Channel string `json:"channel"`
-	Token   string `json:"token"`
-}
-
-func newHub(c *Cache) *Hub {
+func newHub(c *cache.Cache) *Hub {
 	return &Hub{
-		broadcast:  make(chan Command),
+		broadcast:  make(chan internal.Command),
 		register:   make(chan *Socket),
 		unregister: make(chan *Socket),
 		sockets:    make(map[*Socket]string),
 		ids:        make(map[string]*Socket),
 		channels:   make(map[*Socket][]chan bool),
-		cache:      c,
+		volatile:   c,
 	}
 }
 
@@ -61,7 +54,7 @@ func (h *Hub) run() {
 			h.sockets[sck] = sck.id
 			h.ids[sck.id] = sck
 
-			cmd := Command{
+			cmd := internal.Command{
 				Type: "init",
 				Data: sck.id,
 			}
@@ -94,47 +87,32 @@ func (h *Hub) run() {
 	}
 }
 
-const (
-	MsgTypeError     = "error"
-	MsgTypeOk        = "ok"
-	MsgTypeEcho      = "echo"
-	MsgTypeAuth      = "auth"
-	MsgTypeToken     = "token"
-	MsgTypeJoin      = "join"
-	MsgTypeJoined    = "joined"
-	MsgTypeChanIn    = "chan_in"
-	MsgTypeChanOut   = "chan_out"
-	MsgTypeDBCreated = "db_created"
-	MsgTypeDBUpdated = "db_updated"
-	MsgTypeDBDeleted = "db_deleted"
-)
-
-func (h *Hub) getTargets(msg Command) (sockets []*Socket, payload Command) {
+func (h *Hub) getTargets(msg internal.Command) (sockets []*Socket, payload internal.Command) {
 	sender, ok := h.ids[msg.SID]
 	if !ok {
 		return
 	}
 
 	switch msg.Type {
-	case MsgTypeEcho:
+	case internal.MsgTypeEcho:
 		sockets = append(sockets, sender)
 		payload = msg
 		payload.Data = "echo: " + msg.Data
-	case MsgTypeAuth:
+	case internal.MsgTypeAuth:
 		sockets = append(sockets, sender)
-		var pl middleware.JWTPayload
-		if _, err := jwt.Verify([]byte(msg.Data), hs, &pl); err != nil {
-			payload = Command{Type: MsgTypeError, Data: "invalid token"}
+		var pl internal.JWTPayload
+		if _, err := jwt.Verify([]byte(msg.Data), internal.HashSecret, &pl); err != nil {
+			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid token"}
 			return
 		}
 
-		_, ok := tokens[pl.Token]
+		_, ok := internal.Tokens[pl.Token]
 		if !ok {
-			payload = Command{Type: MsgTypeError, Data: "invalid token"}
+			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid token"}
 		} else {
-			payload = Command{Type: MsgTypeToken, Data: pl.Token}
+			payload = internal.Command{Type: internal.MsgTypeToken, Data: pl.Token}
 		}
-	case MsgTypeJoin:
+	case internal.MsgTypeJoin:
 		subs, ok := h.channels[sender]
 		if !ok {
 			subs = make([]chan bool, 0)
@@ -143,34 +121,34 @@ func (h *Hub) getTargets(msg Command) (sockets []*Socket, payload Command) {
 		closeSubChan := make(chan bool)
 		subs = append(subs, closeSubChan)
 
-		go h.cache.Subscribe(sender.send, msg.Token, msg.Data, closeSubChan)
+		go h.volatile.Subscribe(sender.send, msg.Token, msg.Data, closeSubChan)
 
 		sockets = append(sockets, sender)
-		payload = Command{Type: MsgTypeJoined, Data: msg.Data}
-	case MsgTypeChanIn:
+		payload = internal.Command{Type: internal.MsgTypeJoined, Data: msg.Data}
+	case internal.MsgTypeChanIn:
 		sockets = append(sockets, sender)
 
 		if len(msg.Channel) == 0 {
-			payload = Command{Type: MsgTypeError, Data: "no channel was specified"}
+			payload = internal.Command{Type: internal.MsgTypeError, Data: "no channel was specified"}
 			return
 		} else if strings.HasPrefix(strings.ToLower(msg.Channel), "db-") {
-			payload = Command{
-				Type: MsgTypeError,
+			payload = internal.Command{
+				Type: internal.MsgTypeError,
 				Data: "you cannot write to database channel",
 			}
 			return
 		}
 
-		if err := h.cache.Publish(msg); err != nil {
-			payload = Command{Type: MsgTypeError, Data: "unable to send your message"}
+		if err := h.volatile.Publish(msg); err != nil {
+			payload = internal.Command{Type: internal.MsgTypeError, Data: "unable to send your message"}
 			return
 		}
 
-		payload = Command{Type: MsgTypeOk}
+		payload = internal.Command{Type: internal.MsgTypeOk}
 	default:
 		sockets = append(sockets, sender)
 
-		payload.Type = MsgTypeError
+		payload.Type = internal.MsgTypeError
 		payload.Data = fmt.Sprintf(`%s command not found`, msg.Type)
 	}
 
@@ -191,12 +169,4 @@ func (h *Hub) unsub(sck *Socket) {
 		sub <- true
 		close(sub)
 	}
-}
-
-func (msg Command) IsDBEvent() bool {
-	switch msg.Type {
-	case MsgTypeDBCreated, MsgTypeDBUpdated, MsgTypeDBDeleted:
-		return true
-	}
-	return false
 }

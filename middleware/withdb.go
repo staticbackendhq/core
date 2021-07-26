@@ -4,22 +4,13 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"staticbackend/internal"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-type BaseConfig struct {
-	ID        primitive.ObjectID `bson:"_id" json:"id"`
-	SBID      primitive.ObjectID `bson:"accountId" json:"-"`
-	Name      string             `bson:"name" json:"name"`
-	Whitelist []string           `bson:"whitelist" json:"whitelist"`
-	Valid     bool               `bson:"valid" json:"valid"`
-}
-
-var bases map[string]BaseConfig = make(map[string]BaseConfig)
 
 func WithDB(client *mongo.Client) Middleware {
 	return func(next http.Handler) http.Handler {
@@ -39,7 +30,7 @@ func WithDB(client *mongo.Client) Middleware {
 
 			ctx := r.Context()
 
-			conf, ok := bases[key]
+			conf, ok := internal.Bases[key]
 			if ok {
 				ctx = context.WithValue(ctx, ContextBase, conf)
 			} else {

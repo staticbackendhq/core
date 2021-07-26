@@ -1,8 +1,9 @@
-package main
+package staticbackend
 
 import (
 	"log"
 	"net/http"
+	"staticbackend/internal"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,7 +45,7 @@ type Socket struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan Command
+	send chan internal.Command
 
 	// unique socket identifier
 	id string
@@ -64,7 +65,7 @@ func (c *Socket) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		var msg Command
+		var msg internal.Command
 		if err := c.conn.ReadJSON(&msg); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -117,7 +118,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-	sck := &Socket{hub: hub, conn: conn, send: make(chan Command), id: id.String()}
+	sck := &Socket{hub: hub, conn: conn, send: make(chan internal.Command), id: id.String()}
 	sck.hub.register <- sck
 
 	// Allow collection of memory referenced by the caller by doing all work in

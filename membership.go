@@ -1,4 +1,4 @@
-package main
+package staticbackend
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"staticbackend/internal"
 	"staticbackend/middleware"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -55,7 +56,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	db := client.Database(conf.Name)
 
-	var l Login
+	var l internal.Login
 	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -78,7 +79,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens[token] = Auth{
+	internal.Tokens[token] = internal.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
@@ -88,13 +89,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
-func validateUserPassword(db *mongo.Database, email, password string) (*Token, error) {
+func validateUserPassword(db *mongo.Database, email, password string) (*internal.Token, error) {
 	email = strings.ToLower(email)
 
 	ctx := context.Background()
 	sr := db.Collection("sb_tokens").FindOne(ctx, bson.M{"email": email})
 
-	var tok Token
+	var tok internal.Token
 	if err := sr.Decode(&tok); err != nil {
 		return nil, err
 	}
@@ -107,8 +108,8 @@ func validateUserPassword(db *mongo.Database, email, password string) (*Token, e
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
 		log.Println("invalid StaticBackend key")
 		return
@@ -116,7 +117,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	db := client.Database(conf.Name)
 
-	var l Login
+	var l internal.Login
 	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -142,10 +143,10 @@ func register(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
-func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, Token, error) {
+func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, internal.Token, error) {
 	acctID := primitive.NewObjectID()
 
-	a := Account{
+	a := internal.Account{
 		ID:    acctID,
 		Email: email,
 	}
@@ -153,25 +154,25 @@ func createAccountAndUser(db *mongo.Database, email, password string, role int) 
 	ctx := context.Background()
 	_, err := db.Collection("sb_accounts").InsertOne(ctx, a)
 	if err != nil {
-		return nil, Token{}, err
+		return nil, internal.Token{}, err
 	}
 
 	jwtBytes, tok, err := createUser(db, acctID, email, password, role)
 	if err != nil {
-		return nil, Token{}, err
+		return nil, internal.Token{}, err
 	}
 	return jwtBytes, tok, nil
 }
 
-func createUser(db *mongo.Database, accountID primitive.ObjectID, email, password string, role int) ([]byte, Token, error) {
+func createUser(db *mongo.Database, accountID primitive.ObjectID, email, password string, role int) ([]byte, internal.Token, error) {
 	ctx := context.Background()
 
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, Token{}, err
+		return nil, internal.Token{}, err
 	}
 
-	tok := Token{
+	tok := internal.Token{
 		ID:        primitive.NewObjectID(),
 		AccountID: accountID,
 		Email:     email,
@@ -193,7 +194,7 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 		return nil, tok, err
 	}
 
-	tokens[token] = Auth{
+	internal.Tokens[token] = internal.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
@@ -204,16 +205,9 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 }
 
 func setRole(w http.ResponseWriter, r *http.Request) {
-	a, ok := r.Context().Value(ContextAuth).(Auth)
-	if !ok || a.Role < 100 {
+	conf, a, err := middleware.Extract(r, true)
+	if err != nil || a.Role < 100 {
 		http.Error(w, "insufficient priviledges", http.StatusUnauthorized)
-		return
-	}
-
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
-		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
-		log.Println("invalid StaticBackend key")
 		return
 	}
 
@@ -240,16 +234,9 @@ func setRole(w http.ResponseWriter, r *http.Request) {
 }
 
 func setPassword(w http.ResponseWriter, r *http.Request) {
-	a, ok := r.Context().Value(ContextAuth).(Auth)
-	if !ok || a.Role < 100 {
+	conf, a, err := middleware.Extract(r, true)
+	if err != nil || a.Role < 100 {
 		http.Error(w, "insufficient priviledges", http.StatusUnauthorized)
-		return
-	}
-
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
-		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
-		log.Println("invalid StaticBackend key")
 		return
 	}
 
@@ -289,8 +276,8 @@ func setPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func resetPassword(w http.ResponseWriter, r *http.Request) {
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
 		return
 	}
@@ -332,8 +319,8 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func changePassword(w http.ResponseWriter, r *http.Request) {
-	conf, ok := r.Context().Value(ContextBase).(BaseConfig)
-	if !ok {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
 		return
 	}
@@ -351,7 +338,7 @@ func changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := bson.M{"email": strings.ToLower(data.Email), "sb_reset_code": data.Code}
-	var tok Token
+	var tok internal.Token
 	sr := db.Collection("sb_tokens").FindOne(context.Background(), filter)
 	if err := sr.Decode(&tok); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -365,7 +352,7 @@ func changePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	filter = bson.M{fieldID: tok.ID}
+	filter = bson.M{internal.FieldID: tok.ID}
 	update := bson.M{"$set": bson.M{"pw": string(newpw)}}
 	if _, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -377,7 +364,7 @@ func changePassword(w http.ResponseWriter, r *http.Request) {
 
 func getJWT(token string) ([]byte, error) {
 	now := time.Now()
-	pl := JWTPayload{
+	pl := internal.JWTPayload{
 		Payload: jwt.Payload{
 			Issuer:         "StaticBackend",
 			ExpirationTime: jwt.NumericDate(now.Add(12 * time.Hour)),
@@ -388,12 +375,12 @@ func getJWT(token string) ([]byte, error) {
 		Token: token,
 	}
 
-	return jwt.Sign(pl, hs)
+	return jwt.Sign(pl, internal.HashSecret)
 
 }
 
 func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
-	conf, _, err := extract(r, false)
+	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -412,12 +399,12 @@ func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := bson.M{fieldAccountID: oid}
+	filter := bson.M{internal.FieldAccountID: oid}
 	ctx := context.Background()
 
 	opt := options.Find()
 	opt.SetLimit(1)
-	opt.SetSort(bson.M{fieldID: 1})
+	opt.SetSort(bson.M{internal.FieldID: 1})
 
 	cur, err := db.Collection("sb_tokens").Find(ctx, filter, opt)
 	if err != nil {
@@ -426,7 +413,7 @@ func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cur.Close(ctx)
 
-	var tok Token
+	var tok internal.Token
 	if cur.Next(ctx) {
 		if err := cur.Decode(&tok); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -447,7 +434,7 @@ func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens[token] = Auth{
+	internal.Tokens[token] = internal.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
