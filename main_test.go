@@ -10,6 +10,10 @@ import (
 	"strings"
 	"testing"
 
+	"staticbackend/cache"
+	"staticbackend/internal"
+
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -37,9 +41,9 @@ func TestMain(m *testing.M) {
 
 	deleteAndSetupTestAccount()
 
-	cache := NewCache()
+	volatile := cache.NewCache()
 
-	hub := newHub(cache)
+	hub := newHub(volatile)
 	go hub.run()
 
 	ws := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +55,7 @@ func TestMain(m *testing.M) {
 
 	database = &Database{
 		client: client,
-		cache:  cache,
+		cache:  volatile,
 	}
 
 	os.Exit(m.Run())
@@ -66,16 +70,16 @@ func deleteAndSetupTestAccount() {
 
 	sysDB := client.Database("sbsys")
 
-	if err := sysDB.Collection("accounts").Drop(ctx); err != nil {
+	if _, err := sysDB.Collection("accounts").DeleteMany(ctx, bson.M{"email": email}); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := sysDB.Collection("bases").Drop(ctx); err != nil {
+	if _, err := sysDB.Collection("bases").DeleteOne(ctx, bson.M{"name": dbName}); err != nil {
 		log.Fatal(err)
 	}
 
 	acctID := primitive.NewObjectID()
-	cus := Customer{
+	cus := internal.Customer{
 		ID:    acctID,
 		Email: email,
 	}
@@ -84,7 +88,7 @@ func deleteAndSetupTestAccount() {
 		log.Fatal(err)
 	}
 
-	base := BaseConfig{
+	base := internal.BaseConfig{
 		ID:        primitive.NewObjectID(),
 		SBID:      acctID,
 		Name:      dbName,

@@ -70,13 +70,13 @@ func Start() {
 
 	stdAuth := []middleware.Middleware{
 		middleware.Cors(),
-		middleware.RequireAuth(client),
 		middleware.WithDB(client),
+		middleware.RequireAuth(client),
 	}
 
 	stdRoot := []middleware.Middleware{
-		middleware.RequireRoot(client),
 		middleware.WithDB(client),
+		middleware.RequireRoot(client),
 	}
 
 	http.Handle("/login", middleware.Chain(http.HandlerFunc(login), pubWithDB...))

@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"staticbackend/internal"
+	"staticbackend/middleware"
 	"testing"
 	"time"
 )
@@ -23,7 +25,11 @@ func dbPost(t *testing.T, hf func(http.ResponseWriter, *http.Request), repo stri
 	req.Header.Set("SB-PUBLIC-KEY", pubKey)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", adminToken))
 
-	h := chain(http.HandlerFunc(hf), auth, withDB)
+	stdAuth := []middleware.Middleware{
+		middleware.WithDB(database.client),
+		middleware.RequireAuth(database.client),
+	}
+	h := middleware.Chain(http.HandlerFunc(hf), stdAuth...)
 
 	h.ServeHTTP(w, req)
 
@@ -41,26 +47,26 @@ func GetResponseBody(t *testing.T, resp *http.Response) string {
 }
 
 func TestHasPermission(t *testing.T) {
-	reads := make(map[string]permissionLevel)
-	reads["tbl_740_"] = permGroup
-	reads["tbl_600_"] = permOwner
-	reads["tbl"] = permGroup
-	reads["tbl_226_"] = permEveryone
+	reads := make(map[string]internal.PermissionLevel)
+	reads["tbl_740_"] = internal.PermGroup
+	reads["tbl_600_"] = internal.PermOwner
+	reads["tbl"] = internal.PermGroup
+	reads["tbl_226_"] = internal.PermEveryone
 
 	for k, v := range reads {
-		if p := readPermission(k); v != p {
+		if p := internal.ReadPermission(k); v != p {
 			t.Errorf("%s expected read to be %v got %v", k, v, p)
 		}
 	}
 
-	writes := make(map[string]permissionLevel)
-	writes["tbl"] = permOwner
-	writes["tbl_760_"] = permGroup
-	writes["tbl_662_"] = permEveryone
-	writes["tbl_244_"] = permOwner
+	writes := make(map[string]internal.PermissionLevel)
+	writes["tbl"] = internal.PermOwner
+	writes["tbl_760_"] = internal.PermGroup
+	writes["tbl_662_"] = internal.PermEveryone
+	writes["tbl_244_"] = internal.PermOwner
 
 	for k, v := range writes {
-		if p := writePermission(k); v != p {
+		if p := internal.WritePermission(k); v != p {
 			t.Errorf("%s expected write to be %v got %v", k, v, p)
 		}
 	}
@@ -101,7 +107,11 @@ func TestDBListCollections(t *testing.T) {
 	req.Header.Set("SB-PUBLIC-KEY", pubKey)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
-	h := chain(http.HandlerFunc(database.listCollections), requireRoot, withDB)
+	stdRoot := []middleware.Middleware{
+		middleware.WithDB(database.client),
+		middleware.RequireRoot(database.client),
+	}
+	h := middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...)
 
 	h.ServeHTTP(w, req)
 
