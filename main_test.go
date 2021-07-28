@@ -19,7 +19,7 @@ import (
 
 const (
 	dbName       = "unittest"
-	email        = "unit@test.com"
+	admEmail     = "unit@test.com"
 	password     = "my_unittest_pw"
 	userEmail    = "user@test.com"
 	userPassword = "another_fake_password"
@@ -70,7 +70,7 @@ func deleteAndSetupTestAccount() {
 
 	sysDB := client.Database("sbsys")
 
-	if _, err := sysDB.Collection("accounts").DeleteMany(ctx, bson.M{"email": email}); err != nil {
+	if _, err := sysDB.Collection("accounts").DeleteMany(ctx, bson.M{"email": admEmail}); err != nil {
 		log.Fatal(err)
 	}
 
@@ -81,7 +81,7 @@ func deleteAndSetupTestAccount() {
 	acctID := primitive.NewObjectID()
 	cus := internal.Customer{
 		ID:    acctID,
-		Email: email,
+		Email: admEmail,
 	}
 
 	if _, err := sysDB.Collection("accounts").InsertOne(ctx, cus); err != nil {
@@ -103,7 +103,7 @@ func deleteAndSetupTestAccount() {
 	pubKey = base.ID.Hex()
 
 	db := client.Database(dbName)
-	token, dbToken, err := createAccountAndUser(db, email, password, 100)
+	token, dbToken, err := createAccountAndUser(db, admEmail, password, 100)
 	if err != nil {
 		log.Fatal(err)
 	}

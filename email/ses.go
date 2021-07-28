@@ -9,8 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
-
-	"staticbackend/internal"
 )
 
 type AWSSES struct{}
@@ -60,7 +58,7 @@ func (AWSSES) Send(data internal.SendMailData) error {
 				Data:    aws.String(data.Subject),
 			},
 		},
-		Source:           aws.String(fromEmail),
+		Source:           aws.String(data.From),
 		ReplyToAddresses: aws.StringSlice([]string{data.ReplyTo}),
 		// Uncomment to use a configuration set
 		//ConfigurationSetName: aws.String(ConfigurationSet),

@@ -3,14 +3,15 @@ package staticbackend
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 	"staticbackend/realtime"
+	"strings"
 	"time"
 
 	"staticbackend/cache"
@@ -29,22 +30,15 @@ const (
 var (
 	client   *mongo.Client
 	volatile *cache.Cache
+	emailer  internal.Mailer
 	AppEnv   = os.Getenv("APP_ENV")
 )
 
 // Start starts the web server and all dependencies services
-func Start() {
+func Start(dbHost, port string) {
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
-	dbHost := flag.String("host", "localhost", "Hostname for mongodb")
-	port := flag.String("port", "8099", "HTTP port to listen on")
-	flag.Parse()
-
-	if err := openDatabase(*dbHost); err != nil {
-		log.Fatal(err)
-	}
-
-	volatile = cache.NewCache()
+	initServices(dbHost)
 
 	// websockets
 	hub := newHub(volatile)
@@ -136,9 +130,23 @@ func Start() {
 	}
 	http.Handle("/sse/msg", middleware.Chain(http.HandlerFunc(receiveMessage), pubWithDB...))
 
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
+func initServices(dbHost string) {
+	if err := openDatabase(dbHost); err != nil {
+		log.Fatal(err)
+	}
+
+	volatile = cache.NewCache()
+
+	mp := os.Getenv("MAIL_PROVIDER")
+	if strings.EqualFold(mp, internal.MailProviderSES) {
+		emailer = email.AWSSES{}
+	} else {
+		emailer = email.Dev{}
+	}
+}
 func openDatabase(dbHost string) error {
 	uri := os.Getenv("DATABASE_URL")
 	if dbHost == "localhost" {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 
@@ -309,8 +310,18 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//TODO: have HTML template for those
 	body := fmt.Sprintf(`Your reset code is: %s`, code)
-	if err := sendMail(data.Email, "", FromEmail, FromName, "Your password reset code", body, ""); err != nil {
+
+	ed := internal.SendMailData{
+		From:     FromEmail,
+		FromName: FromName,
+		To:       data.Email,
+		Subject:  "Your password reset code",
+		HTMLBody: body,
+		TextBody: email.StripHTML(body),
+	}
+	if err := emailer.Send(ed); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

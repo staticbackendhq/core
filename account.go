@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	emailFuncs "staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 
@@ -157,6 +158,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	rootToken := fmt.Sprintf("%s|%s|%s", token.ID.Hex(), token.AccountID.Hex(), token.Token)
 
+	//TODO: Have html template for those
 	body := fmt.Sprintf(`
 	<p>Hey there,</p>
 	<p>Thanks for creating your account.</p>
@@ -175,7 +177,17 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>Dominic<br />Founder</p>
 	`, base.ID.Hex(), email, pw, rootToken)
 
-	err = sendMail(email, "", FromEmail, FromName, "Your StaticBackend account", body, "")
+	ed := internal.SendMailData{
+		From:     FromEmail,
+		FromName: FromName,
+		To:       email,
+		ToName:   "",
+		Subject:  "Your StaticBackend account",
+		HTMLBody: body,
+		TextBody: emailFuncs.StripHTML(body),
+	}
+
+	err = emailer.Send(ed)
 	if err != nil {
 		log.Println("error sending email", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
