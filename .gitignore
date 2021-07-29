@@ -2,6 +2,8 @@
 mongodata/
 cmd/staticbackend
 
+dist/
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
