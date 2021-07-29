@@ -13,22 +13,22 @@ vendor lock-in, and your data stays in your control.
 
 ### Table of content
 
-* [What can you build](#what-can-you-build)
-* [How it works / dev workflow](#how-it-works-dev-workflow)
-* [Get started with the self-hosted version](#get-started-with-the-self-hosted-version)
-* [Documentation](#documentation)
-* [Librairies & CLI](#libraries-cli)
-* [Examples](#examples)
-* [Deploying in production](#deploying-in-production)
-* [Feedback & contributing](#feedback-contributing)
-* [Open source, sponsors, paid SaaS](#open-source-sponsors-paid-saas)
-* [Spread the words](#spread-the-words)
+* [What can you build](#user-content-what-can-you-build)
+* [How it works / dev workflow](#user-content-how-it-works--dev-workflow)
+* [Get started with the self-hosted version](#user-content-get-started-with-the-self-hosted-version)
+* [Documentation](#user-content-documentation)
+* [Librairies & CLI](#user-content-librairies--cli)
+* [Examples](#user-content-examples)
+* [Deploying in production](#user-content-deploying-in-production")
+* [Feedback & contributing](#user-content-feedback--contributing")
+* [Open source, sponsors, paid SaaS](#user-content-open-source-sponsors-paid-saas")
+* [Spread the words](#user-content-spread-the-words")
 
 
 ## What can you build
 
 I built StaticBackend with the mindset of someone tired of writing the same code 
-over and over on the backend. If you're application needs one or all of 
+over and over on the backend. If your application needs one or all of 
 user management, database, file storage, real-time interactions, it should be 
 a good fit.
 
@@ -53,15 +53,15 @@ From there each users can create database documents that are by default Read/Wri
 for the owner (the user) and Read for its parent account. You may customize 
 permission for each of your collection (see that later in the documentation).
 
-From here you have the basics building blocks to create a typical web 
-application. You have all your CRUD and data query operations cover, file 
+You have the basic building blocks to create a typical web 
+application. You have all your CRUD and data query operations covered, file 
 storage and websocket-like capabilities.
 
-We have a [JavaScript](https://www.npmjs.com/package/@staticbackend/js) to 
+We have a [JavaScript library](https://www.npmjs.com/package/@staticbackend/js) to 
 get started quickly. We have also server-side libraries for Node and Go atm.
 
-Why would you need server-side libraries, was it not suppose to be a backend 
-for client-side application.
+Why would you need server-side libraries, was it not supposed to be a backend 
+for client-side applications.
 
 Yes, but, there's always a but. Sometimes your application will need to 
 perform tasks on behalf of users or public user that do not have access to 
@@ -83,13 +83,16 @@ when they click on the unique link on their email they received.
 This can be achieve via a backend function. Couple of ways:
 
 * The email the client received can be directly a unique URL pointing to a 
-function as a service hosted somewhere. (We will have functions soon).
+function as a service hosted somewhere. (We will have functions soon). That 
+function returns the invoice HTML.
 * Or it could be pointing to your client-side app and you perform a call to 
-a serverless function you're hosting somewhere.
+a serverless function you're hosting somewhere. That function uses the 
+server-side library to perform a `GET` on behalf of the creator of the invoice 
+document, which is our customer.
 
 The function will be able to perform a Read operation using a special `Root Token`.
 
-This Root Token allow your system to do anything in the server-side.
+This `Root Token` allows your system to do anything on the server-side.
 
 I hope I did not lost the majority of people here ;)
 
@@ -129,7 +132,7 @@ We have a page listing our
 
 ## Examples
 
-If you'd like to see specifics examples please let us know via the 
+If you'd like to see specific examples please let us know via the 
 [Discussions](https://github.com/staticbackendhq/core/discussions) tab.
 
 Here's the examples we have created so far:
@@ -154,16 +157,6 @@ Same for contributing. The easiest is to get in touch first. We're working
 to make it easier to contribute code. If you'd like to work on something 
 precise let us know.
 
-todoici
-
-
-
-
-
-
-We've decided to open the core of the product and have a permissive license 
-with the MIT license.
-
 
 ## Open source, sponsors, paid SaaS
 
@@ -184,7 +177,7 @@ StaticBackend. A tweet, a blog post, any visibility is helpful and I (Dominic)
 personally thanks you for this.
 
 I've failed at getting any kind of traction with StaticBackend on its closed 
-source form. I think developer tool like these need to be open source.
+source form. I think developer tools like this need to be open source.
 
 I believe in the product, it solves a pain I have for so long, but I'm hoping 
 others will also get value out of it and will be excited about the project.
