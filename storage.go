@@ -9,9 +9,6 @@ import (
 	"staticbackend/middleware"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -52,12 +49,6 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		name = primitive.NewObjectID().Hex()
 	}
 
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	fileKey := fmt.Sprintf("%s/%s/%s%s",
 		auth.AccountID.Hex(),
 		config.Name,
@@ -65,22 +56,12 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		ext,
 	)
 
-	svc := s3.New(sess)
-	obj := &s3.PutObjectInput{}
-	obj.Body = file
-	obj.ACL = aws.String(s3.ObjectCannedACLPublicRead)
-	obj.Bucket = aws.String("files.staticbackend.com")
-	obj.Key = aws.String(fileKey)
-
-	if _, err := svc.PutObject(obj); err != nil {
+	upData := internal.UploadFileData{FileKey: fileKey, File: file}
+	url, err := storer.Save(upData)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	url := fmt.Sprintf(
-		"https://cdn.staticbackend.com/%s",
-		fileKey,
-	)
 
 	doc := bson.M{
 		"accountId": auth.AccountID,
@@ -148,18 +129,7 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	svc := s3.New(sess)
-	obj := &s3.DeleteObjectInput{
-		Bucket: aws.String("files.staticbackend.com"),
-		Key:    aws.String(fileKey),
-	}
-	if _, err := svc.DeleteObject(obj); err != nil {
+	if err := storer.Delete(fileKey); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

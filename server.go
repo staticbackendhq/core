@@ -11,6 +11,7 @@ import (
 	"staticbackend/internal"
 	"staticbackend/middleware"
 	"staticbackend/realtime"
+	"staticbackend/storage"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ var (
 	client   *mongo.Client
 	volatile *cache.Cache
 	emailer  internal.Mailer
+	storer   internal.Storer
 	AppEnv   = os.Getenv("APP_ENV")
 )
 
@@ -145,6 +147,13 @@ func initServices(dbHost string) {
 		emailer = email.AWSSES{}
 	} else {
 		emailer = email.Dev{}
+	}
+
+	sp := os.Getenv("STORAGE_PROVIDER")
+	if strings.EqualFold(sp, internal.StorageProviderS3) {
+		storer = storage.S3{}
+	} else {
+		storer = storage.Local{}
 	}
 }
 func openDatabase(dbHost string) error {
