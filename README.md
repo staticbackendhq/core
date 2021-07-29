@@ -13,16 +13,16 @@ vendor lock-in, and your data stays in your control.
 
 ### Table of content
 
-* [What can you build](#user-content-what-can-you-build)
-* [How it works / dev workflow](#user-content-how-it-works--dev-workflow)
-* [Get started with the self-hosted version](#user-content-get-started-with-the-self-hosted-version)
-* [Documentation](#user-content-documentation)
-* [Librairies & CLI](#user-content-librairies--cli)
-* [Examples](#user-content-examples)
-* [Deploying in production](#user-content-deploying-in-production")
-* [Feedback & contributing](#user-content-feedback--contributing")
-* [Open source, sponsors, paid SaaS](#user-content-open-source-sponsors-paid-saas")
-* [Spread the words](#user-content-spread-the-words")
+* [What can you build](#what-can-you-build)
+* [How it works / dev workflow](#how-it-works--dev-workflow)
+* [Get started with the self-hosted version](#get-started-with-the-self-hosted-version)
+* [Documentation](#documentation)
+* [Librairies & CLI](#librairies--cli)
+* [Examples](#examples)
+* [Deploying in production](#deploying-in-production)
+* [Feedback & contributing](#feedback--contributing)
+* [Open source, sponsors, paid SaaS](#open-source-sponsors-paid-saas)
+* [Spread the words](#spread-the-words)
 
 
 ## What can you build
