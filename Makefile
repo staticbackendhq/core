@@ -5,7 +5,7 @@ build:
 	@cd cmd && rm -rf staticbackend && go build -o staticbackend
 
 start: build
-	@cd cmd && ./staticbackend -host localhost
+	@./cmd/staticbackend -host localhost
 
 deploy:
 	CGO_ENABLED=0 go build

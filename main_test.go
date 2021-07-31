@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"staticbackend/cache"
+	"staticbackend/db"
 	"staticbackend/internal"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -56,6 +57,7 @@ func TestMain(m *testing.M) {
 	database = &Database{
 		client: client,
 		cache:  volatile,
+		base:   &db.Base{PublishDocument: volatile.PublishDocument},
 	}
 
 	os.Exit(m.Run())

@@ -1,0 +1,15 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6">
+		<div class="columns pt-6">
+			{{range .Data}}
+			<p>{{.}}</p>
+			{{end}}
+		</div>
+	</div>
+
+</body>
+{{template "foot"}}

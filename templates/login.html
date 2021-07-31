@@ -1,5 +1,75 @@
+<!DOCTYPE html>
 <html>
+
+<head>
+	<title>Sign-in to your StaticBackend account</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css">
+</head>
+
 <body>
-	todo
+	<div class="container pt-6">
+		<div class="has-text-centered">
+			<img class="py-3" src="https://staticbackend.com/img/logo-sb-no-text.png" alt="StaticBackend"
+				style="height: 150px;" />
+			<h1 class="title is-1">Sign-in</h1>
+			<p class="subtitle is-5">Welcome back</p>
+		</div>
+		<div class="columns">
+			<div class="column is-half">
+				<!-- login -->
+				<div class="box">
+					<h4 class="title is-4">Manage your app</h4>
+					{{template "flash" .}}
+
+					<form action="/ui/login" method="POST">
+						<div class="field">
+							<label class="label">Your public key</label>
+							<div class="control">
+								<input class="input" name="pk" type="text" placeholder="Your app public key" required />
+							</div>
+						</div>
+
+						<div class="field">
+							<label class="label">Your token</label>
+							<div class="control">
+								<input class="input" name="token" type="password" placeholder="Your root token" required />
+							</div>
+						</div>
+
+						<div class="control">
+							<button type="submit" class="button is-primary">Sign in</button>
+						</div>
+
+					</form>
+				</div>
+				<!-- /login -->
+			</div>
+
+			<div class="column is-half">
+				<!-- sign-up -->
+				<div class="box">
+					<h4 class="title is-4">Create a new app</h4>
+					<form action="/ui/register" method="POST">
+						<div class="field">
+							<label class="label">Your email</label>
+							<div class="control">
+								<input class="input" type="email" name="email" placeholder="Your email" required >
+							</div>
+						</div>
+
+						<div class="control">
+							<button type="submit" class="button is-primary">Create your app</button>
+						</div>
+
+					</form>
+				</div>
+				<!-- /sign-up -->-->
+			</div>
+		</div>
+
+	</div>
 </body>
+
 </html>

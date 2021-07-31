@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"staticbackend/db"
 	"staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
@@ -40,6 +41,10 @@ var (
 func Start(dbHost, port string) {
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
+	if err := loadTemplates(); err != nil {
+		log.Fatal("error loading templates: ", err)
+	}
+
 	initServices(dbHost)
 
 	// websockets
@@ -57,6 +62,7 @@ func Start(dbHost, port string) {
 	database := &Database{
 		client: client,
 		cache:  volatile,
+		base:   &db.Base{PublishDocument: volatile.PublishDocument},
 	}
 
 	pubWithDB := []middleware.Middleware{
@@ -131,6 +137,12 @@ func Start(dbHost, port string) {
 		respond(w, http.StatusOK, true)
 	}
 	http.Handle("/sse/msg", middleware.Chain(http.HandlerFunc(receiveMessage), pubWithDB...))
+
+	// ui routes
+	webUI := ui{base: &db.Base{PublishDocument: volatile.PublishDocument}}
+	http.HandleFunc("/ui/login", webUI.auth)
+	http.Handle("/ui/db", middleware.Chain(http.HandlerFunc(webUI.dbCols), stdRoot...))
+	http.HandleFunc("/", webUI.login)
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

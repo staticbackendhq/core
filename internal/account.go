@@ -93,3 +93,9 @@ func CreateAccount(db *mongo.Database, cus Customer) error {
 	}
 	return nil
 }
+
+func FindDatabase(db *mongo.Database, id primitive.ObjectID) (conf BaseConfig, err error) {
+	sr := db.Collection("bases").FindOne(ctx, bson.M{FieldID: id})
+	err = sr.Decode(&conf)
+	return
+}

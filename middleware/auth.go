@@ -118,6 +118,14 @@ func RequireRoot(client *mongo.Client) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
 
+			// we check if the token is in a cookie (used from UI)
+			if len(key) == 0 {
+				ck, err := r.Cookie("token")
+				if err == nil || ck != nil {
+					key = fmt.Sprintf("Bearer %s", ck.Value)
+				}
+			}
+
 			if len(key) == 0 {
 				http.Error(w, "missing authorization HTTP header", http.StatusUnauthorized)
 				return
@@ -131,41 +139,16 @@ func RequireRoot(client *mongo.Client) Middleware {
 
 			key = strings.Replace(key, "Bearer ", "", -1)
 
-			parts := strings.Split(key, "|")
-			if len(parts) != 3 {
-				http.Error(w, "invalid root token", http.StatusBadRequest)
-				return
-			}
-
-			id, err := primitive.ObjectIDFromHex(parts[0])
-			if err != nil {
-				http.Error(w, "invalid root token", http.StatusBadRequest)
-				return
-			}
-
-			acctID, err := primitive.ObjectIDFromHex(parts[1])
-			if err != nil {
-				http.Error(w, "invalid root token", http.StatusBadRequest)
-				return
-			}
-
-			token := parts[2]
-
 			ctx := r.Context()
 			conf, ok := ctx.Value(ContextBase).(internal.BaseConfig)
 			if !ok {
-				http.Error(w, "invalid StaticBackend public key", http.StatusUnauthorized)
+				http.Error(w, "invalid StaticBackend public key", http.StatusBadRequest)
 				return
 			}
 
-			db := client.Database(conf.Name)
-
-			tok, err := internal.FindRootToken(db, id, acctID, token)
+			tok, err := ValidateRootToken(client, conf.Name, key)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			} else if tok.Role < RootRole {
-				http.Error(w, "not enough permission", http.StatusUnauthorized)
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 
@@ -181,4 +164,35 @@ func RequireRoot(client *mongo.Client) Middleware {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func ValidateRootToken(client *mongo.Client, base, token string) (internal.Token, error) {
+	tok := internal.Token{}
+
+	parts := strings.Split(token, "|")
+	if len(parts) != 3 {
+		return tok, fmt.Errorf("invalid root token")
+	}
+
+	id, err := primitive.ObjectIDFromHex(parts[0])
+	if err != nil {
+		return tok, fmt.Errorf("invalid root token")
+	}
+
+	acctID, err := primitive.ObjectIDFromHex(parts[1])
+	if err != nil {
+		return tok, fmt.Errorf("invalid root token")
+	}
+
+	token = parts[2]
+
+	db := client.Database(base)
+
+	tok, err = internal.FindRootToken(db, id, acctID, token)
+	if err != nil {
+		return tok, err
+	} else if tok.Role < RootRole {
+		return tok, fmt.Errorf("not enough permission")
+	}
+	return tok, nil
 }

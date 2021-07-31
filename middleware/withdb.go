@@ -5,9 +5,7 @@ import (
 	"log"
 	"net/http"
 	"staticbackend/internal"
-	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -20,6 +18,14 @@ func WithDB(client *mongo.Client) Middleware {
 			// we check in query string (used for SSE)
 			if len(key) == 0 {
 				key = r.URL.Query().Get("sbpk")
+			}
+
+			// we check in cookie (used via the UI)
+			if len(key) == 0 {
+				ck, err := r.Cookie("pk")
+				if err == nil || ck != nil {
+					key = ck.Value
+				}
 			}
 
 			if len(key) == 0 {
@@ -44,11 +50,9 @@ func WithDB(client *mongo.Client) Middleware {
 					return
 				}
 
-				dbCtx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-				sr := db.Collection("bases").FindOne(dbCtx, bson.M{"_id": oid})
-				if err := sr.Decode(&conf); err != nil {
+				conf, err = internal.FindDatabase(db, oid)
+				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
-					log.Println("cannot find this base", err, " Key:", oid)
 					return
 				}
 
