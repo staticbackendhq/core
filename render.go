@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var (
@@ -19,6 +22,8 @@ func loadTemplates() error {
 	if err != nil {
 		return err
 	}
+
+	funcs := customFuncs()
 
 	for _, e := range entries {
 		partials = append(partials, fmt.Sprintf("./templates/partials/%s", e.Name()))
@@ -39,7 +44,7 @@ func loadTemplates() error {
 
 		cur := append([]string{name}, partials...)
 
-		t, err := template.New(tmpl.Name()).ParseFiles(cur...)
+		t, err := template.New(tmpl.Name()).Funcs(funcs).ParseFiles(cur...)
 		if err != nil {
 			return err
 		}
@@ -93,4 +98,25 @@ func renderErr(w http.ResponseWriter, r *http.Request, err error) {
 		log.Println("err in ui", err)
 	}
 	render(w, r, "err.html", nil, nil)
+}
+
+func customFuncs() template.FuncMap {
+	return template.FuncMap{
+		"getField": func(s string, doc interface{}) string {
+			dict, ok := doc.(bson.M)
+			if !ok {
+				return "error converting document"
+			}
+			v, ok := dict[s]
+			if !ok {
+				return "n/a"
+			}
+
+			oid, ok := v.(primitive.ObjectID)
+			if ok {
+				return oid.Hex()
+			}
+			return fmt.Sprintf("%v", v)
+		},
+	}
 }

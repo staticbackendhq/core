@@ -1,7 +1,6 @@
 package staticbackend
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -19,7 +18,6 @@ import (
 	"github.com/stripe/stripe-go/v71/customer"
 	"github.com/stripe/stripe-go/v71/sub"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -32,7 +30,20 @@ var (
 type accounts struct{}
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
-	email := strings.ToLower(r.URL.Query().Get("email"))
+	var email string
+	fromCLI := true
+
+	// the CLI do a GET for the account initialization, we can then
+	// base the rest of the flow on the fact that the web UI POST data
+	if r.Method == http.MethodPost {
+		fromCLI = false
+
+		r.ParseForm()
+
+		email = strings.ToLower(r.Form.Get("email"))
+	} else {
+		email = strings.ToLower(r.URL.Query().Get("email"))
+	}
 	// TODO: cheap email validation
 	if len(email) < 4 || strings.Index(email, "@") == -1 || strings.Index(email, ".") == -1 {
 		http.Error(w, "invalid email", http.StatusBadRequest)
@@ -40,12 +51,11 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	db := client.Database("sbsys")
-	ctx := context.Background()
-	count, err := db.Collection("accounts").CountDocuments(ctx, bson.M{"email": email})
+	exists, err := internal.EmailExists(db, email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	} else if count > 0 {
+	} else if exists {
 		http.Error(w, "Please use a different/valid email.", http.StatusInternalServerError)
 		return
 	}
@@ -101,11 +111,11 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	retry := 10
 	dbName := randStringRunes(12)
 	for {
-		count, err = db.Collection("bases").CountDocuments(ctx, bson.M{"name": dbName})
+		exists, err = internal.DatabaseExists(db, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		} else if count > 0 {
+		} else if exists {
 			retry--
 			dbName = randStringRunes(12)
 			continue
@@ -120,7 +130,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Whitelist: []string{"localhost"},
 	}
 
-	if _, err := db.Collection("bases").InsertOne(ctx, base); err != nil {
+	if err := internal.CreateBase(db, base); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -194,7 +204,17 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond(w, http.StatusOK, signUpURL)
+	if fromCLI {
+		respond(w, http.StatusOK, signUpURL)
+		return
+	}
+
+	if strings.HasPrefix(signUpURL, "https") {
+		http.Redirect(w, r, signUpURL, http.StatusSeeOther)
+		return
+	}
+
+	render(w, r, "login.html", nil, &Flash{Type: "sucess", Message: "We've emailed you all the information you need to get started."})
 }
 
 func (a *accounts) auth(w http.ResponseWriter, r *http.Request) {

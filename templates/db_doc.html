@@ -1,0 +1,77 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6">
+		<h2 class="title is-2">
+			Document: {{getField "id" .Data.Doc}}
+			<a 
+				href='/ui/db/del/{{getField "id" .Data.Doc}}?col={{.Data.Collection}}'
+				class="pt-5 delete is-large"
+				onclick="return confirm('Are you sure you want to delete?\n\nThis is irreversible.')"
+			>
+		</a>
+		</h2>
+		<p class="subtitle is-5">Experimental, only strings, numbers and boolans can be changed</p>
+		{{$col := .Data.Collection}}
+		{{$doc := .Data.Doc}}
+
+		<table class="table is-bordered">
+			<thead>
+				<tr>
+					<th>Field</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				{{range .Data.Columns}}
+				{{if eq . "id"}}
+				<tr>
+					<td><strong>id: </strong> {{getField . $doc}}</td>
+					<td></td>
+				</tr>
+				{{else if eq . "accountId"}}
+				<tr>
+					<td><strong>accountId: </strong> {{getField . $doc}}</td>
+					<td></td>
+				</tr>
+				{{else}}
+				<form action="/ui/db/save" method="POST">
+					<input type="hidden" name="id" value='{{getField "id" $doc}}'>
+					<input type="hidden" name="col" value="{{$col}}">
+					<input type="hidden" name="field" value="{{.}}">
+					<tr>
+						<td>
+							<div class="field has-addons">
+								<label class="label pr-3">{{.}}</label>
+								<div class="control">
+									<input class="input" type="text" name="value" value="{{getField . $doc}}">
+								</div>
+								<div class="control">
+									<div class="select">
+										<select name="type">
+											<option value="string">string</option>
+											<option value="int">integer</option>
+											<option value="float">float</option>
+											<option value="bool">bool</option>
+										</select>
+									</div>
+								</div>
+							</div>
+						</td>
+						<td>
+							<div class="control">
+								<button type="submit" class="button is-light">Save</button>
+							</div>
+						</td>
+					</tr>
+				</form>
+				{{end}}
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+</body>
+
+{{template "foot"}}

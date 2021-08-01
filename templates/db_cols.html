@@ -3,12 +3,133 @@
 <body>
 	{{template "navbar" .}}
 
-	<div class="container p-6">
-		<div class="columns pt-6">
-			{{range .Data}}
-			<p>{{.}}</p>
-			{{end}}
-		</div>
+	<div class="container p-6" x-data="{showQuery: {{if .Data.Query}}true{{else}}false{{end}}}">
+		<!-- collections and filters -->
+		<form action="/ui/db" method="POST">
+			<div class="columns pt-6">
+				<div class="column is-one-sixth">
+					<div class="field">
+						<label class="label">Collections</label>
+						<div class="control">
+							<div class="select">
+								<select name="col">
+									{{$cur := .Data.Collection}}
+									{{range .Data.Collections}}
+									<option value="{{.}}" {{if eq . $cur}}selected{{end}}>
+										{{.}}
+									</option>
+									{{end}}
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="column is-two-sixth">
+					<div class="field">
+						<label class="label">Sort</label>
+						<div class="control">
+							<div class="columns">
+								<div class="column">
+									<div class="select">
+										<select name="sortby">
+											{{$sortby := .Data.SortBy}}
+											{{range .Data.Columns}}
+											<option value="{{.}}" {{if eq . $sortby}}selected{{end}}>
+												{{.}}
+											</option>
+											{{end}}
+										</select>
+									</div>
+								</div>
+								<div class="column">
+									<div class="select">
+										<select name="desc">
+											<option value="0" {{if eq .Data.SortDescending "0"}}selected{{end}}>Ascending</option>
+											<option value="1" {{if eq .Data.SortDescending "1"}}selected{{end}}>Descending</option>
+										</select>
+									</div>
+								</div>
+							</div>
+
+
+						</div>
+					</div>
+				</div>
+				<div class="column is-two-sixth">
+					<div class="field">
+						<label class="label">Fields to display (separated by ,)</label>
+						<div class="control">
+							<input name="fields" class="input" placeholder="i.e. email,client,invoiceId">
+						</div>
+					</div>
+				</div>
+				<div class="column is-one-sixth">
+					<vid class="field">
+						<label class="label">&nbsp;</label>
+						<div class="control">
+							<button type="submit" class="button is-primary">
+								Refresh
+							</button>
+						</div>
+					</vid>
+				</div>
+			</div>
+
+			<div class="columns pt-3">
+				<div x-show="showQuery == false" class="column">
+					<a @click="showQuery = true" class="button">
+						Write a query (experimental)
+					</a>
+				</div>
+				<div x-show="showQuery" class="column is-half">
+					<textarea name="query" class="textarea" rows="9" placeholder='[["field", ">=", 3]]'>{{.Data.Query}}</textarea>
+				</div>
+				<div x-show="showQuery" class="column is-half">
+					<div class="box content">
+						<h5>How to write queries</h5>
+						<ul>
+							<li>Use a JSON syntax</li>
+							<li>A clause is an array <code>["field", "operator", "value"]</code></li>
+							<li>Use proper JavaScript type: <conde>["isActive", "=", true]</conde>
+							</li>
+							<li>Wrap all your clauses into a parent array: <code>[["field", "=", "value"], ["field2"...]]</code></li>
+							<li>Available operators: =, !=, &lt;, &gt; &lt;=, &gt;=, in, !in</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</form>
+		<!-- /collections and filters -->
+
+		<table class="table is-bordered is-striped py-6" style="overflow-x: hidden;">
+			<thead>
+				<tr>
+					{{range .Data.Columns}}
+					<th>{{.}}</th>
+					{{end}}
+				</tr>
+			</thead>
+			<tbody>
+				{{$col := .Data.Collection}}
+				{{$cols := .Data.Columns}}
+				{{range .Data.Docs}}
+				{{$doc := .}}
+				<tr>
+					{{range $cols}}
+					<td>
+						{{if eq . "id"}}
+							<a href="/ui/db/{{getField . $doc}}?col={{$col}}">
+								{{getField . $doc}}
+							</a>
+						{{else}}
+							{{getField . $doc}}
+						{{end}}
+					</td>
+					{{end}}
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
 	</div>
 
 </body>

@@ -57,6 +57,14 @@ type Customer struct {
 	Created          time.Time          `bson:"created" json:"created"`
 }
 
+func EmailExists(db *mongo.Database, email string) (bool, error) {
+	count, err := db.Collection("accounts").CountDocuments(ctx, bson.M{"email": email})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func FindToken(db *mongo.Database, id primitive.ObjectID, token string) (tok Token, err error) {
 	sr := db.Collection("sb_tokens").FindOne(ctx, bson.M{FieldID: id, FieldToken: token})
 	err = sr.Decode(&tok)
@@ -94,8 +102,23 @@ func CreateAccount(db *mongo.Database, cus Customer) error {
 	return nil
 }
 
+func CreateBase(db *mongo.Database, base BaseConfig) error {
+	if _, err := db.Collection("bases").InsertOne(ctx, base); err != nil {
+		return err
+	}
+	return nil
+}
+
 func FindDatabase(db *mongo.Database, id primitive.ObjectID) (conf BaseConfig, err error) {
 	sr := db.Collection("bases").FindOne(ctx, bson.M{FieldID: id})
 	err = sr.Decode(&conf)
 	return
+}
+
+func DatabaseExists(db *mongo.Database, name string) (bool, error) {
+	count, err := db.Collection("bases").CountDocuments(ctx, bson.M{"name": name})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

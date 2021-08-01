@@ -110,7 +110,7 @@ func Start(dbHost, port string) {
 
 	// account
 	acct := &accounts{}
-	http.Handle("/account/init", middleware.Chain(http.HandlerFunc(acct.create), pubWithDB...))
+	http.HandleFunc("/account/init", acct.create)
 	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
 	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))
 
@@ -142,6 +142,9 @@ func Start(dbHost, port string) {
 	webUI := ui{base: &db.Base{PublishDocument: volatile.PublishDocument}}
 	http.HandleFunc("/ui/login", webUI.auth)
 	http.Handle("/ui/db", middleware.Chain(http.HandlerFunc(webUI.dbCols), stdRoot...))
+	http.Handle("/ui/db/save", middleware.Chain(http.HandlerFunc(webUI.dbSave), stdRoot...))
+	http.Handle("/ui/db/del/", middleware.Chain(http.HandlerFunc(webUI.dbDel), stdRoot...))
+	http.Handle("/ui/db/", middleware.Chain(http.HandlerFunc(webUI.dbDoc), stdRoot...))
 	http.HandleFunc("/", webUI.login)
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -224,4 +227,12 @@ func sudoCache(w http.ResponseWriter, r *http.Request) {
 		}
 		respond(w, http.StatusOK, true)
 	}
+}
+
+func getURLPart(s string, idx int) string {
+	parts := strings.Split(s, "/")
+	if len(parts) <= idx {
+		return ""
+	}
+	return parts[idx]
 }

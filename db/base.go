@@ -81,9 +81,12 @@ func (b *Base) List(auth internal.Auth, db *mongo.Database, col string, params L
 
 	skips := params.Size * (params.Page - 1)
 
-	sortBy := bson.M{internal.FieldID: 1}
+	if len(params.SortBy) == 0 || strings.EqualFold(params.SortBy, "id") {
+		params.SortBy = internal.FieldID
+	}
+	sortBy := bson.M{params.SortBy: 1}
 	if params.SortDescending {
-		sortBy[internal.FieldID] = -1
+		sortBy[params.SortBy] = -1
 	}
 
 	opt := options.Find()
@@ -158,6 +161,9 @@ func (b *Base) Query(auth internal.Auth, db *mongo.Database, col string, filter 
 
 	skips := params.Size * (params.Page - 1)
 
+	if len(params.SortBy) == 0 || strings.EqualFold(params.SortBy, "id") {
+		params.SortBy = internal.FieldID
+	}
 	sortBy := bson.M{params.SortBy: 1}
 	if params.SortDescending {
 		sortBy[params.SortBy] = -1
