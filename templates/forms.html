@@ -1,0 +1,66 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6">
+		<h2 class="title is-2">
+			Form submissions
+		</h2>
+		<p class="subtitle is-5">
+		<div class="dropdown is-active" x-data="{isOpen: false}">
+			<div class="dropdown-trigger">
+				<button @click="isOpen = !isOpen" class="button" aria-haspopup="true" aria-controls="dropdown-menu">
+					<span>
+						{{if .Data.FormName}}
+						{{.Data.FormName}}
+						{{else}}
+						All forms
+						{{end}}
+					</span>
+					<span class="icon is-small">
+						<i class="fas fa-angle-down" aria-hidden="true"></i>
+					</span>
+				</button>
+			</div>
+			<div x-show="isOpen" class="dropdown-menu" id="dropdown-menu" role="menu">
+				<div class="dropdown-content">
+					<a href="/ui/forms" class="dropdown-item">
+						All forms
+					</a>
+					{{range .Data.Forms}}
+					<a href="/ui/forms?fn={{.}}" class="dropdown-item">
+						{{.}}
+					</a>
+					{{end}}
+				</div>
+			</div>
+		</div>
+		<span class="pl-3">filter for a specifics form</span>
+		</p>
+
+		{{range .Data.Entries}}
+		<div class="box py-3">
+			<div class="columns is-multiline">
+				<div class="column">
+					<a href='/ui/forms/del/{{getField "id" .}}' class="delete"
+						onclick="return confirm('Are you sure you want to delete this form submission?\n\nThis is irreversible.')">
+					</a>
+				</div>
+				{{$doc := .}}
+				{{range $key, $val := .}}
+				{{if eq $key "id"}}
+				{{else}}
+				<div class="column">
+					<strong>{{$key}}</strong><br />
+					{{getField $key $doc}}
+				</div>
+				{{end}}
+				{{end}}
+			</div>
+		</div>
+		{{end}}
+	</div>
+</body>
+
+{{template "foot"}}

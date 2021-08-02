@@ -319,3 +319,58 @@ func (ui) readColumnNames(docs []interface{}) []string {
 
 	return columns
 }
+
+func (x ui) forms(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	formName := r.URL.Query().Get("fn")
+
+	curDB := client.Database(conf.Name)
+
+	forms, err := internal.GetForms(curDB)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	entries, err := internal.ListFormSubmissions(curDB, formName)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	var data = new(struct {
+		FormName string
+		Forms    []string
+		Entries  []bson.M
+	})
+
+	data.FormName = formName
+	data.Forms = forms
+	data.Entries = entries
+
+	render(w, r, "forms.html", data, nil)
+}
+
+func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	id := getURLPart(r.URL.Path, 4)
+
+	if _, err := x.base.Delete(auth, curDB, "sb_forms", id); err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	http.Redirect(w, r, "/ui/forms", http.StatusSeeOther)
+}

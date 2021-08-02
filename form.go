@@ -10,7 +10,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func submitForm(w http.ResponseWriter, r *http.Request) {
@@ -67,46 +66,14 @@ func listForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database(conf.Name)
+	curDB := client.Database(conf.Name)
 
-	opt := options.Find()
-	opt.SetLimit(100)
-	opt.SetSort(bson.M{internal.FieldID: -1})
+	formName := r.URL.Query().Get("name")
 
-	filter := bson.M{}
-	if fn := r.URL.Query().Get("name"); len(fn) > 0 {
-		filter["form"] = fn
-	}
-
-	cur, err := db.Collection("sb_forms").Find(context.Background(), filter, opt)
+	results, err := internal.ListFormSubmissions(curDB, formName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	defer cur.Close(context.Background())
-
-	var results []bson.M
-
-	for cur.Next(context.Background()) {
-		var result bson.M
-		err := cur.Decode(&result)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		result["id"] = result["_id"]
-		delete(result, internal.FieldID)
-
-		results = append(results, result)
-	}
-	if err := cur.Err(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if len(results) == 0 {
-		results = make([]bson.M, 1)
 	}
 
 	respond(w, http.StatusOK, results)

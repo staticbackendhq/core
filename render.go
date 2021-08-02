@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -115,6 +117,19 @@ func customFuncs() template.FuncMap {
 			oid, ok := v.(primitive.ObjectID)
 			if ok {
 				return oid.Hex()
+			}
+
+			date, ok := dict[s].(time.Time)
+			if ok {
+				return date.Format("2006-01-02 15:04")
+			}
+
+			if s == "sb_posted" {
+				i, err := strconv.ParseInt(fmt.Sprintf("%v", dict[s]), 10, 64)
+				if err == nil {
+					ts := time.Unix(i/1000, 0)
+					return ts.Format("2006-01-02 15:04")
+				}
 			}
 			return fmt.Sprintf("%v", v)
 		},
