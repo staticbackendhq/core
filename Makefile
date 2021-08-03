@@ -5,7 +5,7 @@ build:
 	@cd cmd && rm -rf staticbackend && go build -o staticbackend
 
 start: build
-	@./cmd/staticbackend -host localhost
+	@./cmd/staticbackend
 
 deploy:
 	CGO_ENABLED=0 go build
@@ -13,6 +13,9 @@ deploy:
 
 test:
 	@JWT_SECRET=okdevmode go test --race --cover ./...
+
+docker:
+	docker build . -t staticbackend:latest
 
 pkg: build
 	@rm -rf dist/*

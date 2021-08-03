@@ -1,14 +1,16 @@
 package main
 
 import (
-	"flag"
+	"os"
 	backend "staticbackend"
 )
 
 func main() {
-	dbHost := flag.String("host", "localhost", "Hostname for mongodb")
-	port := flag.String("port", "8099", "HTTP port to listen on")
-	flag.Parse()
+	dbHost := os.Getenv("DATABASE_URL")
+	port := os.Getenv("PORT")
+	if len(port) == 0 {
+		port = "8099"
+	}
 
-	backend.Start(*dbHost, *port)
+	backend.Start(dbHost, port)
 }

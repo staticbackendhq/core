@@ -110,6 +110,44 @@ This is one example of your typical day-to-day workflow using StaticBackend.
 
 Please refer to this [guide here](https://staticbackend.com/getting-started/self-hosting/).
 
+If you have Docker & Docker Compose ready, here's how you can have your server 
+up and running in dev mode in 30 seconds:
+
+```shell
+$> git clone git@github.com:staticbackendhq/core.git
+$> cd core
+$> docker build . -t staticbackend:latest
+$> docker-compuse -f docker-compose-demo.yml up
+```
+
+Test your instance:
+
+```shell
+$> curl -v http://localhost:8099/db/test
+```
+
+You should get an error as follow:
+
+```shell
+< HTTP/1.1 401 Unauthorized
+< Content-Type: text/plain; charset=utf-8
+< Vary: Origin
+< Vary: Access-Control-Request-Method
+< Vary: Access-Control-Request-Headers
+< X-Content-Type-Options: nosniff
+< Date: Tue, 03 Aug 2021 11:40:15 GMT
+< Content-Length: 33
+< 
+invalid StaticBackend public key
+```
+
+This is normal, as you're trying to request protected API, but you're all set.
+
+The next step is to visit [http://localhost:8099](http://localhost:8099) and 
+create your first app. Please note that in dev mode you'll have to look at your 
+docker compose output terminal to see the content of the email after creating 
+your app.
+
 ## Documentation
 
 We're trying to have the best experience possible reading our documentation.

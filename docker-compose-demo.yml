@@ -1,0 +1,20 @@
+version: "3"
+services:
+  sb:
+    image: staticbackend:latest
+    ports:
+      - "8099:8099"
+    env_file:
+      - ./.demo.env
+
+  mongo:
+    image: mongo:3-stretch
+    volumes:
+      - ./mongodata:/data/db/mongo
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"

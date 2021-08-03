@@ -36,7 +36,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	if err := openDatabase("localhost"); err != nil {
+	if err := openDatabase("mongodb://localhost:27017"); err != nil {
 		log.Fatal(err)
 	}
 

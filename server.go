@@ -174,10 +174,7 @@ func initServices(dbHost string) {
 	}
 }
 func openDatabase(dbHost string) error {
-	uri := os.Getenv("DATABASE_URL")
-	if dbHost == "localhost" {
-		uri = "mongodb://localhost:27017"
-	}
+	uri := dbHost
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	cl, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
