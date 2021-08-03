@@ -1,5 +1,13 @@
 <p align="center">
 	<img src="https://staticbackend.com/img/logo-sb-no-text.png"  alt="StaticBackend logo">
+	<br />
+	<a href="https://discord.gg/vgh2PTp9ZB">
+		<img src="https://img.shields.io/discord/872035652944928838?logoColor=%23DD0000">
+	</a>
+	<a href="https://twitter.com/staticbackend">
+		<img src="https://img.shields.io/twitter/follow/staticbackend?color=DD0000&style=social">
+	</a>
+	
 </p>
 
 # StaticBackend - simple backend for your apps
