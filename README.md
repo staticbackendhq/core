@@ -108,7 +108,16 @@ This is one example of your typical day-to-day workflow using StaticBackend.
 
 ## Get started with the self-hosted version
 
+[![Get started with self-hosted version](https://img.youtube.com/vi/vQjfaMxidx4/0.jpg)](https://www.youtube.com/watch?v=vQjfaMxidx4)
+
+_Click on the image above to see a video showing how to get started with the 
+self-hosted version_.
+
 Please refer to this [guide here](https://staticbackend.com/getting-started/self-hosting/).
+
+We also have this 
+[blog post](https://staticbackend.com/blog/get-started-self-hosted-version/) 
+that also includes the above video.
 
 If you have Docker & Docker Compose ready, here's how you can have your server 
 up and running in dev mode in 30 seconds:
@@ -116,6 +125,7 @@ up and running in dev mode in 30 seconds:
 ```shell
 $> git clone git@github.com:staticbackendhq/core.git
 $> cd core
+$> cp .demo.env .env
 $> docker build . -t staticbackend:latest
 $> docker-compuse -f docker-compose-demo.yml up
 ```
