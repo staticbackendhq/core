@@ -2,71 +2,55 @@ package staticbackend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
+	"io"
 	"net/http"
+	"os"
 	"staticbackend/internal"
 
+	"github.com/stripe/stripe-go/v71"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 type stripeWebhook struct{}
 
-type CustomerSourceCreated struct {
-	Data struct {
-		CustomerID string `json:"customer"`
-	} `json:"data"`
-}
-
 func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("inside stripe webhook")
-	var evt map[string]interface{}
-	if err := parseBody(r.Body, &evt); err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	typ, ok := evt["type"]
-	if !ok {
-		log.Println("no type specified")
-		http.Error(w, "no type specified in the event data", http.StatusBadRequest)
-		return
-	}
-
-	fmt.Println("event type", typ)
-
-	var err error
-
-	switch typ {
-	case "customer.source.created":
-		err = wh.sourceCreated(evt["data"])
-	}
-
+	const MaxBodyBytes = int64(65536)
+	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
+	payload, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Fprintf(os.Stderr, "Error reading request body: %v\n", err)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 
-	respond(w, http.StatusOK, true)
+	event := stripe.Event{}
+
+	if err := json.Unmarshal(payload, &event); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to parse webhook body json: %v\n", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Unmarshal the event data into an appropriate struct depending on its Type
+	switch event.Type {
+	case "payment_method.attached":
+		var paymentMethod stripe.PaymentMethod
+		err := json.Unmarshal(event.Data.Raw, &paymentMethod)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		wh.handlePaymentMethodAttached(paymentMethod)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
-func (wh *stripeWebhook) sourceCreated(params interface{}) error {
-	data, ok := params.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("unable to cast params: %v into a map[string]interface{}", params)
-	}
-
-	obj, ok := data["object"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("unable to cast data[object] into a map[string]interface{}")
-	}
-
-	stripeID, ok := obj["customer"].(string)
-	if !ok {
-		return fmt.Errorf("unable to convert %v to string", data["customer"])
-	}
+func (wh *stripeWebhook) handlePaymentMethodAttached(pm stripe.PaymentMethod) error {
+	stripeID := pm.Customer.ID
 
 	db := client.Database("sbsys")
 	ctx := context.Background()

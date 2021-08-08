@@ -12,7 +12,7 @@ type BaseConfig struct {
 	SBID      primitive.ObjectID `bson:"accountId" json:"-"`
 	Name      string             `bson:"name" json:"name"`
 	Whitelist []string           `bson:"whitelist" json:"whitelist"`
-	Valid     bool               `bson:"valid" json:"valid"`
+	IsActive  bool               `bson:"active" json:"-"`
 }
 
 var (
