@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/aws/aws-sdk-go v1.27.2
+	github.com/dop251/goja v0.0.0-20210804101310-32956a348b49
 	github.com/gbrlsnchs/jwt/v3 v3.0.0-rc.1
 	github.com/go-redis/redis/v8 v8.4.4
 	github.com/golang/snappy v0.0.4 // indirect
@@ -15,5 +16,4 @@ require (
 	go.mongodb.org/mongo-driver v1.7.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/text v0.3.6 // indirect
 )

@@ -12,7 +12,7 @@ deploy:
 	scp staticbackend sb-poc:/home/dstpierre/sb
 
 test:
-	@JWT_SECRET=okdevmode go test --race --cover ./...
+	@JWT_SECRET=okdevmode go test -v --race --cover ./...
 
 docker:
 	docker build . -t staticbackend:latest

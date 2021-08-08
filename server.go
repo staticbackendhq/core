@@ -138,6 +138,10 @@ func Start(dbHost, port string) {
 	}
 	http.Handle("/sse/msg", middleware.Chain(http.HandlerFunc(receiveMessage), pubWithDB...))
 
+	// server-side functions
+	f := &functions{base: &db.Base{PublishDocument: volatile.PublishDocument}}
+	http.Handle("/exec", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
+
 	// ui routes
 	webUI := ui{base: &db.Base{PublishDocument: volatile.PublishDocument}}
 	http.HandleFunc("/ui/login", webUI.auth)

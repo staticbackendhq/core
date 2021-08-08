@@ -28,6 +28,7 @@ const (
 
 var (
 	database   *Database
+	funexec    *functions
 	wsURL      string
 	pubKey     string
 	adminToken string
@@ -59,6 +60,8 @@ func TestMain(m *testing.M) {
 		cache:  volatile,
 		base:   &db.Base{PublishDocument: volatile.PublishDocument},
 	}
+
+	funexec = &functions{base: &db.Base{PublishDocument: volatile.PublishDocument}}
 
 	os.Exit(m.Run())
 }
