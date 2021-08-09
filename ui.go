@@ -104,7 +104,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		Collection     string
 		Collections    []string
 		Columns        []string
-		Docs           []interface{}
+		Docs           []bson.M
 		SortBy         string
 		SortDescending string
 		FilterFields   string
@@ -213,7 +213,7 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 		Doc        interface{}
 	})
 
-	var docs []interface{}
+	var docs []bson.M
 	docs = append(docs, doc)
 
 	data.Collection = col
@@ -293,15 +293,12 @@ func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ui/db", http.StatusSeeOther)
 }
 
-func (ui) readColumnNames(docs []interface{}) []string {
+func (ui) readColumnNames(docs []bson.M) []string {
 	if len(docs) == 0 {
 		return nil
 	}
 
-	first, ok := docs[0].(bson.M)
-	if !ok {
-		return nil
-	}
+	first := docs[0]
 
 	var columns []string
 	columns = append(columns, "id")

@@ -13,7 +13,16 @@ import (
 	"time"
 )
 
-func dbPost(t *testing.T, hf func(http.ResponseWriter, *http.Request), repo string, v interface{}) *http.Response {
+// dbPost post on behalf of adminToken by default (use params[0] true for root)
+func dbPost(t *testing.T, hf func(http.ResponseWriter, *http.Request), repo string, v interface{}, params ...bool) *http.Response {
+	if params == nil {
+		params = make([]bool, 0)
+	}
+
+	if len(params) == 0 {
+		params = append(params, false)
+	}
+
 	b, err := json.Marshal(v)
 	if err != nil {
 		t.Fatal("error marshaling post data:", err)
@@ -23,11 +32,22 @@ func dbPost(t *testing.T, hf func(http.ResponseWriter, *http.Request), repo stri
 	w := httptest.NewRecorder()
 
 	req.Header.Set("SB-PUBLIC-KEY", pubKey)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", adminToken))
+
+	tok := adminToken
+	if params[0] {
+		tok = rootToken
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tok))
 
 	stdAuth := []middleware.Middleware{
 		middleware.WithDB(database.client),
 		middleware.RequireAuth(database.client),
+	}
+	if params[0] {
+		stdAuth = []middleware.Middleware{
+			middleware.WithDB(client),
+			middleware.RequireRoot(client),
+		}
 	}
 	h := middleware.Chain(http.HandlerFunc(hf), stdAuth...)
 

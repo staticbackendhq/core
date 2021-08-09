@@ -104,12 +104,8 @@ func renderErr(w http.ResponseWriter, r *http.Request, err error) {
 
 func customFuncs() template.FuncMap {
 	return template.FuncMap{
-		"getField": func(s string, doc interface{}) string {
-			dict, ok := doc.(bson.M)
-			if !ok {
-				return "error converting document"
-			}
-			v, ok := dict[s]
+		"getField": func(s string, doc bson.M) string {
+			v, ok := doc[s]
 			if !ok {
 				return "n/a"
 			}
@@ -119,13 +115,13 @@ func customFuncs() template.FuncMap {
 				return oid.Hex()
 			}
 
-			date, ok := dict[s].(time.Time)
+			date, ok := doc[s].(time.Time)
 			if ok {
 				return date.Format("2006-01-02 15:04")
 			}
 
 			if s == "sb_posted" {
-				i, err := strconv.ParseInt(fmt.Sprintf("%v", dict[s]), 10, 64)
+				i, err := strconv.ParseInt(fmt.Sprintf("%v", doc[s]), 10, 64)
 				if err == nil {
 					ts := time.Unix(i/1000, 0)
 					return ts.Format("2006-01-02 15:04")

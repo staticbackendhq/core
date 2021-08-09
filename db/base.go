@@ -40,10 +40,10 @@ func (b *Base) Add(auth internal.Auth, db *mongo.Database, col string, doc map[s
 }
 
 type PagedResult struct {
-	Page    int64         `json:"page"`
-	Size    int64         `json:"size"`
-	Total   int64         `json:"total"`
-	Results []interface{} `json:"results"`
+	Page    int64    `json:"page"`
+	Size    int64    `json:"size"`
+	Total   int64    `json:"total"`
+	Results []bson.M `json:"results"`
 }
 
 type ListParams struct {
@@ -100,7 +100,7 @@ func (b *Base) List(auth internal.Auth, db *mongo.Database, col string, params L
 	}
 	defer cur.Close(ctx)
 
-	var results []interface{}
+	var results []bson.M
 
 	for cur.Next(ctx) {
 		var v bson.M
@@ -120,7 +120,7 @@ func (b *Base) List(auth internal.Auth, db *mongo.Database, col string, params L
 	}
 
 	if len(results) == 0 {
-		results = make([]interface{}, 1)
+		results = make([]bson.M, 1)
 	}
 
 	result.Results = results
@@ -155,7 +155,7 @@ func (b *Base) Query(auth internal.Auth, db *mongo.Database, col string, filter 
 	result.Total = count
 
 	if count == 0 {
-		result.Results = make([]interface{}, 0)
+		result.Results = make([]bson.M, 0)
 		return result, nil
 	}
 
@@ -180,7 +180,7 @@ func (b *Base) Query(auth internal.Auth, db *mongo.Database, col string, filter 
 	}
 	defer cur.Close(ctx)
 
-	var results []interface{}
+	var results []bson.M
 
 	for cur.Next(ctx) {
 		var v bson.M
@@ -200,7 +200,7 @@ func (b *Base) Query(auth internal.Auth, db *mongo.Database, col string, filter 
 	}
 
 	if len(results) == 0 {
-		results = make([]interface{}, 1)
+		results = make([]bson.M, 1)
 	}
 
 	result.Results = results

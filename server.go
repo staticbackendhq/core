@@ -140,7 +140,10 @@ func Start(dbHost, port string) {
 
 	// server-side functions
 	f := &functions{base: &db.Base{PublishDocument: volatile.PublishDocument}}
-	http.Handle("/exec", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
+	http.Handle("/fn/add", middleware.Chain(http.HandlerFunc(f.add), stdRoot...))
+	http.Handle("/fn/update", middleware.Chain(http.HandlerFunc(f.update), stdRoot...))
+	http.Handle("/fn/delete/", middleware.Chain(http.HandlerFunc(f.del), stdRoot...))
+	http.Handle("/fn/exec", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
 
 	// ui routes
 	webUI := ui{base: &db.Base{PublishDocument: volatile.PublishDocument}}
