@@ -20,11 +20,13 @@ type ExecData struct {
 	Code         string             `bson:"code" json:"code"`
 	Version      int                `bson:"v" json:"version"`
 	LastUpdated  time.Time          `bson:"lu" json:"lastUpdated"`
+	LastRun      time.Time          `bson:"lr" json:"lastRun"`
 	History      []ExecHistory      `bson:"h" json:"history"`
 }
 
 // ExecHistory represents a function run ending result
 type ExecHistory struct {
+	ID        string    `bson:"id" json:"id"`
 	Version   int       `bson:"v" json:"version"`
 	Started   time.Time `bson:"s" json:"started"`
 	Completed time.Time `bson:"c" json:"completed"`
@@ -38,11 +40,16 @@ func Add(db *mongo.Database, data ExecData) (string, error) {
 	data.LastUpdated = time.Now()
 
 	ctx := context.Background()
-	if _, err := db.Collection("sb_functions").InsertOne(ctx, data); err != nil {
+	res, err := db.Collection("sb_functions").InsertOne(ctx, data)
+	if err != nil {
 		return "", err
 	}
 
-	return data.ID.Hex(), nil
+	oid, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return "", nil
+	}
+	return oid.Hex(), nil
 }
 
 func Update(db *mongo.Database, id, code, trigger string) error {
@@ -108,7 +115,7 @@ func GetByID(db *mongo.Database, id string) (ExecData, error) {
 
 func List(db *mongo.Database) ([]ExecData, error) {
 	opt := &options.FindOptions{}
-	opt.SetProjection(bson.M{"h": -1})
+	opt.SetProjection(bson.M{"h": 0})
 
 	ctx := context.Background()
 	cur, err := db.Collection("sb_functions").Find(ctx, bson.M{}, opt)

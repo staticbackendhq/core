@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"staticbackend/db"
+	"staticbackend/function"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 	"strconv"
@@ -370,4 +371,104 @@ func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/ui/forms", http.StatusSeeOther)
+}
+
+func (x ui) fnList(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	results, err := function.List(curDB)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	render(w, r, "fn_list.html", results, nil)
+}
+
+func (x *ui) fnNew(w http.ResponseWriter, r *http.Request) {
+	fn := function.ExecData{}
+	render(w, r, "fn_edit.html", fn, nil)
+}
+
+func (x *ui) fnEdit(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	id := getURLPart(r.URL.Path, 3)
+
+	fn, err := function.GetByID(curDB, id)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	render(w, r, "fn_edit.html", fn, nil)
+}
+
+func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	r.ParseForm()
+
+	id := r.Form.Get("id")
+	name := r.Form.Get("name")
+	trigger := r.Form.Get("trigger")
+	code := r.Form.Get("code")
+
+	if id == "new" {
+		fn := function.ExecData{
+			FunctionName: name,
+			Code:         code,
+			TriggerTopic: trigger,
+		}
+		newID, err := function.Add(curDB, fn)
+		if err != nil {
+			renderErr(w, r, err)
+			return
+		}
+
+		http.Redirect(w, r, "/ui/fn/"+newID, http.StatusSeeOther)
+		return
+	}
+
+	if err := function.Update(curDB, id, code, trigger); err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	http.Redirect(w, r, "/ui/fn/"+id, http.StatusSeeOther)
+}
+
+func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+	name := getURLPart(r.URL.Path, 4)
+	if err := function.Delete(curDB, name); err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	http.Redirect(w, r, "/ui/fn", http.StatusSeeOther)
 }

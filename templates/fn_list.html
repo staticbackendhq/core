@@ -1,0 +1,62 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6">
+		<h2 class="title is-2">
+			Functions
+		</h2>
+		<p class="subtitle is-5">
+			Functions are useful to react to platform events and schedule tasks.
+		</p>
+		<p class="py-3">
+			<a href="/ui/fn/new" class="button is-primary">
+				Create a new function
+			</a>
+		</p>
+
+		<table class="table is-bordered is-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Version</th>
+				<th>Trigger</th>
+				<th>Last execution</th>
+				<th>Last updated</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Data}}
+			<tr>
+				<td>
+					<a href="/ui/fn/{{.ID.Hex}}">
+						{{.FunctionName}}
+					</a>
+				</td>
+				<td>{{.Version}}</td>
+				<td>{{.TriggerTopic}}</td>
+				<td>
+					{{if .LastRun}}
+						{{.LastRun}}
+					{{else}}
+						never
+					{{end}}
+				</td>
+				<td>{{.LastUpdated}}</td>
+				<td>
+					<a 
+						href="/ui/fn/del/{{.FunctionName}}" 
+						class="delete" 
+						onclick="return confirm('Are you sure you want to delete this function?\n\nThis is irreversible.')">
+					</a>
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+		</table>
+	</div>
+</body>
+
+{{template "foot"}}
