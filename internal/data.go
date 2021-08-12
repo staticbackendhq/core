@@ -39,6 +39,7 @@ const (
 	MsgTypeToken     = "token"
 	MsgTypeJoin      = "join"
 	MsgTypeJoined    = "joined"
+	MsgTypePresence  = "presence"
 	MsgTypeChanIn    = "chan_in"
 	MsgTypeChanOut   = "chan_out"
 	MsgTypeDBCreated = "db_created"
