@@ -98,7 +98,7 @@ func deleteAndSetupTestAccount() {
 		SBID:      acctID,
 		Name:      dbName,
 		Whitelist: []string{"localhost"},
-		Valid:     true,
+		IsActive:  true,
 	}
 
 	if _, err := sysDB.Collection("bases").InsertOne(ctx, base); err != nil {

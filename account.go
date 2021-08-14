@@ -61,8 +61,11 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stripeCustomerID, subID := "", ""
+	active := true
 
-	if AppEnv == AppEnvProd {
+	if AppEnv == AppEnvProd && len(os.Getenv("STRIPE_KEY")) > 0 {
+		active = false
+
 		cusParams := &stripe.CustomerParams{
 			Email: stripe.String(email),
 		}
@@ -99,6 +102,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Email:          email,
 		StripeID:       stripeCustomerID,
 		SubscriptionID: subID,
+		IsActive:       active,
 		Created:        time.Now(),
 	}
 
@@ -127,6 +131,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		ID:        primitive.NewObjectID(),
 		SBID:      acctID,
 		Name:      dbName,
+		IsActive:  active,
 		Whitelist: []string{"localhost"},
 	}
 
@@ -146,7 +151,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	signUpURL := "no need to sign up in dev mode"
-	if AppEnv == AppEnvProd {
+	if AppEnv == AppEnvProd && len(os.Getenv("STRIPE_KEY")) > 0 {
 		params := &stripe.BillingPortalSessionParams{
 			Customer:  stripe.String(stripeCustomerID),
 			ReturnURL: stripe.String("https://staticbackend.com/stripe"),

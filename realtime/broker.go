@@ -26,11 +26,13 @@ type Broker struct {
 	clients            map[chan internal.Command]string
 	ids                map[string]chan internal.Command
 	conf               map[string]context.Context
-	subscriptions      map[string][]string
+	subscriptions      map[string][]chan bool
 	validateAuth       Validator
+
+	pubsub internal.PubSuber
 }
 
-func NewBroker(v Validator) *Broker {
+func NewBroker(v Validator, pubsub internal.PubSuber) *Broker {
 	b := &Broker{
 		Broadcast:          make(chan internal.Command, 1),
 		newConnections:     make(chan ConnectionData),
@@ -38,8 +40,9 @@ func NewBroker(v Validator) *Broker {
 		clients:            make(map[chan internal.Command]string),
 		ids:                make(map[string]chan internal.Command),
 		conf:               make(map[string]context.Context),
-		subscriptions:      make(map[string][]string),
+		subscriptions:      make(map[string][]chan bool),
 		validateAuth:       v,
+		pubsub:             pubsub,
 	}
 
 	go b.start()
@@ -83,6 +86,13 @@ func (b *Broker) unsub(c chan internal.Command) {
 	id, ok := b.clients[c]
 	if !ok {
 		fmt.Println("cannot find connection id")
+	}
+
+	subs, ok := b.subscriptions[id]
+	if ok {
+		for _, ch := range subs {
+			ch <- true
+		}
 	}
 
 	delete(b.ids, id)
@@ -140,12 +150,15 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Command, payload internal.Command) {
+	var sender chan internal.Command
+
 	if msg.SID != internal.SystemID {
-		sender, ok := b.ids[msg.SID]
+		s, ok := b.ids[msg.SID]
 		if !ok {
 			fmt.Println("cannot find sender socket", msg.SID)
 			return
 		}
+		sender = s
 		sockets = append(sockets, sender)
 	}
 
@@ -167,15 +180,27 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 
 		payload = internal.Command{Type: internal.MsgTypeToken, Data: msg.Data}
 	case internal.MsgTypeJoin:
-		members, ok := b.subscriptions[msg.Data]
+		subs, ok := b.subscriptions[msg.SID]
 		if !ok {
-			members = make([]string, 0)
+			subs = make([]chan bool, 0)
 		}
 
-		members = append(members, msg.SID)
-		b.subscriptions[msg.Data] = members
+		closesub := make(chan bool)
+
+		subs = append(subs, closesub)
+		b.subscriptions[msg.SID] = subs
+
+		go b.pubsub.Subscribe(sender, msg.Token, msg.Data, closesub)
 
 		payload = internal.Command{Type: internal.MsgTypeJoined, Data: msg.Data}
+	case internal.MsgTypePresence:
+		v, err := b.pubsub.Get(msg.Data)
+		if err != nil {
+			//TODO: Make sure it's because the channel key does not exists
+			v = "0"
+		}
+
+		payload = internal.Command{Type: internal.MsgTypePresence, Data: v}
 	case internal.MsgTypeChanIn:
 		if len(msg.Channel) == 0 {
 			payload = internal.Command{Type: internal.MsgTypeError, Data: "no channel was specified"}
@@ -188,7 +213,8 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 			return
 		}
 
-		go b.Publish(msg, msg.Channel)
+		go b.pubsub.Publish(msg)
+		//go b.Publish(msg, msg.Channel)
 
 		payload = internal.Command{Type: internal.MsgTypeOk}
 	default:
@@ -197,25 +223,4 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 	}
 
 	return
-}
-
-// Publish sends a message to all socket in that channel
-func (b *Broker) Publish(msg internal.Command, channel string) {
-	if msg.Type == internal.MsgTypeChanIn {
-		msg.Type = internal.MsgTypeChanOut
-	}
-
-	members, ok := b.subscriptions[channel]
-	if !ok {
-		return
-	}
-
-	for _, sid := range members {
-		c, ok := b.ids[sid]
-		if !ok {
-			continue
-		}
-
-		c <- msg
-	}
 }

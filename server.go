@@ -19,6 +19,7 @@ import (
 	"staticbackend/cache"
 
 	"github.com/stripe/stripe-go/v71"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -53,11 +54,26 @@ func Start(dbHost, port string) {
 
 	// Server Send Event, alternative to websocket
 	b := realtime.NewBroker(func(ctx context.Context, key string) (string, error) {
+		//TODO: Experimental, let un-authenticated user connect
+		// useful for an Intercom-like SaaS I'm building.
+		if strings.HasPrefix(key, "__tmp__experimental_public_19378246_") {
+			// let's create the most minimal authentication possible
+			a := internal.Auth{
+				AccountID: primitive.NewObjectID(),
+				UserID:    primitive.NewObjectID(),
+				Email:     "exp@tmp.com",
+				Role:      0,
+			}
+
+			internal.Tokens[key] = a
+			return key, nil
+		}
+
 		if _, err := middleware.ValidateAuthKey(client, ctx, key); err != nil {
 			return "", err
 		}
 		return key, nil
-	})
+	}, volatile)
 
 	database := &Database{
 		client: client,

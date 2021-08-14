@@ -54,6 +54,9 @@ func WithDB(client *mongo.Client) Middleware {
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
+				} else if !conf.IsActive {
+					http.Error(w, "your account is not inactive. Please contact us support@staticbackend.com", http.StatusUnauthorized)
+					return
 				}
 
 				ctx = context.WithValue(ctx, ContextBase, conf)

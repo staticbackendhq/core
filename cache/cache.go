@@ -42,6 +42,14 @@ func (c *Cache) Set(key string, value string) error {
 	return nil
 }
 
+func (c *Cache) Inc(key string, by int64) (int64, error) {
+	return c.Rdb.IncrBy(c.Ctx, key, by).Result()
+}
+
+func (c *Cache) Dec(key string, by int64) (int64, error) {
+	return c.Rdb.DecrBy(c.Ctx, key, by).Result()
+}
+
 func (c *Cache) Subscribe(send chan internal.Command, token, channel string, close chan bool) {
 	pubsub := c.Rdb.Subscribe(c.Ctx, channel)
 
