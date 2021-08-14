@@ -9,6 +9,7 @@ import (
 	"os"
 	"staticbackend/db"
 	"staticbackend/email"
+	"staticbackend/function"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 	"staticbackend/realtime"
@@ -65,11 +66,13 @@ func Start(dbHost, port string) {
 				Role:      0,
 			}
 
-			internal.Tokens[key] = a
+			if err := volatile.SetTyped(key, a); err != nil {
+				return key, err
+			}
 			return key, nil
 		}
 
-		if _, err := middleware.ValidateAuthKey(client, ctx, key); err != nil {
+		if _, err := middleware.ValidateAuthKey(client, volatile, ctx, key); err != nil {
 			return "", err
 		}
 		return key, nil
@@ -83,17 +86,17 @@ func Start(dbHost, port string) {
 
 	pubWithDB := []middleware.Middleware{
 		middleware.Cors(),
-		middleware.WithDB(client),
+		middleware.WithDB(client, volatile),
 	}
 
 	stdAuth := []middleware.Middleware{
 		middleware.Cors(),
-		middleware.WithDB(client),
-		middleware.RequireAuth(client),
+		middleware.WithDB(client, volatile),
+		middleware.RequireAuth(client, volatile),
 	}
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(client),
+		middleware.WithDB(client, volatile),
 		middleware.RequireRoot(client),
 	}
 
@@ -200,6 +203,31 @@ func initServices(dbHost string) {
 	} else {
 		storer = storage.Local{}
 	}
+
+	sub := &function.Subscriber{}
+	sub.PubSub = volatile
+	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
+		var exe function.ExecutionEnvironment
+
+		var conf internal.BaseConfig
+		if err := volatile.GetTyped("base:"+token, &conf); err != nil {
+			return exe, err
+		}
+
+		var auth internal.Auth
+		if err := volatile.GetTyped(token, &auth); err != nil {
+			return exe, err
+		}
+
+		exe.Auth = auth
+		exe.Base = &db.Base{PublishDocument: volatile.PublishDocument}
+		exe.DB = client.Database(conf.Name)
+
+		return exe, nil
+	}
+
+	// start system events subscriber
+	go sub.Start()
 }
 func openDatabase(dbHost string) error {
 	uri := dbHost

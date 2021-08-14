@@ -1,6 +1,7 @@
 package function
 
 import (
+	"encoding/json"
 	"fmt"
 	"staticbackend/db"
 	"staticbackend/internal"
@@ -11,10 +12,11 @@ import (
 )
 
 type ExecutionEnvironment struct {
-	Auth internal.Auth
-	DB   *mongo.Database
-	Base *db.Base
-	Data ExecData
+	Auth     internal.Auth
+	DB       *mongo.Database
+	Base     *db.Base
+	Volatile internal.PubSuber
+	Data     ExecData
 }
 
 type Result struct {
@@ -28,6 +30,7 @@ func (env *ExecutionEnvironment) Execute() error {
 
 	env.addHelpers(vm)
 	env.addDatabaseFunctions(vm)
+	env.addVolatileFunctions(vm)
 
 	result, err := vm.RunString(env.Data.Code)
 	if err != nil {
@@ -254,4 +257,38 @@ func (*ExecutionEnvironment) clean(doc map[string]interface{}) error {
 	}
 
 	return nil
+}
+
+func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
+	vm.Set("send", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) != 3 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for send(type, data, channel)"})
+		}
+
+		var typ, channel string
+		if err := vm.ExportTo(call.Argument(0), &typ); err != nil {
+			return vm.ToValue(Result{Content: "the first argument should be a string"})
+		} else if err := vm.ExportTo(call.Argument(2), &channel); err != nil {
+			return vm.ToValue(Result{Content: "the third argument should be a string"})
+		}
+
+		b, err := json.Marshal(call.Argument(1).Export())
+		if err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error converting your data: %v", err)})
+		}
+
+		msg := internal.Command{
+			SID:     env.Data.ID.Hex(),
+			Type:    typ,
+			Data:    string(b),
+			Channel: channel,
+			Token:   env.Auth.ReconstructToken(),
+		}
+
+		if err := env.Volatile.Publish(msg); err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error publishing your message: %v", err)})
+		}
+
+		return vm.ToValue(Result{OK: true})
+	})
 }

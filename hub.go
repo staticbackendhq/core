@@ -106,8 +106,8 @@ func (h *Hub) getTargets(msg internal.Command) (sockets []*Socket, payload inter
 			return
 		}
 
-		_, ok := internal.Tokens[pl.Token]
-		if !ok {
+		var a internal.Auth
+		if err := volatile.GetTyped(pl.Token, &a); err != nil {
 			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid token"}
 		} else {
 			payload = internal.Command{Type: internal.MsgTypeToken, Data: pl.Token}

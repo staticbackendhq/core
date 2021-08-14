@@ -16,9 +16,9 @@ type BaseConfig struct {
 }
 
 var (
-	Tokens     map[string]Auth       = make(map[string]Auth)
-	Bases      map[string]BaseConfig = make(map[string]BaseConfig)
-	HashSecret                       = jwt.NewHS256([]byte(os.Getenv("JWT_SECRET")))
+	//Tokens     map[string]Auth       = make(map[string]Auth)
+	//Bases      map[string]BaseConfig = make(map[string]BaseConfig)
+	HashSecret = jwt.NewHS256([]byte(os.Getenv("JWT_SECRET")))
 )
 
 const (
@@ -48,11 +48,12 @@ const (
 )
 
 type Command struct {
-	SID     string `json:"sid"`
-	Type    string `json:"type"`
-	Data    string `json:"data"`
-	Channel string `json:"channel"`
-	Token   string `json:"token"`
+	SID           string `json:"sid"`
+	Type          string `json:"type"`
+	Data          string `json:"data"`
+	Channel       string `json:"channel"`
+	Token         string `json:"token"`
+	IsSystemEvent bool   `json:"-"`
 }
 
 func (msg Command) IsDBEvent() bool {

@@ -18,7 +18,7 @@ const (
 	RootRole = 100
 )
 
-func RequireAuth(client *mongo.Client) Middleware {
+func RequireAuth(client *mongo.Client, volatile internal.PubSuber) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
@@ -32,6 +32,7 @@ func RequireAuth(client *mongo.Client) Middleware {
 						UserID:    primitive.NewObjectID(),
 						Email:     "",
 						Role:      0,
+						Token:     "pub",
 					}
 
 					ctx := context.WithValue(r.Context(), ContextAuth, a)
@@ -54,7 +55,7 @@ func RequireAuth(client *mongo.Client) Middleware {
 
 			ctx := r.Context()
 
-			auth, err := ValidateAuthKey(client, ctx, key)
+			auth, err := ValidateAuthKey(client, volatile, ctx, key)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -67,7 +68,7 @@ func RequireAuth(client *mongo.Client) Middleware {
 	}
 }
 
-func ValidateAuthKey(client *mongo.Client, ctx context.Context, key string) (internal.Auth, error) {
+func ValidateAuthKey(client *mongo.Client, volatile internal.PubSuber, ctx context.Context, key string) (internal.Auth, error) {
 	a := internal.Auth{}
 
 	var pl internal.JWTPayload
@@ -82,8 +83,8 @@ func ValidateAuthKey(client *mongo.Client, ctx context.Context, key string) (int
 
 	db := client.Database(conf.Name)
 
-	auth, ok := internal.Tokens[pl.Token]
-	if ok {
+	var auth internal.Auth
+	if err := volatile.GetTyped(pl.Token, &auth); err == nil {
 		return auth, nil
 	}
 
@@ -107,8 +108,16 @@ func ValidateAuthKey(client *mongo.Client, ctx context.Context, key string) (int
 		UserID:    token.ID,
 		Email:     token.Email,
 		Role:      token.Role,
+		Token:     token.Token,
 	}
-	internal.Tokens[pl.Token] = a
+	if err := volatile.SetTyped(pl.Token, a); err != nil {
+		return a, err
+	}
+
+	// set base:token useful when executing pubsub event message / function
+	if err := volatile.SetTyped("base:"+pl.Token, conf); err != nil {
+		return a, err
+	}
 
 	return a, nil
 }
@@ -157,6 +166,7 @@ func RequireRoot(client *mongo.Client) Middleware {
 				UserID:    tok.ID,
 				Email:     tok.Email,
 				Role:      tok.Role,
+				Token:     tok.Token,
 			}
 
 			ctx = context.WithValue(ctx, ContextAuth, a)

@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func WithDB(client *mongo.Client) Middleware {
+func WithDB(client *mongo.Client, volatile internal.PubSuber) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("SB-PUBLIC-KEY")
@@ -36,8 +36,8 @@ func WithDB(client *mongo.Client) Middleware {
 
 			ctx := r.Context()
 
-			conf, ok := internal.Bases[key]
-			if ok {
+			var conf internal.BaseConfig
+			if err := volatile.GetTyped(key, &conf); err == nil {
 				ctx = context.WithValue(ctx, ContextBase, conf)
 			} else {
 				// let's try to see if they are allow to use a database
@@ -56,6 +56,11 @@ func WithDB(client *mongo.Client) Middleware {
 					return
 				} else if !conf.IsActive {
 					http.Error(w, "your account is not inactive. Please contact us support@staticbackend.com", http.StatusUnauthorized)
+					return
+				}
+
+				if err := volatile.SetTyped(key, conf); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
 

@@ -80,11 +80,16 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	internal.Tokens[token] = internal.Auth{
+	auth := internal.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
 		Role:      tok.Role,
+		Token:     tok.Token,
+	}
+	if err := volatile.SetTyped(token, auth); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	respond(w, http.StatusOK, string(jwtBytes))
@@ -195,11 +200,15 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 		return nil, tok, err
 	}
 
-	internal.Tokens[token] = internal.Auth{
+	auth := internal.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
 		Role:      role,
+		Token:     tok.Token,
+	}
+	if err := volatile.SetTyped(token, auth); err != nil {
+		return nil, tok, err
 	}
 
 	return jwtBytes, tok, nil
@@ -445,11 +454,16 @@ func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	internal.Tokens[token] = internal.Auth{
+	auth := internal.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
 		Role:      tok.Role,
+		Token:     tok.Token,
+	}
+	if err := volatile.SetTyped(token, auth); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	respond(w, http.StatusOK, string(jwtBytes))

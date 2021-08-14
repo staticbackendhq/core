@@ -42,6 +42,23 @@ func (c *Cache) Set(key string, value string) error {
 	return nil
 }
 
+func (c *Cache) GetTyped(key string, v interface{}) error {
+	s, err := c.Get(key)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal([]byte(s), v)
+}
+
+func (c *Cache) SetTyped(key string, v interface{}) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return c.Set(key, string(b))
+}
+
 func (c *Cache) Inc(key string, by int64) (int64, error) {
 	return c.Rdb.IncrBy(c.Ctx, key, by).Result()
 }
@@ -70,14 +87,16 @@ func (c *Cache) Subscribe(send chan internal.Command, token, channel string, clo
 				return
 			}
 
-			// for non DB events we change the type to MsgTypeChanOut
-			if !msg.IsDBEvent() {
+			// TODO: this will need more thinking
+			if msg.Type == internal.MsgTypeChanIn {
 				msg.Type = internal.MsgTypeChanOut
-			} else if c.HasPermission(token, channel, msg.Data) == false {
+			} else if msg.IsSystemEvent {
+
+			} else if msg.IsDBEvent() && c.HasPermission(token, channel, msg.Data) == false {
 				continue
 			}
 			send <- msg
-		case _ = <-close:
+		case <-close:
 			_ = pubsub.Close()
 			return
 		}
@@ -92,6 +111,22 @@ func (c *Cache) Publish(msg internal.Command) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
+
+	// Publish the event to system so server-side function can trigger
+	go func(sysmsg internal.Command) {
+		sysmsg.IsSystemEvent = true
+		b, err := json.Marshal(sysmsg)
+		if err != nil {
+			log.Println("error marshaling the system msg: ", err)
+			return
+		}
+
+		sysctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+		if err := c.Rdb.Publish(sysctx, "sbsys", string(b)).Err(); err != nil {
+			log.Println("error publishing to system channel: ", err)
+		}
+	}(msg)
 
 	return c.Rdb.Publish(ctx, msg.Channel, string(b)).Err()
 }
@@ -129,8 +164,8 @@ func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 }
 
 func (c *Cache) HasPermission(token, repo, payload string) bool {
-	me, ok := internal.Tokens[token]
-	if !ok {
+	var me internal.Auth
+	if err := c.GetTyped(token, &me); err != nil {
 		return false
 	}
 

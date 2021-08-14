@@ -138,6 +138,32 @@ func List(db *mongo.Database) ([]ExecData, error) {
 	return results, nil
 }
 
+func ListByTrigger(db *mongo.Database, trigger string) ([]ExecData, error) {
+	opt := &options.FindOptions{}
+	opt.SetProjection(bson.M{"h": 0})
+
+	filter := bson.M{"tr": trigger}
+	ctx := context.Background()
+	cur, err := db.Collection("sb_functions").Find(ctx, filter, opt)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var results []ExecData
+	for cur.Next(ctx) {
+		var ed ExecData
+		err := cur.Decode(&ed)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, ed)
+	}
+
+	return results, nil
+}
+
 func Delete(db *mongo.Database, name string) error {
 	filter := bson.M{"name": name}
 

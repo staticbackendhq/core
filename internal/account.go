@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -16,6 +17,11 @@ type Auth struct {
 	UserID    primitive.ObjectID
 	Email     string
 	Role      int
+	Token     string
+}
+
+func (auth Auth) ReconstructToken() string {
+	return fmt.Sprintf("%s|%s", auth.UserID.Hex(), auth.Token)
 }
 
 // JWTPayload contains the current user token
