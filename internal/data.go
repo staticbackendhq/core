@@ -26,6 +26,8 @@ const (
 	FieldAccountID = "accountId"
 	FieldOwnerID   = "sb_owner"
 	FieldToken     = "token"
+	FieldIsActive  = "active"
+	FieldRole      = "role"
 )
 
 const (

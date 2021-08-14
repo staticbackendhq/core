@@ -88,6 +88,15 @@ func FindRootToken(db *mongo.Database, id, accountID primitive.ObjectID, token s
 	return
 }
 
+func GetRootForBase(db *mongo.Database) (tok Token, err error) {
+	filter := bson.M{
+		FieldRole: 100,
+	}
+	sr := db.Collection("sb_tokens").FindOne(ctx, filter)
+	err = sr.Decode(&tok)
+	return
+}
+
 func FindTokenByEmail(db *mongo.Database, email string) (tok Token, err error) {
 	sr := db.Collection("sb_tokens").FindOne(ctx, bson.M{"email": email})
 	err = sr.Decode(&tok)
@@ -127,4 +136,32 @@ func DatabaseExists(db *mongo.Database, name string) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func ListDatabases(db *mongo.Database) ([]BaseConfig, error) {
+	filter := bson.M{FieldIsActive: true}
+
+	ctx := context.Background()
+
+	cur, err := db.Collection("bases").Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var results []BaseConfig
+
+	for cur.Next(ctx) {
+		var bc BaseConfig
+		if err := cur.Decode(&bc); err != nil {
+			return nil, err
+		}
+
+		results = append(results, bc)
+	}
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
