@@ -76,6 +76,11 @@ func (f *functions) del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := function.Delete(curDB, name); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -112,4 +117,42 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (f *functions) list(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	results, err := function.List(curDB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, results)
+}
+
+func (f *functions) info(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	name := getURLPart(r.URL.Path, 3)
+
+	fn, err := function.GetByName(curDB, name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, fn)
 }

@@ -113,6 +113,22 @@ func GetByID(db *mongo.Database, id string) (ExecData, error) {
 	return result, nil
 }
 
+func GetByName(db *mongo.Database, name string) (ExecData, error) {
+	var result ExecData
+
+	filter := bson.M{"name": name}
+
+	ctx := context.Background()
+	sr := db.Collection("sb_functions").FindOne(ctx, filter)
+	if err := sr.Decode(&result); err != nil {
+		return result, err
+	} else if err := sr.Err(); err != nil {
+		return result, err
+	}
+
+	return result, nil
+}
+
 func List(db *mongo.Database) ([]ExecData, error) {
 	opt := &options.FindOptions{}
 	opt.SetProjection(bson.M{"h": 0})

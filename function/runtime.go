@@ -126,7 +126,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 	})
 	vm.Set("getById", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 2 {
-			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for get(repo, id)"})
+			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for get(col, id)"})
 		}
 		var col, id string
 		if err := vm.ExportTo(call.Argument(0), &col); err != nil {
