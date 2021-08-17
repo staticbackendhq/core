@@ -46,7 +46,8 @@ func (sub *Subscriber) process(msg internal.Command) {
 func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 	exe, err := sub.GetExecEnv(msg.Token)
 	if err != nil {
-		log.Println("cannot retrieve base from token")
+		log.Println("cannot retrieve base from token", msg.Token)
+		log.Println(err)
 		return
 	}
 
@@ -81,7 +82,7 @@ func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 
 		exe.Data = fn
 		go func(ex ExecutionEnvironment) {
-			if err := ex.Execute(); err != nil {
+			if err := ex.Execute(msg); err != nil {
 				log.Printf(`executing "%s" function failed: %v"`, ex.Data.FunctionName, err)
 			}
 		}(exe)

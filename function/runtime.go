@@ -2,9 +2,13 @@ package function
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
+	"net/http"
 	"staticbackend/db"
 	"staticbackend/internal"
+	"time"
 
 	"github.com/dop251/goja"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,6 +21,8 @@ type ExecutionEnvironment struct {
 	Base     *db.Base
 	Volatile internal.PubSuber
 	Data     ExecData
+
+	CurrentRun ExecHistory
 }
 
 type Result struct {
@@ -24,7 +30,7 @@ type Result struct {
 	Content interface{} `json:"content"`
 }
 
-func (env *ExecutionEnvironment) Execute() error {
+func (env *ExecutionEnvironment) Execute(data interface{}) error {
 	vm := goja.New()
 	vm.SetFieldNameMapper(goja.TagFieldNameMapper("json", true))
 
@@ -32,24 +38,70 @@ func (env *ExecutionEnvironment) Execute() error {
 	env.addDatabaseFunctions(vm)
 	env.addVolatileFunctions(vm)
 
-	result, err := vm.RunString(env.Data.Code)
-	if err != nil {
+	if _, err := vm.RunString(env.Data.Code); err != nil {
 		return err
 	}
 
 	handler, ok := goja.AssertFunction(vm.Get("handle"))
 	if !ok {
-		return fmt.Errorf(`unable to find function "handle": %v`, err)
+		return errors.New(`unable to find function "handle"`)
 	}
 
-	resp, err := handler(goja.Undefined())
+	args, err := env.prepareArguments(vm, data)
+	if err != nil {
+		return fmt.Errorf("error preparing argument: %v", err)
+	}
+
+	env.CurrentRun = ExecHistory{
+		ID:      primitive.NewObjectID().Hex(),
+		Version: env.Data.Version,
+		Started: time.Now(),
+		Output:  make([]string, 0),
+	}
+
+	env.CurrentRun.Output = append(env.CurrentRun.Output, "Function started")
+
+	_, err = handler(goja.Undefined(), args...)
+	go env.complete(err)
 	if err != nil {
 		return fmt.Errorf("error executing your function: %v", err)
 	}
 
-	fmt.Println("resp", resp)
-	fmt.Println("result", result)
 	return nil
+}
+
+func (env *ExecutionEnvironment) prepareArguments(vm *goja.Runtime, data interface{}) ([]goja.Value, error) {
+	var args []goja.Value
+
+	// for "web" trigger we prepare the body, query string and headers
+	r, ok := data.(*http.Request)
+	if ok {
+		defer r.Body.Close()
+
+		// let's ready the HTTP body
+		if r.Header.Get("Content-Type") == "application/json" {
+			var v interface{}
+			if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+				return nil, err
+			}
+
+			args = append(args, vm.ToValue(v))
+		} else if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
+			if err := r.ParseForm(); err != nil {
+				return nil, err
+			}
+			args = append(args, vm.ToValue(r.Form))
+		}
+
+		args = append(args, vm.ToValue(r.URL.Query()))
+		args = append(args, vm.ToValue(r.Header))
+
+		return args, nil
+	}
+
+	// system or custom event/topic, we send only the 1st argument (body)
+	args = append(args, vm.ToValue(data))
+	return args, nil
 }
 
 func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) {
@@ -62,7 +114,7 @@ func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) {
 		for _, v := range call.Arguments {
 			params = append(params, v.Export())
 		}
-		fmt.Println(params...)
+		env.CurrentRun.Output = append(env.CurrentRun.Output, fmt.Sprint(params...))
 		return goja.Undefined()
 	})
 }
@@ -291,4 +343,22 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true})
 	})
+}
+
+func (env *ExecutionEnvironment) complete(err error) {
+	env.CurrentRun.Completed = time.Now()
+	env.CurrentRun.Success = err == mongo.ErrNilCursor
+
+	env.CurrentRun.Output = append(env.CurrentRun.Output, "Function completed")
+
+	// add the error in the last output entry
+	if err != nil {
+		env.CurrentRun.Output = append(env.CurrentRun.Output, err.Error())
+	}
+
+	//TODO: this needs to be regrouped and ran un batch
+	if err := Ran(env.DB, env.Data.ID, env.CurrentRun); err != nil {
+		//TODO: do something with those error
+		log.Println("error logging function complete: ", err)
+	}
 }

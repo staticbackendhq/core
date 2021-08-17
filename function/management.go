@@ -38,6 +38,7 @@ func Add(db *mongo.Database, data ExecData) (string, error) {
 	data.ID = primitive.NewObjectID()
 	data.Version = 1
 	data.LastUpdated = time.Now()
+	data.History = make([]ExecHistory, 0)
 
 	ctx := context.Background()
 	res, err := db.Collection("sb_functions").InsertOne(ctx, data)
@@ -188,5 +189,19 @@ func Delete(db *mongo.Database, name string) error {
 		return err
 	}
 
+	return nil
+}
+
+func Ran(db *mongo.Database, id primitive.ObjectID, rh ExecHistory) error {
+	filter := bson.M{internal.FieldID: id}
+	update := bson.M{
+		"$set":  bson.M{"lr": time.Now()},
+		"$push": bson.M{"h": rh},
+	}
+	ctx := context.Background()
+	res := db.Collection("sb_functions").FindOneAndUpdate(ctx, filter, update)
+	if err := res.Err(); err != nil {
+		return err
+	}
 	return nil
 }

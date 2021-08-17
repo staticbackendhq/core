@@ -111,7 +111,7 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 		Base: f.base,
 		Data: fn,
 	}
-	if err := env.Execute(); err != nil {
+	if err := env.Execute(r); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

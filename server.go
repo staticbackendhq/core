@@ -3,6 +3,7 @@ package staticbackend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -72,9 +73,25 @@ func Start(dbHost, port string) {
 			return key, nil
 		}
 
-		if _, err := middleware.ValidateAuthKey(client, volatile, ctx, key); err != nil {
+		auth, err := middleware.ValidateAuthKey(client, volatile, ctx, key)
+		if err != nil {
 			return "", err
 		}
+
+		// set base:token useful when executing pubsub event message / function
+		conf, ok := ctx.Value(middleware.ContextBase).(internal.BaseConfig)
+		if !ok {
+			return "", errors.New("could not find base config")
+		}
+
+		//TODO: Lots of repetition of this, needs to be refactor
+		if err := volatile.SetTyped(key, auth); err != nil {
+			return "", err
+		}
+		if err := volatile.SetTyped("base:"+key, conf); err != nil {
+			return "", err
+		}
+
 		return key, nil
 	}, volatile)
 
@@ -162,6 +179,7 @@ func Start(dbHost, port string) {
 	http.Handle("/fn/add", middleware.Chain(http.HandlerFunc(f.add), stdRoot...))
 	http.Handle("/fn/update", middleware.Chain(http.HandlerFunc(f.update), stdRoot...))
 	http.Handle("/fn/delete/", middleware.Chain(http.HandlerFunc(f.del), stdRoot...))
+	http.Handle("/fn/del/", middleware.Chain(http.HandlerFunc(f.del), stdRoot...))
 	http.Handle("/fn/info/", middleware.Chain(http.HandlerFunc(f.info), stdRoot...))
 	http.Handle("/fn/exec", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
 	http.Handle("/fn", middleware.Chain(http.HandlerFunc(f.list), stdRoot...))
@@ -213,11 +231,13 @@ func initServices(dbHost string) {
 
 		var conf internal.BaseConfig
 		if err := volatile.GetTyped("base:"+token, &conf); err != nil {
+			log.Println("cannot find base")
 			return exe, err
 		}
 
 		var auth internal.Auth
 		if err := volatile.GetTyped(token, &auth); err != nil {
+			log.Println("cannot find auth")
 			return exe, err
 		}
 

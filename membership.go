@@ -87,7 +87,14 @@ func login(w http.ResponseWriter, r *http.Request) {
 		Role:      tok.Role,
 		Token:     tok.Token,
 	}
+
+	//TODO: find a good way to find all occurences of those two
+	// and make them easily callable via a shared function
 	if err := volatile.SetTyped(token, auth); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := volatile.SetTyped("base:"+token, conf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -141,12 +148,32 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtBytes, _, err := createAccountAndUser(db, l.Email, l.Password, 0)
+	jwtBytes, tok, err := createAccountAndUser(db, l.Email, l.Password, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respond(w, http.StatusOK, string(jwtBytes))
+
+	token := string(jwtBytes)
+
+	auth := internal.Auth{
+		AccountID: tok.AccountID,
+		UserID:    tok.ID,
+		Email:     tok.Email,
+		Role:      tok.Role,
+		Token:     tok.Token,
+	}
+
+	if err := volatile.SetTyped(token, auth); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := volatile.SetTyped("base:"+token, conf); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, token)
 }
 
 func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, internal.Token, error) {

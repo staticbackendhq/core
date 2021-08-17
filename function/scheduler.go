@@ -152,7 +152,7 @@ func (ts *TaskScheduler) execFunction(curDB *mongo.Database, auth internal.Auth,
 		Data:     fn,
 	}
 
-	if err := exe.Execute(); err != nil {
+	if err := exe.Execute(task.Name); err != nil {
 		log.Printf("error executing function %s: %v", task.Value, err)
 	}
 }

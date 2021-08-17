@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"staticbackend/internal"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -192,7 +193,18 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 
 		go b.pubsub.Subscribe(sender, msg.Token, msg.Data, closesub)
 
-		payload = internal.Command{Type: internal.MsgTypeJoined, Data: msg.Data}
+		joinedMsg := internal.Command{
+			Type:    internal.MsgTypeJoined,
+			Data:    msg.SID,
+			Channel: msg.Data,
+		}
+		// make sure the subscription had time to kick-off
+		go func(m internal.Command) {
+			time.Sleep(250 * time.Millisecond)
+			b.pubsub.Publish(joinedMsg)
+		}(joinedMsg)
+
+		payload = internal.Command{Type: internal.MsgTypeOk, Data: msg.Data}
 	case internal.MsgTypePresence:
 		v, err := b.pubsub.Get(msg.Data)
 		if err != nil {
