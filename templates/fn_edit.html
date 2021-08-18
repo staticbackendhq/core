@@ -23,80 +23,78 @@
 		</div>
 
 		<div x-show="tab == 'edit'">
-		<form action="/ui/fn/save" method="POST">
-			<input 
-				type="hidden" 
-				name="id" 
-				value="{{if .Data.FunctionName}}{{.Data.ID.Hex}}{{else}}new{{end}}">
+			<form action="/ui/fn/save" method="POST">
+				<input type="hidden" name="id" value="{{if .Data.FunctionName}}{{.Data.ID.Hex}}{{else}}new{{end}}">
 
-			<div class="field">
-				<label class="label">Function name</label>
-				<div class="control">
-					<input type="text" class="input" name="name" value="{{.Data.FunctionName}}" placeholder="Name your function"
-						required
-						{{if .Data.FunctionName}}disabled{{end}}>
+				<div class="field">
+					<label class="label">Function name</label>
+					<div class="control">
+						<input type="text" class="input" name="name" value="{{.Data.FunctionName}}" placeholder="Name your function"
+							required {{if .Data.FunctionName}}disabled{{end}}>
+					</div>
 				</div>
-			</div>
 
-			<div class="field">
-				<label class="label">Trigger (web or topic)</label>
-				<div class="control">
-					<input type="text" class="input" name="trigger" value="{{.Data.TriggerTopic}}"
-						placeholder='Either "web" or "topic"' required>
+				<div class="field">
+					<label class="label">Trigger (web or topic)</label>
+					<div class="control">
+						<input type="text" class="input" name="trigger" value="{{.Data.TriggerTopic}}"
+							placeholder='Either "web" or "topic"' required>
+					</div>
 				</div>
-			</div>
 
-			<div class="field">
-				<label class="label">Code</label>
-				<div class="control">
-					<textarea class="textarea" rows="15" name="code" placeholder="Function code"
-						required>{{.Data.Code}}</textarea>
+				<div class="field">
+					<label class="label">Code</label>
+					<div class="control">
+						<textarea class="textarea" rows="15" name="code" placeholder="Function code"
+							required>{{.Data.Code}}</textarea>
+					</div>
 				</div>
-			</div>
 
-			<div class="field">
-				<div class="control">
-					<button type="submit" class="button is-primary">Save changes</button>
+				<div class="field">
+					<div class="control">
+						<button type="submit" class="button is-primary">Save changes</button>
+					</div>
 				</div>
-			</div>
-		</form>
+			</form>
 		</div>
 
 		<div x-show="tab == 'history'">
 			<h3 class="subtitle is-3">History</h3>
 			<table class="table is-bordered is-striped">
-			<thead>
-				<tr>
-					<th>Version</th>
-					<th>Started</th>
-					<th>Completed</th>
-					<th>Status</th>
-					<th>Output</th>
-				</tr>
-			</thead>
-			<tbody>
-				{{range .Data.History}}
-				<tr>
-					<td>{{.Version}}</td>
-					<td>{{.Started}}</td>
-					<td>{{.Completed}}</td>
-					<td>{{if .Success}}Success{{else}}Failed{{end}}</td>
-					<td>
-						<a x-show="log == ''" href="#" @click="log = '{{.ID}}'">View output</a>
-						<a x-show="log == '{{.ID}}'" @click="log = ''">Hide output</a>
-					</td>
-				</tr>
-				<tr x-show="log ==  '{{.ID}}'">
-					<td colspan="5">
-						<pre>
+				<thead>
+					<tr>
+						<th>Version</th>
+						<th>Started</th>
+						<th>Completed</th>
+						<th>Status</th>
+						<th>Output</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{range .Data.History}}
+					<tr>
+						<td>{{.Version}}</td>
+						<td>{{.Started.Format "2006/01/02 15:04"}}</td>
+						<td>{{.Completed.Sub .Started}}</td>
+						<td>{{if .Success}}Success{{else}}Failed{{end}}</td>
+						<td>
+							<a x-show="log == ''" href="#" @click="log = '{{.ID}}'">View output</a>
+							<a x-show="log == '{{.ID}}'" @click="log = ''">Hide output</a>
+						</td>
+					</tr>
+					<tr x-show="log ==  '{{.ID}}'">
+						<td colspan="5" class="content">
+							<div style="overflow-x: scroll;max-width: 100%;">
+								<code>
 							{{range .Output}}
 							{{.}}
 							{{end}}
-						</pre>
-					</td>
-				</tr>
-				{{end}}
-			</tbody>
+								</code>
+							</div>
+						</td>
+					</tr>
+					{{end}}
+				</tbody>
 			</table>
 		</div>
 	</div>

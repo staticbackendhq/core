@@ -44,7 +44,7 @@ type MetaMessage struct {
 func (ts *TaskScheduler) Start() {
 	tasks, err := ts.listTasks()
 	if err != nil {
-		log.Println("error loading tasks: %v", err)
+		log.Println("error loading tasks: ", err)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (ts *TaskScheduler) Start() {
 	for _, task := range tasks {
 		_, err := ts.Scheduler.Cron(task.Interval).Tag(task.ID.Hex()).Do(ts.run, task)
 		if err != nil {
-			log.Println("error scheduling this task: %s -> %v", task.ID.Hex(), err)
+			log.Printf("error scheduling this task: %s -> %v\n", task.ID.Hex(), err)
 		}
 	}
 }
@@ -123,7 +123,7 @@ func (ts *TaskScheduler) run(task Task) {
 		}
 
 		if err := ts.Volatile.SetTyped("root:"+task.BaseName, auth); err != nil {
-			log.Printf("error setting auth inside TaskScheduler.run: ", err)
+			log.Println("error setting auth inside TaskScheduler.run: ", err)
 			return
 		}
 	}

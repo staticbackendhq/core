@@ -27,7 +27,9 @@ var (
 	letterRunes = []rune("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2345679")
 )
 
-type accounts struct{}
+type accounts struct {
+	membership *membership
+}
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	var email string
@@ -145,7 +147,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	db = client.Database(dbName)
 	pw := randStringRunes(6)
 
-	if _, _, err := createAccountAndUser(db, email, pw, 100); err != nil {
+	if _, _, err := a.membership.createAccountAndUser(db, email, pw, 100); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -117,12 +117,14 @@ func Start(dbHost, port string) {
 		middleware.RequireRoot(client),
 	}
 
-	http.Handle("/login", middleware.Chain(http.HandlerFunc(login), pubWithDB...))
-	http.Handle("/register", middleware.Chain(http.HandlerFunc(register), pubWithDB...))
-	http.Handle("/email", middleware.Chain(http.HandlerFunc(emailExists), pubWithDB...))
+	m := &membership{volatile: volatile}
+
+	http.Handle("/login", middleware.Chain(http.HandlerFunc(m.login), pubWithDB...))
+	http.Handle("/register", middleware.Chain(http.HandlerFunc(m.register), pubWithDB...))
+	http.Handle("/email", middleware.Chain(http.HandlerFunc(m.emailExists), pubWithDB...))
 	//http.Handle("/setrole", chain(http.HandlerFunc(setRole), withDB))
 
-	http.Handle("/sudogettoken/", middleware.Chain(http.HandlerFunc(sudoGetTokenFromAccountID), stdRoot...))
+	http.Handle("/sudogettoken/", middleware.Chain(http.HandlerFunc(m.sudoGetTokenFromAccountID), stdRoot...))
 
 	// database routes
 	http.Handle("/db/", middleware.Chain(http.HandlerFunc(database.dbreq), stdAuth...))
@@ -145,7 +147,7 @@ func Start(dbHost, port string) {
 	http.Handle("/sudo/cache", middleware.Chain(http.HandlerFunc(sudoCache), stdRoot...))
 
 	// account
-	acct := &accounts{}
+	acct := &accounts{membership: m}
 	http.HandleFunc("/account/init", acct.create)
 	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
 	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))

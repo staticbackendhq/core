@@ -39,12 +39,12 @@
 				<td>{{.TriggerTopic}}</td>
 				<td>
 					{{if .LastRun}}
-						{{.LastRun}}
+						{{.LastRun.Format "2006/01/02 15:04" }}
 					{{else}}
 						never
 					{{end}}
 				</td>
-				<td>{{.LastUpdated}}</td>
+				<td>{{.LastUpdated.Format "2006/01/02 15:04" }}</td>
 				<td>
 					<a 
 						href="/ui/fn/del/{{.FunctionName}}" 

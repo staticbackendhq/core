@@ -41,9 +41,9 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	deleteAndSetupTestAccount()
+	volatile = cache.NewCache()
 
-	volatile := cache.NewCache()
+	deleteAndSetupTestAccount()
 
 	hub := newHub(volatile)
 	go hub.run()
@@ -107,8 +107,10 @@ func deleteAndSetupTestAccount() {
 
 	pubKey = base.ID.Hex()
 
+	m := &membership{volatile: volatile}
+
 	db := client.Database(dbName)
-	token, dbToken, err := createAccountAndUser(db, admEmail, password, 100)
+	token, dbToken, err := m.createAccountAndUser(db, admEmail, password, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +119,7 @@ func deleteAndSetupTestAccount() {
 
 	rootToken = fmt.Sprintf("%s|%s|%s", dbToken.ID.Hex(), dbToken.AccountID.Hex(), dbToken.Token)
 
-	token, _, err = createUser(db, dbToken.AccountID, userEmail, userPassword, 0)
+	token, _, err = m.createUser(db, dbToken.AccountID, userEmail, userPassword, 0)
 	if err != nil {
 		log.Fatal(err)
 	}

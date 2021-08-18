@@ -40,12 +40,12 @@ func dbPost(t *testing.T, hf func(http.ResponseWriter, *http.Request), repo stri
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tok))
 
 	stdAuth := []middleware.Middleware{
-		middleware.WithDB(database.client),
-		middleware.RequireAuth(database.client),
+		middleware.WithDB(database.client, volatile),
+		middleware.RequireAuth(database.client, volatile),
 	}
 	if params[0] {
 		stdAuth = []middleware.Middleware{
-			middleware.WithDB(client),
+			middleware.WithDB(client, volatile),
 			middleware.RequireRoot(client),
 		}
 	}
@@ -128,7 +128,7 @@ func TestDBListCollections(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(database.client),
+		middleware.WithDB(database.client, volatile),
 		middleware.RequireRoot(database.client),
 	}
 	h := middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...)

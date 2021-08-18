@@ -10,7 +10,7 @@ import (
 func TestFunctionsExecuteDBOperations(t *testing.T) {
 	code := `
 	log("works here");
-	function handle() {
+	function handle(body) {
 		var o = {
 			desc: "yep", 
 			done: false, 
@@ -66,6 +66,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 	data := function.ExecData{
 		FunctionName: "unittest",
 		Code:         code,
+		TriggerTopic: "web",
 	}
 	addResp := dbPost(t, funexec.add, "", data, true)
 	if addResp.StatusCode != http.StatusOK {
@@ -79,7 +80,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		t.Errorf("add: expected status 200 got %s", addResp.Status)
 	}
 
-	execResp := dbPost(t, funexec.exec, "", data)
+	execResp := dbPost(t, funexec.exec, "", data, true)
 	if execResp.StatusCode != http.StatusOK {
 		b, err := io.ReadAll(execResp.Body)
 		if err != nil {

@@ -13,7 +13,7 @@ deploy:
 	scp -qr ./templates/* sb-poc:/home/dstpierre/templates/
 
 test:
-	@JWT_SECRET=okdevmode go test -v --race --cover ./...
+	@JWT_SECRET=okdevmode go test --race --cover ./...
 
 docker:
 	docker build . -t staticbackend:latest

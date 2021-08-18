@@ -347,7 +347,7 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
 
 func (env *ExecutionEnvironment) complete(err error) {
 	env.CurrentRun.Completed = time.Now()
-	env.CurrentRun.Success = err == mongo.ErrNilCursor
+	env.CurrentRun.Success = err == nil
 
 	env.CurrentRun.Output = append(env.CurrentRun.Output, "Function completed")
 

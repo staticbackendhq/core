@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"staticbackend/cache"
 	"staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
@@ -23,7 +24,11 @@ import (
 	"github.com/gbrlsnchs/jwt/v3"
 )
 
-func emailExists(w http.ResponseWriter, r *http.Request) {
+type membership struct {
+	volatile *cache.Cache
+}
+
+func (m *membership) emailExists(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(r.URL.Query().Get("e"))
 	if len(email) == 0 {
 		respond(w, http.StatusOK, false)
@@ -48,7 +53,7 @@ func emailExists(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, count == 1)
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
+func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
@@ -65,7 +70,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	l.Email = strings.ToLower(l.Email)
 
-	tok, err := validateUserPassword(db, l.Email, l.Password)
+	tok, err := m.validateUserPassword(db, l.Email, l.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -74,7 +79,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	token := fmt.Sprintf("%s|%s", tok.ID.Hex(), tok.Token)
 
 	// get their JWT
-	jwtBytes, err := getJWT(token)
+	jwtBytes, err := m.getJWT(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -90,11 +95,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: find a good way to find all occurences of those two
 	// and make them easily callable via a shared function
-	if err := volatile.SetTyped(token, auth); err != nil {
+	if err := m.volatile.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := volatile.SetTyped("base:"+token, conf); err != nil {
+	if err := m.volatile.SetTyped("base:"+token, conf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -102,7 +107,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
-func validateUserPassword(db *mongo.Database, email, password string) (*internal.Token, error) {
+func (m *membership) validateUserPassword(db *mongo.Database, email, password string) (*internal.Token, error) {
 	email = strings.ToLower(email)
 
 	ctx := context.Background()
@@ -120,7 +125,7 @@ func validateUserPassword(db *mongo.Database, email, password string) (*internal
 	return &tok, nil
 }
 
-func register(w http.ResponseWriter, r *http.Request) {
+func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
@@ -148,7 +153,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtBytes, tok, err := createAccountAndUser(db, l.Email, l.Password, 0)
+	jwtBytes, tok, err := m.createAccountAndUser(db, l.Email, l.Password, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -164,11 +169,11 @@ func register(w http.ResponseWriter, r *http.Request) {
 		Token:     tok.Token,
 	}
 
-	if err := volatile.SetTyped(token, auth); err != nil {
+	if err := m.volatile.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := volatile.SetTyped("base:"+token, conf); err != nil {
+	if err := m.volatile.SetTyped("base:"+token, conf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -176,7 +181,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, token)
 }
 
-func createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, internal.Token, error) {
+func (m *membership) createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, internal.Token, error) {
 	acctID := primitive.NewObjectID()
 
 	a := internal.Account{
@@ -190,14 +195,14 @@ func createAccountAndUser(db *mongo.Database, email, password string, role int) 
 		return nil, internal.Token{}, err
 	}
 
-	jwtBytes, tok, err := createUser(db, acctID, email, password, role)
+	jwtBytes, tok, err := m.createUser(db, acctID, email, password, role)
 	if err != nil {
 		return nil, internal.Token{}, err
 	}
 	return jwtBytes, tok, nil
 }
 
-func createUser(db *mongo.Database, accountID primitive.ObjectID, email, password string, role int) ([]byte, internal.Token, error) {
+func (m *membership) createUser(db *mongo.Database, accountID primitive.ObjectID, email, password string, role int) ([]byte, internal.Token, error) {
 	ctx := context.Background()
 
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -222,7 +227,7 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 	token := fmt.Sprintf("%s|%s", tok.ID.Hex(), tok.Token)
 
 	// Get their JWT
-	jwtBytes, err := getJWT(token)
+	jwtBytes, err := m.getJWT(token)
 	if err != nil {
 		return nil, tok, err
 	}
@@ -234,14 +239,14 @@ func createUser(db *mongo.Database, accountID primitive.ObjectID, email, passwor
 		Role:      role,
 		Token:     tok.Token,
 	}
-	if err := volatile.SetTyped(token, auth); err != nil {
+	if err := m.volatile.SetTyped(token, auth); err != nil {
 		return nil, tok, err
 	}
 
 	return jwtBytes, tok, nil
 }
 
-func setRole(w http.ResponseWriter, r *http.Request) {
+func (m *membership) setRole(w http.ResponseWriter, r *http.Request) {
 	conf, a, err := middleware.Extract(r, true)
 	if err != nil || a.Role < 100 {
 		http.Error(w, "insufficient priviledges", http.StatusUnauthorized)
@@ -270,7 +275,7 @@ func setRole(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
-func setPassword(w http.ResponseWriter, r *http.Request) {
+func (m *membership) setPassword(w http.ResponseWriter, r *http.Request) {
 	conf, a, err := middleware.Extract(r, true)
 	if err != nil || a.Role < 100 {
 		http.Error(w, "insufficient priviledges", http.StatusUnauthorized)
@@ -289,7 +294,7 @@ func setPassword(w http.ResponseWriter, r *http.Request) {
 
 	db := client.Database(conf.Name)
 
-	tok, err := validateUserPassword(db, data.Email, data.OldPassword)
+	tok, err := m.validateUserPassword(db, data.Email, data.OldPassword)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -312,7 +317,7 @@ func setPassword(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
-func resetPassword(w http.ResponseWriter, r *http.Request) {
+func (m *membership) resetPassword(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
@@ -365,7 +370,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
-func changePassword(w http.ResponseWriter, r *http.Request) {
+func (m *membership) changePassword(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
@@ -409,7 +414,7 @@ func changePassword(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
-func getJWT(token string) ([]byte, error) {
+func (m *membership) getJWT(token string) ([]byte, error) {
 	now := time.Now()
 	pl := internal.JWTPayload{
 		Payload: jwt.Payload{
@@ -426,7 +431,7 @@ func getJWT(token string) ([]byte, error) {
 
 }
 
-func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
+func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -475,7 +480,7 @@ func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 
 	token := fmt.Sprintf("%s|%s", tok.ID.Hex(), tok.Token)
 
-	jwtBytes, err := getJWT(token)
+	jwtBytes, err := m.getJWT(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -488,7 +493,7 @@ func sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 		Role:      tok.Role,
 		Token:     tok.Token,
 	}
-	if err := volatile.SetTyped(token, auth); err != nil {
+	if err := m.volatile.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

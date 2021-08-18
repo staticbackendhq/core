@@ -22,7 +22,7 @@ func (Local) Save(data internal.UploadFileData) (string, error) {
 	}
 
 	filename := path.Join(os.TempDir(), data.FileKey)
-	if err := os.WriteFile(filename, b, 0044); err != nil {
+	if err := os.WriteFile(filename, b, 0644); err != nil {
 		return "", err
 	}
 

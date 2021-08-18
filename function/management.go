@@ -81,7 +81,7 @@ func GetForExecution(db *mongo.Database, name string) (ExecData, error) {
 
 	ctx := context.Background()
 	opt := &options.FindOneOptions{}
-	opt.SetProjection(bson.M{"h": -1})
+	opt.SetProjection(bson.M{"h": false})
 
 	sr := db.Collection("sb_functions").FindOne(ctx, filter, opt)
 	if err := sr.Decode(&result); err != nil {
