@@ -120,7 +120,7 @@ func (b *Base) List(auth internal.Auth, db *mongo.Database, col string, params L
 	}
 
 	if len(results) == 0 {
-		results = make([]bson.M, 1)
+		results = make([]bson.M, 0)
 	}
 
 	result.Results = results
