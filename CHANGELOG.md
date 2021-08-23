@@ -1,5 +1,10 @@
 # Changelog for StaticBackend
 
+### Aug 23, 2021 v1.0.1
+
+* Server-side function runtime allows to run JavaScript code on event/schedule
+* Task scheduler allows to run function on specifics interval
+
 ### Aug 12, 2021
 
 * Updated the realtime broker to handle distribution by having all messages 
