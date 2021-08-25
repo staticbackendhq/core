@@ -26,9 +26,8 @@ func (sub *Subscriber) Start() {
 		select {
 		case msg := <-receiver:
 			go sub.process(msg)
-		case _ = <-close:
+		case <-close:
 			log.Println("system event channel closed?!?")
-			break
 		}
 	}
 }

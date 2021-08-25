@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -21,6 +22,9 @@ type Auth struct {
 }
 
 func (auth Auth) ReconstructToken() string {
+	if strings.HasPrefix(auth.Token, "__tmp__experimental_public") {
+		return auth.Token
+	}
 	return fmt.Sprintf("%s|%s", auth.UserID.Hex(), auth.Token)
 }
 

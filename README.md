@@ -40,71 +40,78 @@ over and over on the backend. If your application needs one or all of
 user management, database, file storage, real-time interactions, it should be 
 a good fit.
 
-I'm personally using it to build SaaS.
+I'm personally using it to build SaaS:
+
+* [Tangara - one page checkout for creators](https://tangara.io)
 
 ## How it works / dev workflow
 
-The main idea is that StaticBackend is your backend API for your frontend apps.
+The main idea is that StaticBackend is your backend API for your frontend apps. 
+A performant free and open-source Firebase alternative.
 
-It needs to have access to MongoDB and Redis servers. Once you have your instance 
-running you create accounts for your applications.
+_Note that it can also be used from your backend code as well._
 
-An account has its own database, file storage, etc.
+Once you have an instance running and your first app created, you may install 
+the JavaScript client-side library:
 
-I think `app` might have been a better name instead of `account`. Naming things 
-is hard.
+```shell
+$> npm install @staticbackend/js
+```
 
-A StaticBackend account(app) can have multiple user accounts and each user 
-accounts may have multiple users.
+Let's create a user account and get a session `token` and create a `task` 
+document in the `tasks` collection:
 
-From there each users can create database documents that are by default Read/Write 
-for the owner (the user) and Read for its parent account. You may customize 
-permission for each of your collection (see that later in the documentation).
+```javascript
+import { Backend } from "@staticbackend/js";
 
-You have the basic building blocks to create a typical web 
-application. You have all your CRUD and data query operations covered, file 
-storage and websocket-like capabilities.
+const bkn = new Backend("your_public-key", "dev");
 
-We have a [JavaScript library](https://www.npmjs.com/package/@staticbackend/js) to 
-get started quickly. We have also server-side libraries for Node and Go atm.
+let token = "";
 
-Why would you need server-side libraries, was it not supposed to be a backend 
-for client-side applications.
+login = async () => {
+	const res = await bkn.login("email@test.com", "password");
+	if (!res.ok) {
+		console.error(res.content);
+		return;
+	}
+	token = res.content();
 
-Yes, but, there's always a but. Sometimes your application will need to 
-perform tasks on behalf of users or public user that do not have access to 
-perform CRUD from the client-side.
+	createTask();
+}
 
-Let's imagine we're building an invoicing app. Here's the major entities 
-we have for this examples:
+createTask = async () => {
+	const task = {
+		desc: "Do something for XYZ",
+		done: false
+	};
 
-* A StaticBackend account (our app inside our SB instance)
-* An account with 2 users (this would be your customer)
-* An invoices collection (where your customer create invoice)
-* A clients collection (Your customer send invoice to their clients)
+	const res = bkn.create(token, "tasks", task);
+	if (!res.ok) {
+		console.error(res.content);
+		return;
+	}
+	console.log(res.content);
+}
+```
 
-Now let's imagine our customer (our app user) sends an invoice to their Client.
+The last `console.log` prints
 
-Their client does not have any user account, but they need to see their invoice 
-when they click on the unique link on their email they received.
+```json
+{
+	"id": "123456-unique-id",
+	"accountId": "aaa-bbb-unique-account-id",
+	"desc": "Do something for XYZ",
+	"done": false
+}
+```
 
-This can be achieve via a backend function. Couple of ways:
+From there you build your application using the 
+[database](https://staticbackend.com/docs/database/) CRUD and query functions, 
+the [real-time component](https://staticbackend.com/docs/websocket/),
+the [storage API](https://staticbackend.com/docs/storage/), etc.
 
-* The email the client received can be directly a unique URL pointing to a 
-function as a service hosted somewhere. (We will have functions soon). That 
-function returns the invoice HTML.
-* Or it could be pointing to your client-side app and you perform a call to 
-a serverless function you're hosting somewhere. That function uses the 
-server-side library to perform a `GET` on behalf of the creator of the invoice 
-document, which is our customer.
-
-The function will be able to perform a Read operation using a special `Root Token`.
-
-This `Root Token` allows your system to do anything on the server-side.
-
-I hope I did not lost the majority of people here ;)
-
-This is one example of your typical day-to-day workflow using StaticBackend.
+You may use server-side libraries for Node and Go or use an HTTP client 
+and use your preferred language.
 
 ## Get started with the self-hosted version
 
@@ -195,6 +202,7 @@ Here's the examples we have created so far:
 
 * [To-do list example](https://staticbackend.com/getting-started/)
 * [Realtime collaboration](https://staticbackend.com/blog/realtime-collaboration-example/)
+* [Live chat using server-side function & real-time component](https://staticbackend.com/blog/server-side-functions-task-scheduler-example/)
 
 ## Deploying in production
 

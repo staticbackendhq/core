@@ -3,6 +3,7 @@ package staticbackend
 import (
 	"context"
 	"net/http"
+	"staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 
@@ -14,6 +15,25 @@ func sudoSendMail(w http.ResponseWriter, r *http.Request) {
 	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// all email are sent from the env var MAIL_FROM
+	from := data.From
+	if len(data.ReplyTo) > 0 {
+		from = data.ReplyTo
+	}
+
+	data.From = FromEmail
+	data.ReplyTo = from
+
+	// if only body is provided
+	if len(data.Body) > 0 {
+		data.HTMLBody = data.Body
+		data.TextBody = email.StripHTML(data.Body)
+	} else if len(data.TextBody) == 0 && len(data.HTMLBody) > 0 {
+		data.TextBody = email.StripHTML(data.HTMLBody)
+	} else if len(data.HTMLBody) == 0 && len(data.TextBody) > 0 {
+		data.HTMLBody = data.TextBody
 	}
 
 	if err := emailer.Send(data); err != nil {

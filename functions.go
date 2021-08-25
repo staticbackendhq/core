@@ -1,7 +1,6 @@
 package staticbackend
 
 import (
-	"fmt"
 	"net/http"
 	"staticbackend/db"
 	"staticbackend/function"
@@ -99,9 +98,6 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 	}
 
 	curDB := client.Database(conf.Name)
-
-	fmt.Println("DEBUG: search for name: ", data.FunctionName)
-	fmt.Println("DEBUG: base: ", conf.Name)
 
 	fn, err := function.GetForExecution(curDB, data.FunctionName)
 	if err != nil {

@@ -58,18 +58,20 @@ func Start(dbHost, port string) {
 	b := realtime.NewBroker(func(ctx context.Context, key string) (string, error) {
 		//TODO: Experimental, let un-authenticated user connect
 		// useful for an Intercom-like SaaS I'm building.
-		if strings.HasPrefix(key, "__tmp__experimental_public_19378246_") {
+		if strings.HasPrefix(key, "__tmp__experimental_public") {
 			// let's create the most minimal authentication possible
 			a := internal.Auth{
 				AccountID: primitive.NewObjectID(),
 				UserID:    primitive.NewObjectID(),
 				Email:     "exp@tmp.com",
 				Role:      0,
+				Token:     key,
 			}
 
 			if err := volatile.SetTyped(key, a); err != nil {
 				return key, err
 			}
+
 			return key, nil
 		}
 
@@ -232,7 +234,16 @@ func initServices(dbHost string) {
 		var exe function.ExecutionEnvironment
 
 		var conf internal.BaseConfig
-		if err := volatile.GetTyped("base:"+token, &conf); err != nil {
+		// for public websocket (experimental)
+		if strings.HasPrefix(token, "__tmp__experimental_public") {
+			pk := strings.Replace(token, "__tmp__experimental_public_", "", -1)
+			pairs := strings.Split(pk, "_")
+			fmt.Println("checking for base in cache: ", pairs[0])
+			if err := volatile.GetTyped(pairs[0], &conf); err != nil {
+				log.Println("cannot find base for public websocket")
+				return exe, err
+			}
+		} else if err := volatile.GetTyped("base:"+token, &conf); err != nil {
 			log.Println("cannot find base")
 			return exe, err
 		}
@@ -246,6 +257,7 @@ func initServices(dbHost string) {
 		exe.Auth = auth
 		exe.Base = &db.Base{PublishDocument: volatile.PublishDocument}
 		exe.DB = client.Database(conf.Name)
+		exe.Volatile = volatile
 
 		return exe, nil
 	}

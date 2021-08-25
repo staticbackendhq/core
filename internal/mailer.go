@@ -15,6 +15,8 @@ type SendMailData struct {
 	HTMLBody string `json:"htmlBody"`
 	TextBody string `json:"textBody"`
 	ReplyTo  string `json:"replyTo"`
+
+	Body string `json:"body"`
 }
 
 // Mailer is used to have different implementation for sending email
