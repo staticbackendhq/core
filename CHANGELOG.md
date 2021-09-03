@@ -1,5 +1,11 @@
 # Changelog for StaticBackend
 
+### Aug 25, 2021
+
+* Fixed issue with server-side function not being authenticated
+* Added a new Body property to the email structure. SB is now creating HTML/Text 
+version of the body if they're not provided.
+
 ### Aug 23, 2021 v1.0.1
 
 * Server-side function runtime allows to run JavaScript code on event/schedule
