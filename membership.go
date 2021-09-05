@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -14,12 +16,14 @@ import (
 	"staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
+	"staticbackend/oauth"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
 
 	"github.com/gbrlsnchs/jwt/v3"
 )
@@ -41,16 +45,24 @@ func (m *membership) emailExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database(conf.Name)
-
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	count, err := db.Collection("sb_tokens").CountDocuments(ctx, bson.M{"email": email})
+	curDB := client.Database(conf.Name)
+	exists, err := m.checkEmailExists(curDB, email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	respond(w, http.StatusOK, count == 1)
+	respond(w, http.StatusOK, exists)
+}
+
+func (m *membership) checkEmailExists(db *mongo.Database, email string) (bool, error) {
+	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	count, err := db.Collection("sb_tokens").CountDocuments(ctx, bson.M{"email": email})
+	if err != nil {
+		return false, err
+	}
+
+	return count == 1, nil
 }
 
 func (m *membership) login(w http.ResponseWriter, r *http.Request) {
@@ -76,13 +88,22 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	jwtToken, err := m.loginSetup(tok, conf)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, jwtToken)
+}
+
+func (m *membership) loginSetup(tok *internal.Token, conf internal.BaseConfig) (string, error) {
 	token := fmt.Sprintf("%s|%s", tok.ID.Hex(), tok.Token)
 
 	// get their JWT
 	jwtBytes, err := m.getJWT(token)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
 
 	auth := internal.Auth{
@@ -93,18 +114,14 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 		Token:     tok.Token,
 	}
 
-	//TODO: find a good way to find all occurences of those two
-	// and make them easily callable via a shared function
 	if err := m.volatile.SetTyped(token, auth); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
 	if err := m.volatile.SetTyped("base:"+token, conf); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
 
-	respond(w, http.StatusOK, string(jwtBytes))
+	return string(jwtBytes), nil
 }
 
 func (m *membership) validateUserPassword(db *mongo.Database, email, password string) (*internal.Token, error) {
@@ -153,32 +170,19 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtBytes, tok, err := m.createAccountAndUser(db, l.Email, l.Password, 0)
+	_, tok, err := m.createAccountAndUser(db, l.Email, l.Password, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	token := string(jwtBytes)
-
-	auth := internal.Auth{
-		AccountID: tok.AccountID,
-		UserID:    tok.ID,
-		Email:     tok.Email,
-		Role:      tok.Role,
-		Token:     tok.Token,
-	}
-
-	if err := m.volatile.SetTyped(token, auth); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err := m.volatile.SetTyped("base:"+token, conf); err != nil {
+	jwtToken, err := m.loginSetup(&tok, conf)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	respond(w, http.StatusOK, token)
+	respond(w, http.StatusOK, jwtToken)
 }
 
 func (m *membership) createAccountAndUser(db *mongo.Database, email, password string, role int) ([]byte, internal.Token, error) {
@@ -499,4 +503,162 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 	}
 
 	respond(w, http.StatusOK, string(jwtBytes))
+}
+
+type OauthFlowState struct {
+	PublicKey   string `json:"pk"`
+	DBName      string `json:"dbName"`
+	Provider    string `json:"provider"`
+	RedirectURL string `json:"redirectUrl"`
+}
+
+func (m *membership) externalLogin(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// /oauth/login/:provider
+	provider := getURLPart(r.URL.Path, 3)
+
+	curDB := client.Database(conf.Name)
+
+	data, err := oauth.GetConfig(curDB, provider)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if len(data.ClientID) == 0 {
+		http.Error(w, "missing configuration for this external login provider", http.StatusBadRequest)
+		return
+	}
+
+	//TODO: Change the LOCAL_STORAGE_URL here to a new Env Var, like APP_URL
+	oauthConf := &oauth2.Config{
+		ClientID:     data.ClientID,
+		ClientSecret: data.ClientSecret,
+		Scopes:       data.Scopes,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  data.AuthURL,
+			TokenURL: data.TokenURL,
+		},
+		RedirectURL: fmt.Sprintf("%s/oauth/code", os.Getenv("LOCAL_STORAGE_URL")),
+	}
+
+	state := OauthFlowState{
+		PublicKey: conf.ID.Hex(),
+		DBName:    conf.Name,
+		Provider:  provider,
+	}
+
+	// we'll need this when the oauth provider call our callback
+	if err := m.volatile.SetTyped(fmt.Sprint("oauth:%s", conf.ID.Hex()), state); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	url := oauthConf.AuthCodeURL(conf.ID.Hex(), oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusSeeOther)
+}
+
+func (m *membership) exchangeCode(w http.ResponseWriter, r *http.Request) {
+	state := r.URL.Query().Get("state")
+	code := r.URL.Query().Get("code")
+
+	var flowState OauthFlowState
+	if err := m.volatile.GetTyped(fmt.Sprintf("oauth:%s", state), &flowState); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	curDB := client.Database(flowState.DBName)
+
+	data, err := oauth.GetConfig(curDB, flowState.Provider)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	oauthConf := &oauth2.Config{
+		ClientID:     data.ClientID,
+		ClientSecret: data.ClientSecret,
+		Scopes:       data.Scopes,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  data.AuthURL,
+			TokenURL: data.TokenURL,
+		},
+		RedirectURL: fmt.Sprintf("%s/oauth/code", os.Getenv("LOCAL_STORAGE_URL")),
+	}
+
+	ctx := context.Background()
+	tok, err := oauthConf.Exchange(ctx, code)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	client := oauthConf.Client(ctx, tok)
+
+	grabber := oauth.GetInfoGrabber(data.Provider)
+	if grabber == nil {
+		http.Error(w, "cannot find implementation for this provider", http.StatusBadRequest)
+		return
+	}
+
+	info, err := grabber.Get(client, tok.AccessToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	info.Email = strings.ToLower(info.Email)
+
+	exists, err := m.checkEmailExists(curDB, info.Email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var userToken internal.Token
+
+	if exists {
+		t, err := internal.FindTokenByEmail(curDB, info.Email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		userToken = t
+	} else {
+		_, newToken, err := m.createAccountAndUser(curDB, info.Email, "el", 1)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		userToken = newToken
+	}
+
+	// the BaseConfig has to be in the cache...
+	// TODO: there's a huge clean-up that has to be done with all the cache / volatile concepts
+	var conf internal.BaseConfig
+	if err := volatile.GetTyped(flowState.PublicKey, &conf); err == nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	jwtToken, err := m.loginSetup(&userToken, conf)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	u, err := url.Parse(flowState.RedirectURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	u.Query().Add("token", jwtToken)
+
+	http.Redirect(w, r, u.String(), http.StatusTemporaryRedirect)
 }
