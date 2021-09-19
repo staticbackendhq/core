@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -50,6 +51,7 @@ type Token struct {
 	Email     string             `bson:"email" json:"email"`
 	Password  string             `bson:"pw" json:"-"`
 	Role      int                `bson:"role" json:"role"`
+	ResetCode string             `bson:"resetCode" json:"-"`
 }
 
 type Login struct {
@@ -105,6 +107,26 @@ func FindTokenByEmail(db *mongo.Database, email string) (tok Token, err error) {
 	sr := db.Collection("sb_tokens").FindOne(ctx, bson.M{"email": email})
 	err = sr.Decode(&tok)
 	return
+}
+
+func SetPasswordResetCode(db *mongo.Database, id primitive.ObjectID, code string) error {
+	update := bson.M{"$set": bson.M{"resetCode": code}}
+	if _, err := db.Collection("sb_tokens").UpdateByID(ctx, id, update); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ResetPassword(db *mongo.Database, email, code, password string) error {
+	filter := bson.M{"email": email, "resetCode": code}
+	update := bson.M{"$set": bson.M{"pw": password}}
+	res, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	} else if res.ModifiedCount != 1 {
+		return errors.New("cannot find document")
+	}
+	return nil
 }
 
 func FindAccount(db *mongo.Database, accountID primitive.ObjectID) (cus Customer, err error) {

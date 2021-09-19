@@ -328,7 +328,6 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error converting your data: %v", err)})
 		}
-		fmt.Println("DEBUG: ", string(b))
 
 		msg := internal.Command{
 			SID:     env.Data.ID.Hex(),

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"staticbackend/cache"
-	"staticbackend/email"
 	"staticbackend/internal"
 	"staticbackend/middleware"
 
@@ -246,6 +245,72 @@ func (m *membership) createUser(db *mongo.Database, accountID primitive.ObjectID
 	return jwtBytes, tok, nil
 }
 
+func (m *membership) setResetCode(w http.ResponseWriter, r *http.Request) {
+	email := strings.ToLower(r.URL.Query().Get("e"))
+	if len(email) == 0 || strings.Index(email, "@") <= 0 {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
+
+	code := randStringRunes(10)
+
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	tok, err := internal.FindTokenByEmail(curDB, email)
+	if err != nil {
+		http.Error(w, "email not found", http.StatusNotFound)
+		return
+	}
+
+	if err := internal.SetPasswordResetCode(curDB, tok.ID, code); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, code)
+}
+
+func (m *membership) resetPassword(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	curDB := client.Database(conf.Name)
+
+	var data = new(struct {
+		Email    string `json:"email"`
+		Code     string `json:"code"`
+		Password string `json:"password"`
+	})
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	data.Email = strings.ToLower(data.Email)
+
+	b, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := internal.ResetPassword(curDB, data.Email, data.Code, string(b)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
+
 func (m *membership) setRole(w http.ResponseWriter, r *http.Request) {
 	conf, a, err := middleware.Extract(r, true)
 	if err != nil || a.Role < 100 {
@@ -308,103 +373,6 @@ func (m *membership) setPassword(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	filter := bson.M{"_id": tok.ID}
-	update := bson.M{"$set": bson.M{"pw": string(newpw)}}
-	if _, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	respond(w, http.StatusOK, true)
-}
-
-func (m *membership) resetPassword(w http.ResponseWriter, r *http.Request) {
-	conf, _, err := middleware.Extract(r, false)
-	if err != nil {
-		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
-		return
-	}
-
-	db := client.Database(conf.Name)
-
-	var data = new(struct {
-		Email string `json:"email"`
-	})
-	if err := parseBody(r.Body, &data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	filter := bson.M{"email": strings.ToLower(data.Email)}
-	count, err := db.Collection("sb_tokens").CountDocuments(context.Background(), filter)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	} else if count == 0 {
-		http.Error(w, "not found", http.StatusNotFound)
-		return
-	}
-
-	code := randStringRunes(6)
-	update := bson.M{"%set": bson.M{"sb_reset_code": code}}
-	if _, err := db.Collection("sb_tokens").UpdateOne(context.Background(), filter, update); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//TODO: have HTML template for those
-	body := fmt.Sprintf(`Your reset code is: %s`, code)
-
-	ed := internal.SendMailData{
-		From:     FromEmail,
-		FromName: FromName,
-		To:       data.Email,
-		Subject:  "Your password reset code",
-		HTMLBody: body,
-		TextBody: email.StripHTML(body),
-	}
-	if err := emailer.Send(ed); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	respond(w, http.StatusOK, true)
-}
-
-func (m *membership) changePassword(w http.ResponseWriter, r *http.Request) {
-	conf, _, err := middleware.Extract(r, false)
-	if err != nil {
-		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
-		return
-	}
-
-	db := client.Database(conf.Name)
-
-	var data = new(struct {
-		Email    string `json:"email"`
-		Code     string `json:"code"`
-		Password string `json:"password"`
-	})
-	if err := parseBody(r.Body, &data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	filter := bson.M{"email": strings.ToLower(data.Email), "sb_reset_code": data.Code}
-	var tok internal.Token
-	sr := db.Collection("sb_tokens").FindOne(context.Background(), filter)
-	if err := sr.Decode(&tok); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	newpw, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	ctx := context.Background()
-	filter = bson.M{internal.FieldID: tok.ID}
 	update := bson.M{"$set": bson.M{"pw": string(newpw)}}
 	if _, err := db.Collection("sb_tokens").UpdateOne(ctx, filter, update); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
