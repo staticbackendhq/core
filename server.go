@@ -124,7 +124,7 @@ func Start(dbHost, port string) {
 	http.Handle("/login", middleware.Chain(http.HandlerFunc(m.login), pubWithDB...))
 	http.Handle("/register", middleware.Chain(http.HandlerFunc(m.register), pubWithDB...))
 	http.Handle("/email", middleware.Chain(http.HandlerFunc(m.emailExists), pubWithDB...))
-	http.Handle("/password/resetcode", middleware.Chain(http.HandlerFunc(m.setResetCode), pubWithDB...))
+	http.Handle("/password/resetcode", middleware.Chain(http.HandlerFunc(m.setResetCode), stdRoot...))
 	http.Handle("/password/reset", middleware.Chain(http.HandlerFunc(m.resetPassword), pubWithDB...))
 	//http.Handle("/setrole", chain(http.HandlerFunc(setRole), withDB))
 
