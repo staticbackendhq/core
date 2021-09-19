@@ -7,7 +7,7 @@ build:
 start: build
 	@./cmd/staticbackend
 
-deploy:
+deploy: build
 	@cd cmd && rm -rf staticbackend && CGO_ENABLED=0 go build -o staticbackend
 	scp cmd/staticbackend sb-poc:/home/dstpierre/sb
 	scp -qr ./templates/* sb-poc:/home/dstpierre/templates/
