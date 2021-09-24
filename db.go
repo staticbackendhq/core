@@ -25,7 +25,11 @@ type Database struct {
 
 func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		database.add(w, r)
+		if len(r.URL.Query().Get("bulk")) > 0 {
+			database.bulkAdd(w, r)
+		} else {
+			database.add(w, r)
+		}
 	} else if r.Method == http.MethodPut {
 		database.update(w, r)
 	} else if r.Method == http.MethodDelete {
@@ -79,6 +83,32 @@ func (database *Database) add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusCreated, doc)
+}
+
+func (database *Database) bulkAdd(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	curDB := database.client.Database(conf.Name)
+
+	_, r.URL.Path = ShiftPath(r.URL.Path)
+	col, _ := ShiftPath(r.URL.Path)
+
+	var v []interface{}
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := database.base.BulkAdd(auth, curDB, col, v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusCreated, true)
 }
 
 func (database *Database) list(w http.ResponseWriter, r *http.Request) {

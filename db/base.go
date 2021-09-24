@@ -39,6 +39,31 @@ func (b *Base) Add(auth internal.Auth, db *mongo.Database, col string, doc map[s
 	return doc, nil
 }
 
+func (b *Base) BulkAdd(auth internal.Auth, db *mongo.Database, col string, docs []interface{}) error {
+	for _, item := range docs {
+		doc, ok := item.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unable to cast docs to map")
+		}
+
+		delete(doc, "id")
+		delete(doc, internal.FieldID)
+		delete(doc, internal.FieldAccountID)
+		delete(doc, internal.FieldOwnerID)
+
+		doc[internal.FieldID] = primitive.NewObjectID()
+		doc[internal.FieldAccountID] = auth.AccountID
+		doc[internal.FieldOwnerID] = auth.UserID
+	}
+
+	ctx := context.Background()
+	if _, err := db.Collection(col).InsertMany(ctx, docs); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type PagedResult struct {
 	Page    int64    `json:"page"`
 	Size    int64    `json:"size"`

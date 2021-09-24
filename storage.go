@@ -35,7 +35,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 	// check for file size
 	// TODO: This should be based on current plan
-	if h.Size/(1000*1000) > 64 {
+	if h.Size/(1000*1000) > 150 {
 		http.Error(w, "file size exeeded your limit", http.StatusBadRequest)
 		return
 	}
