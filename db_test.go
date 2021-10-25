@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// dbPost post on behalf of adminToken by default (use params[0] true for root)
-func dbPost(t *testing.T, hf func(http.ResponseWriter, *http.Request), repo string, v interface{}, params ...bool) *http.Response {
+// dbReq post on behalf of adminToken by default (use params[0] true for root)
+func dbReq(t *testing.T, hf func(http.ResponseWriter, *http.Request), method, path string, v interface{}, params ...bool) *http.Response {
 	if params == nil {
 		params = make([]bool, 0)
 	}
@@ -28,7 +28,7 @@ func dbPost(t *testing.T, hf func(http.ResponseWriter, *http.Request), repo stri
 		t.Fatal("error marshaling post data:", err)
 	}
 
-	req := httptest.NewRequest("POST", "/db/"+repo, bytes.NewReader(b))
+	req := httptest.NewRequest(method, path, bytes.NewReader(b))
 	w := httptest.NewRecorder()
 
 	req.Header.Set("SB-PUBLIC-KEY", pubKey)
@@ -97,6 +97,7 @@ type Task struct {
 	Title   string    `json:"title"`
 	Done    bool      `json:"done"`
 	Created time.Time `json:"created"`
+	Count   int       `json:"count"`
 }
 
 func TestDBCreate(t *testing.T) {
@@ -106,7 +107,8 @@ func TestDBCreate(t *testing.T) {
 			Created: time.Now(),
 		}
 
-	resp := dbPost(t, database.add, "tasks", task)
+	resp := dbReq(t, database.add, "POST", "/db/tasks", task)
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
@@ -152,5 +154,51 @@ func TestDBListCollections(t *testing.T) {
 		t.Fatal(err)
 	} else if len(names) < 2 {
 		t.Errorf("expected len to be > than 2 got %d", len(names))
+	}
+}
+
+func TestDBIncrease(t *testing.T) {
+	task :=
+		Task{
+			Title:   "item created",
+			Created: time.Now(),
+			Count:   1,
+		}
+
+	resp := dbReq(t, database.add, "POST", "/db/tasks", task)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var createdTask Task
+	if err := parseBody(resp.Body, &createdTask); err != nil {
+		t.Fatal(err)
+	}
+
+	var data = new(struct {
+		Field string `json:"field"`
+		Range int    `json:"range"`
+	})
+	data.Field = "count"
+	data.Range = 4
+
+	resp = dbReq(t, database.increase, "PUT", "/inc/tasks/"+createdTask.ID, data)
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	resp = dbReq(t, database.get, "GET", "/db/tasks/"+createdTask.ID, nil)
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var increased Task
+	if err := parseBody(resp.Body, &increased); err != nil {
+		t.Fatal(err)
+	} else if increased.Count != 5 {
+		t.Errorf("expected count to be 5 got %d", increased.Count)
 	}
 }

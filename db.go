@@ -251,6 +251,36 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, result)
 }
 
+func (database *Database) increase(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	curDB := database.client.Database(conf.Name)
+
+	// /db/col/id
+	col := getURLPart(r.URL.Path, 2)
+	id := getURLPart(r.URL.Path, 3)
+
+	var v = new(struct {
+		Field string `json:"field"`
+		Range int    `json:"range"`
+	})
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := database.base.Increase(auth, curDB, col, id, v.Field, v.Range); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
+
 func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {

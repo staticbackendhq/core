@@ -208,7 +208,7 @@ func TestWebSocketDBEvents(t *testing.T) {
 		Title:   "websocket test",
 		Created: time.Now(),
 	}
-	resp := dbPost(t, database.add, "test", task)
+	resp := dbReq(t, database.add, "POST", "/db/test", task)
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
 	}
@@ -290,7 +290,7 @@ func TestWebSocketDBPermission(t *testing.T) {
 		Title:   "websocket test",
 		Created: time.Now(),
 	}
-	resp := dbPost(t, database.add, "permtest_700_", task)
+	resp := dbReq(t, database.add, "POST", "/db/permtest_700_", task)
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
 	}

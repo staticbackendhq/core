@@ -323,6 +323,50 @@ func (b *Base) Update(auth internal.Auth, db *mongo.Database, col, id string, do
 	return result, nil
 }
 
+func (b *Base) Increase(auth internal.Auth, db *mongo.Database, col, id, field string, n int) error {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{internal.FieldID: oid}
+
+	// if they are not "root", we use permission
+	if auth.Role < 100 {
+		switch internal.WritePermission(col) {
+		case internal.PermGroup:
+			filter[internal.FieldAccountID] = auth.AccountID
+		case internal.PermOwner:
+			filter[internal.FieldAccountID] = auth.AccountID
+			filter[internal.FieldOwnerID] = auth.UserID
+		}
+	}
+
+	update := bson.M{"$inc": bson.M{field: n}}
+
+	ctx := context.Background()
+	res := db.Collection(col).FindOneAndUpdate(ctx, filter, update)
+	if err := res.Err(); err != nil {
+		return err
+	}
+
+	var result bson.M
+	sr := db.Collection(col).FindOne(ctx, filter)
+	if err := sr.Decode(&result); err != nil {
+		return err
+	} else if err := sr.Err(); err != nil {
+		return err
+	}
+
+	result["id"] = result[internal.FieldID]
+	delete(result, internal.FieldID)
+	delete(result, internal.FieldOwnerID)
+
+	b.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
+
+	return nil
+}
+
 func (b *Base) Delete(auth internal.Auth, db *mongo.Database, col, id string) (int64, error) {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {

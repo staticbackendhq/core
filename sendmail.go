@@ -17,15 +17,6 @@ func sudoSendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// all email are sent from the env var MAIL_FROM
-	from := data.From
-	if len(data.ReplyTo) > 0 {
-		from = data.ReplyTo
-	}
-
-	data.From = FromEmail
-	data.ReplyTo = from
-
 	// if only body is provided
 	if len(data.Body) > 0 {
 		data.HTMLBody = data.Body

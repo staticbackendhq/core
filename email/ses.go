@@ -34,6 +34,8 @@ func (AWSSES) Send(data internal.SendMailData) error {
 	// Create an SES session.
 	svc := ses.New(sess)
 
+	from := fmt.Sprintf("%s <%s>", data.FromName, data.From)
+
 	// Assemble the email.
 	input := &ses.SendEmailInput{
 		Destination: &ses.Destination{
@@ -58,7 +60,7 @@ func (AWSSES) Send(data internal.SendMailData) error {
 				Data:    aws.String(data.Subject),
 			},
 		},
-		Source:           aws.String(data.From),
+		Source:           aws.String(from),
 		ReplyToAddresses: aws.StringSlice([]string{data.ReplyTo}),
 		// Uncomment to use a configuration set
 		//ConfigurationSetName: aws.String(ConfigurationSet),

@@ -68,7 +68,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		Code:         code,
 		TriggerTopic: "web",
 	}
-	addResp := dbPost(t, funexec.add, "", data, true)
+	addResp := dbReq(t, funexec.add, "POST", "/", data, true)
 	if addResp.StatusCode != http.StatusOK {
 		b, err := io.ReadAll(addResp.Body)
 		if err != nil {
@@ -80,7 +80,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		t.Errorf("add: expected status 200 got %s", addResp.Status)
 	}
 
-	execResp := dbPost(t, funexec.exec, "", data, true)
+	execResp := dbReq(t, funexec.exec, "POST", "/", data, true)
 	if execResp.StatusCode != http.StatusOK {
 		b, err := io.ReadAll(execResp.Body)
 		if err != nil {
