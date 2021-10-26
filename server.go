@@ -296,8 +296,14 @@ func ping(w http.ResponseWriter, r *http.Request) {
 }
 
 func sudoCache(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if r.Method == http.MethodGet {
-		key := r.URL.Query().Get("key")
+		key := fmt.Sprintf("%s_%s", conf.Name, r.URL.Query().Get("key"))
 		val, err := volatile.Get(key)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -314,6 +320,8 @@ func sudoCache(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		data.Key = fmt.Sprintf("%s_%s", conf.Name, data.Key)
 
 		if err := volatile.Set(data.Key, data.Value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
