@@ -1,3 +1,7 @@
+**JAMstack Boston talk**: I'm gonna give a talk on Nov 23rd @ 6pm EST on 
+StaticBackend. If you're interested: https://www.meetup.com/JAMstack-Boston/events/281827534/
+
+
 <p align="center">
 	<img src="https://staticbackend.com/img/logo-sb-no-text.png"  alt="StaticBackend logo">
 	<br />

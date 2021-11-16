@@ -1,5 +1,11 @@
 # Changelog for StaticBackend
 
+### Oct 31, 2021 v1.1.0
+
+* Added reset password flow and made the reset code generation avail from backend.
+* Added bulk create function to insert lots of documents reliably
+* Added an increment function to inc/dec a specific field atomically
+
 ### Aug 23, 2021 v1.0.1
 
 * Server-side function runtime allows to run JavaScript code on event/schedule

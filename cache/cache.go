@@ -36,7 +36,7 @@ func (c *Cache) Get(key string) (string, error) {
 }
 
 func (c *Cache) Set(key string, value string) error {
-	if _, err := c.Rdb.Set(c.Ctx, key, value, 3*time.Hour).Result(); err != nil {
+	if _, err := c.Rdb.Set(c.Ctx, key, value, 12*time.Hour).Result(); err != nil {
 		return err
 	}
 	return nil
