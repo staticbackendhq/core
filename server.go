@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"staticbackend/db"
 	"staticbackend/email"
 	"staticbackend/function"
@@ -16,6 +17,7 @@ import (
 	"staticbackend/realtime"
 	"staticbackend/storage"
 	"strings"
+	"syscall"
 	"time"
 
 	"staticbackend/cache"
@@ -25,6 +27,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -207,7 +210,34 @@ func Start(dbHost, port string) {
 	http.Handle("/ui/forms/del/", middleware.Chain(http.HandlerFunc(webUI.formDel), stdRoot...))
 	http.HandleFunc("/", webUI.login)
 
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// handle stop/kill signal
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+		<-c
+		cancel()
+	}()
+
+	httpsvr := &http.Server{
+		Addr: ":" + port,
+	}
+
+	g, gCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return httpsvr.ListenAndServe()
+	})
+	g.Go(func() error {
+		<-gCtx.Done()
+		return httpsvr.Shutdown(context.Background())
+	})
+
+	if err := g.Wait(); err != nil {
+		fmt.Printf("exit reason: %s \n", err)
+	}
 }
 
 func initServices(dbHost string) {
