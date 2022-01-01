@@ -194,3 +194,19 @@ func (c *Cache) HasPermission(token, repo, payload string) bool {
 		return true
 	}
 }
+
+func (c *Cache) QueueWork(key, value string) error {
+	return c.Rdb.RPush(c.Ctx, key, value).Err()
+}
+
+func (c *Cache) DequeueWork(key string) (string, error) {
+	val, err := c.Rdb.LPop(c.Ctx, key).Result()
+	if err != nil {
+		if err.Error() == redis.Nil.Error() {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return val, nil
+}

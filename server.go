@@ -333,7 +333,19 @@ func sudoCache(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet {
+		typ := r.URL.Query().Get("type")
 		key := fmt.Sprintf("%s_%s", conf.Name, r.URL.Query().Get("key"))
+
+		if typ == "queue" {
+			val, err := volatile.DequeueWork(key)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			respond(w, http.StatusOK, val)
+			return
+		}
 		val, err := volatile.Get(key)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -345,6 +357,7 @@ func sudoCache(w http.ResponseWriter, r *http.Request) {
 		data := new(struct {
 			Key   string `json:"key"`
 			Value string `json:"value"`
+			Type  string `json:"type"`
 		})
 		if err := parseBody(r.Body, &data); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -353,6 +366,14 @@ func sudoCache(w http.ResponseWriter, r *http.Request) {
 
 		data.Key = fmt.Sprintf("%s_%s", conf.Name, data.Key)
 
+		if data.Type == "queue" {
+			if err := volatile.QueueWork(data.Key, data.Value); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			respond(w, http.StatusOK, true)
+			return
+		}
 		if err := volatile.Set(data.Key, data.Value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
