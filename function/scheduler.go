@@ -3,9 +3,10 @@ package function
 import (
 	"context"
 	"log"
-	"staticbackend/db"
-	"staticbackend/internal"
 	"time"
+
+	"github.com/staticbackendhq/core/db"
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/go-co-op/gocron"
 	"go.mongodb.org/mongo-driver/bson"

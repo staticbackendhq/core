@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"staticbackend/internal"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/go-redis/redis/v8"
 )

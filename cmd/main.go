@@ -2,7 +2,8 @@ package main
 
 import (
 	"os"
-	backend "staticbackend"
+
+	backend "github.com/staticbackendhq/core"
 )
 
 func main() {

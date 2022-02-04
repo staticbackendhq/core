@@ -5,7 +5,8 @@ import (
 	"io"
 	"os"
 	"path"
-	"staticbackend/internal"
+
+	"github.com/staticbackendhq/core/internal"
 )
 
 type Local struct{}

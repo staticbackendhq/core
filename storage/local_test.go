@@ -3,9 +3,10 @@ package storage
 import (
 	"bytes"
 	"fmt"
-	"staticbackend/internal"
 	"strings"
 	"testing"
+
+	"github.com/staticbackendhq/core/internal"
 )
 
 func TestLocalSave(t *testing.T) {

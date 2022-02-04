@@ -3,9 +3,10 @@ package staticbackend
 import (
 	"context"
 	"net/http"
-	"staticbackend/email"
-	"staticbackend/internal"
-	"staticbackend/middleware"
+
+	"github.com/staticbackendhq/core/email"
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
 
 	"go.mongodb.org/mongo-driver/bson"
 )

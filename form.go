@@ -3,10 +3,11 @@ package staticbackend
 import (
 	"context"
 	"net/http"
-	"staticbackend/internal"
-	"staticbackend/middleware"
 	"strings"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

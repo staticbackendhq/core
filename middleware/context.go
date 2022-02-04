@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"staticbackend/internal"
+	"github.com/staticbackendhq/core/internal"
 )
 
 type ContextKey int

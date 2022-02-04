@@ -3,8 +3,9 @@ package staticbackend
 import (
 	"log"
 	"net/http"
-	"staticbackend/internal"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"

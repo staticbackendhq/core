@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"staticbackend/db"
-	"staticbackend/function"
-	"staticbackend/internal"
-	"staticbackend/middleware"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/staticbackendhq/core/db"
+	"github.com/staticbackendhq/core/function"
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

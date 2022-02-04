@@ -7,7 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"staticbackend/internal"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/stripe/stripe-go/v71"
 	"go.mongodb.org/mongo-driver/bson"

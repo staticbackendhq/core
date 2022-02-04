@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"staticbackend/internal"
-	"staticbackend/middleware"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

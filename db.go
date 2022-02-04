@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"staticbackend/db"
-	"staticbackend/internal"
-	"staticbackend/middleware"
 	"strconv"
 	"strings"
 
-	"staticbackend/cache"
+	"github.com/staticbackendhq/core/db"
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
+
+	"github.com/staticbackendhq/core/cache"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

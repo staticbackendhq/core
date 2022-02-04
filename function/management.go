@@ -2,8 +2,9 @@ package function
 
 import (
 	"context"
-	"staticbackend/internal"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

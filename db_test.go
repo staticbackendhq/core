@@ -7,10 +7,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"staticbackend/internal"
-	"staticbackend/middleware"
 	"testing"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
 )
 
 // dbReq post on behalf of adminToken by default (use params[0] true for root)

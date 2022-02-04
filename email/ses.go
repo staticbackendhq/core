@@ -3,8 +3,9 @@ package email
 import (
 	"fmt"
 	"os"
-	"staticbackend/internal"
 	"strings"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"

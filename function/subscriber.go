@@ -3,7 +3,8 @@ package function
 import (
 	"fmt"
 	"log"
-	"staticbackend/internal"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

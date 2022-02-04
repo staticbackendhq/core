@@ -4,7 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"staticbackend/internal"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

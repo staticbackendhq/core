@@ -3,8 +3,9 @@ package staticbackend
 import (
 	"io"
 	"net/http"
-	"staticbackend/function"
 	"testing"
+
+	"github.com/staticbackendhq/core/function"
 )
 
 func TestFunctionsExecuteDBOperations(t *testing.T) {

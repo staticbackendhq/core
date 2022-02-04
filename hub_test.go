@@ -1,9 +1,10 @@
 package staticbackend
 
 import (
-	"staticbackend/internal"
 	"testing"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/gorilla/websocket"
 )

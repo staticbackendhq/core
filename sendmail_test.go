@@ -1,9 +1,10 @@
 package staticbackend
 
 import (
-	"staticbackend/email"
-	"staticbackend/internal"
 	"testing"
+
+	"github.com/staticbackendhq/core/email"
+	"github.com/staticbackendhq/core/internal"
 )
 
 func Test_Sendmail_AWS(t *testing.T) {

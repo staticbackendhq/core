@@ -2,9 +2,10 @@ package staticbackend
 
 import (
 	"fmt"
-	"staticbackend/cache"
-	"staticbackend/internal"
 	"strings"
+
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gorilla/websocket"

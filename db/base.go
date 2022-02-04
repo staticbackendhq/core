@@ -3,8 +3,9 @@ package db
 import (
 	"context"
 	"fmt"
-	"staticbackend/internal"
 	"strings"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

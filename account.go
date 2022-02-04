@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	emailFuncs "staticbackend/email"
-	"staticbackend/internal"
-	"staticbackend/middleware"
+	emailFuncs "github.com/staticbackendhq/core/email"
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
 
 	"github.com/stripe/stripe-go/v71"
 	"github.com/stripe/stripe-go/v71/billingportal/session"

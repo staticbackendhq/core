@@ -2,9 +2,10 @@ package staticbackend
 
 import (
 	"net/http"
-	"staticbackend/db"
-	"staticbackend/function"
-	"staticbackend/middleware"
+
+	"github.com/staticbackendhq/core/db"
+	"github.com/staticbackendhq/core/function"
+	"github.com/staticbackendhq/core/middleware"
 )
 
 type functions struct {

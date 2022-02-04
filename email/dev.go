@@ -2,7 +2,8 @@ package email
 
 import (
 	"fmt"
-	"staticbackend/internal"
+
+	"github.com/staticbackendhq/core/internal"
 )
 
 type Dev struct{}

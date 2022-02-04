@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"staticbackend/internal"
 	"strings"
 	"time"
+
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/google/uuid"
 )

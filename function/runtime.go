@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"staticbackend/db"
-	"staticbackend/internal"
 	"time"
+
+	"github.com/staticbackendhq/core/db"
+	"github.com/staticbackendhq/core/internal"
 
 	"github.com/dop251/goja"
 	"go.mongodb.org/mongo-driver/bson/primitive"

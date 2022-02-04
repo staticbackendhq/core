@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"staticbackend/cache"
-	"staticbackend/internal"
-	"staticbackend/middleware"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/middleware"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
