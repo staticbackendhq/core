@@ -17,6 +17,53 @@ const (
 	FieldRole      = "role"
 )
 
+type LocalToken struct {
+	ID        primitive.ObjectID `bson:"_id" json:"id"`
+	AccountID primitive.ObjectID `bson:"accountId" json:"accountId"`
+	Token     string             `bson:"token" json:"token"`
+	Email     string             `bson:"email" json:"email"`
+	Password  string             `bson:"pw" json:"-"`
+	Role      int                `bson:"role" json:"role"`
+	ResetCode string             `bson:"resetCode" json:"-"`
+	Created time.Time `bson:"created" json:"created"`
+}
+
+func toLocalToken(token internal.Token) LocalToken {
+	id, err := primitive.ObjectIDFromHex(token.ID)
+	if err != nil {
+		return LocalToken{}
+	}
+
+	acctID, err := primitive.ObjectIDFromHex(token.AccountID)
+	if err != nil {
+		return LocalToken{}
+	}
+
+	return LocalToken(
+		ID: id,
+		AccountID: acctID,
+		Token: token.Token,
+		Email: token.Email,
+		Password: token.Password,
+		Role: token.Role,
+		ResetCode: token.ResetCode,
+		Created: token.Created,
+	)
+}
+
+func fromLocalToken(tok LocalToken) internal.Token {
+	return internal.Token{
+		ID: tok.ID.Hex(),
+		AccountID: tok.AccountID.Hex(),
+		Token: tok.Token,
+		Email: tok.Email,
+		Password: tok.Password,
+		Role: tok.Role,
+		ResetCode: tok.ResetCode,
+		Created: tok.Created,
+	}
+}
+
 func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok internal.Token, err error) {
 	db := mg.Client.Database(dbName)
 
@@ -25,8 +72,11 @@ func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok internal.Token, e
 		return
 	}
 
+	var lt LocalToken
 	sr := db.Collection("sb_tokens").FindOne(mg.Ctx, bson.M{FieldID: id, FieldToken: token})
-	err = sr.Decode(&tok)
+	err = sr.Decode(&lt)
+
+	tok = fromLocalToken(lt)
 	return
 }
 
@@ -48,8 +98,14 @@ func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok in
 		FieldAccountID: acctID,
 		FieldToken:     token,
 	}
+	
+	var lt LocalToken
+
 	sr := db.Collection("sb_tokens").FindOne(mg.Ctx, filter)
-	err = sr.Decode(&tok)
+	err = sr.Decode(&lt)
+
+	tok = fromLocalToken(lt)
+
 	return
 }
 
@@ -59,16 +115,27 @@ func (mg *Mongo) GetRootForBase(dbName string) (tok internal.Token, err error) {
 	filter := bson.M{
 		FieldRole: 100,
 	}
+
+	var lt LocalToken
+
 	sr := db.Collection("sb_tokens").FindOne(mg.Ctx, filter)
-	err = sr.Decode(&tok)
+	err = sr.Decode(&lt)
+
+	tok = fromLocalToken(lt)
+
 	return
 }
 
 func (mg *Mongo) FindTokenByEmail(dbName, email string) (tok internal.Token, err error) {
 	db := mg.Client.Database(dbName)
 
+	var lt LocalToken
+
 	sr := db.Collection("sb_tokens").FindOne(mg.Ctx, bson.M{"email": email})
-	err = sr.Decode(&tok)
+	err = sr.Decode(&lt)
+
+	tok = fromLocalToken(lt)
+
 	return
 }
 

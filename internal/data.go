@@ -8,12 +8,13 @@ import (
 )
 
 type BaseConfig struct {
-	ID            string    `bson:"_id" json:"id"`
-	CustomerID    string    `bson:"accountId" json:"-"`
-	Name          string    `bson:"name" json:"name"`
-	AllowedDomain []string  `bson:"whitelist" json:"whitelist"`
-	IsActive      bool      `bson:"active" json:"-"`
-	Created       time.Time `json:"created"`
+	ID               string    `json:"id"`
+	CustomerID       string    `json:"-"`
+	Name             string    `json:"name"`
+	AllowedDomain    []string  `json:"whitelist"`
+	IsActive         bool      `json:"-"`
+	MonthlySentEmail int       `json:"-"`
+	Created          time.Time `json:"created"`
 }
 
 type PagedResult struct {

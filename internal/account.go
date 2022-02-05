@@ -42,13 +42,14 @@ type Account struct {
 }
 
 type Token struct {
-	ID        primitive.ObjectID `bson:"_id" json:"id"`
-	AccountID primitive.ObjectID `bson:"accountId" json:"accountId"`
-	Token     string             `bson:"token" json:"token"`
-	Email     string             `bson:"email" json:"email"`
-	Password  string             `bson:"pw" json:"-"`
-	Role      int                `bson:"role" json:"role"`
-	ResetCode string             `bson:"resetCode" json:"-"`
+	ID        string    `json:"id"`
+	AccountID string    `json:"accountId"`
+	Token     string    `json:"token"`
+	Email     string    `json:"email"`
+	Password  string    `json:"-"`
+	Role      int       `json:"role"`
+	ResetCode string    `json:"-"`
+	Created   time.Time `json:"created"`
 }
 
 type Login struct {
