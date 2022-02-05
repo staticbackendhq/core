@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+  mongo:
+    image: mongo:3-stretch
+    volumes:
+      - ./mongodata:/data/db/mongo
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+

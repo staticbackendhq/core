@@ -26,3 +26,25 @@ type ExecHistory struct {
 	Success   bool      `bson:"ok" json:"success"`
 	Output    []string  `bson:"out" json:"output"`
 }
+
+const (
+	TaskTypeFunction = "function"
+	TaskTypeMessage  = "message"
+)
+
+type Task struct {
+	ID       string      `json:"id"`
+	Name     string      `json:"name"`
+	Type     string      ` json:"type"`
+	Value    string      ` json:"value"`
+	Meta     interface{} ` json:"meta"`
+	Interval string      ` json:"interval"`
+	LastRun  time.Time   ` json:"last"`
+
+	BaseName string `json:"base"`
+}
+
+type MetaMessage struct {
+	Data    string `json:"data"`
+	Channel string `json:"channel"`
+}

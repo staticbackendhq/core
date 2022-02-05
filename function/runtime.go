@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/staticbackendhq/core/db"
 	"github.com/staticbackendhq/core/internal"
 
 	"github.com/dop251/goja"
@@ -17,11 +16,11 @@ import (
 )
 
 type ExecutionEnvironment struct {
-	Auth     internal.Auth
-	DB       *mongo.Database
-	Base     *db.Base
-	Volatile internal.PubSuber
-	Data     ExecData
+	Auth      internal.Auth
+	DB        *mongo.Database
+	datastore internal.Persister
+	Volatile  internal.PubSuber
+	Data      ExecData
 
 	CurrentRun ExecHistory
 }
@@ -154,7 +153,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: "the first agrument should be a string"})
 		}
 
-		var params db.ListParams
+		var params internal.ListParams
 		if len(call.Arguments) >= 2 {
 			v := call.Argument(1)
 			if !goja.IsNull(v) && !goja.IsUndefined(v) {
@@ -213,12 +212,12 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: "the second argument should be a query filter: [['field', '==', 'value'], ...]"})
 		}
 
-		filter, err := db.ParseQuery(clauses)
+		filter, err := env.datastore.ParseQuery(clauses)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error parsing query filter: %v", err)})
 		}
 
-		var params db.ListParams
+		var params internal.ListParams
 		if len(call.Arguments) >= 3 {
 			v := call.Argument(2)
 			if !goja.IsNull(v) && !goja.IsUndefined(v) {

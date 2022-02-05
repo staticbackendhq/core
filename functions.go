@@ -3,13 +3,14 @@ package staticbackend
 import (
 	"net/http"
 
-	"github.com/staticbackendhq/core/db"
 	"github.com/staticbackendhq/core/function"
+	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 )
 
 type functions struct {
-	base *db.Base
+	dbName    string
+	datastore internal.Persister
 }
 
 func (f *functions) add(w http.ResponseWriter, r *http.Request) {

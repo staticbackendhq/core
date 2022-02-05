@@ -1,4 +1,4 @@
-package db
+package mongo
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func ParseQuery(clauses [][]interface{}) (bson.M, error) {
+func (mg *Mongo) ParseQuery(clauses [][]interface{}) (map[string]interface{}, error) {
 	filter := bson.M{}
 	for i, clause := range clauses {
 		if len(clause) != 3 {

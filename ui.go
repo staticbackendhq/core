@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/db"
 	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
@@ -18,7 +17,6 @@ import (
 )
 
 type ui struct {
-	base *db.Base
 }
 
 func (ui) login(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +123,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 	col := names[0]
 
-	params := db.ListParams{
+	params := internal.ListParams{
 		Page:           1,
 		Size:           50,
 		SortDescending: true,
@@ -152,7 +150,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			filter, err = db.ParseQuery(clauses)
+			filter, err = datastore.ParseQuery(clauses)
 			if err != nil {
 				renderErr(w, r, err)
 				return
@@ -160,7 +158,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var list db.PagedResult
+	var list internal.PagedResult
 	if len(filter) == 0 {
 		list, err = x.base.List(auth, curDB, col, params)
 		if err != nil {

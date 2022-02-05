@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.1.4
 	github.com/gorilla/websocket v1.4.2
 	github.com/klauspost/compress v1.13.1 // indirect
+	github.com/lib/pq v1.10.4 // indirect
 	github.com/stripe/stripe-go/v71 v71.44.0
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.7.0

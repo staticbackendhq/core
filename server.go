@@ -2,6 +2,7 @@ package staticbackend
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/staticbackendhq/core/db"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database/mongo"
+	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/internal"
@@ -21,14 +24,14 @@ import (
 	"github.com/staticbackendhq/core/realtime"
 	"github.com/staticbackendhq/core/storage"
 
-	"github.com/staticbackendhq/core/cache"
-
 	"github.com/stripe/stripe-go/v71"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"golang.org/x/sync/errgroup"
+
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -37,11 +40,13 @@ const (
 )
 
 var (
-	client   *mongo.Client
-	volatile *cache.Cache
-	emailer  internal.Mailer
-	storer   internal.Storer
-	AppEnv   = os.Getenv("APP_ENV")
+	client *mongo.Client
+
+	datastore internal.Persister
+	volatile  *cache.Cache
+	emailer   internal.Mailer
+	storer    internal.Storer
+	AppEnv    = os.Getenv("APP_ENV")
 )
 
 // Start starts the web server and all dependencies services
@@ -104,7 +109,8 @@ func Start(dbHost, port string) {
 	database := &Database{
 		client: client,
 		cache:  volatile,
-		base:   &db.Base{PublishDocument: volatile.PublishDocument},
+		//TODONOW: related to publishing event
+		//base:   &db.Base{PublishDocument: volatile.PublishDocument},
 	}
 
 	pubWithDB := []middleware.Middleware{
@@ -244,6 +250,26 @@ func Start(dbHost, port string) {
 func initServices(dbHost string) {
 	if err := openDatabase(dbHost); err != nil {
 		log.Fatal(err)
+	}
+
+	persister := os.Getenv("DATA_STORE")
+	if strings.EqualFold(persister, "mongo") {
+		datastore = mongo.New(client)
+	} else {
+		//TODO: This should be move elsewhere
+
+		// default is "postgresql"
+		connStr := "user=postgres password=example dbname=test sslmode=disable"
+		dbConn, err := sql.Open("postgres", connStr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := db.Ping(); err != nil {
+			log.Fatal(err)
+		}
+
+		datastore = postgresql.New(dbConn)
 	}
 
 	volatile = cache.NewCache()

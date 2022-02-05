@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/staticbackendhq/core/db"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 
@@ -21,7 +20,6 @@ import (
 type Database struct {
 	client *mongo.Client
 	cache  *cache.Cache
-	base   *db.Base
 }
 
 func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +113,7 @@ func (database *Database) bulkAdd(w http.ResponseWriter, r *http.Request) {
 func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 	page, size := getPagination(r.URL)
 
-	params := db.ListParams{
+	params := internal.ListParams{
 		Page:           page,
 		Size:           size,
 		SortDescending: len(r.URL.Query().Get("desc")) > 0,
@@ -173,7 +171,7 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter, err := db.ParseQuery(clauses)
+	filter, err := datastore.ParseQuery(clauses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -186,7 +184,7 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 		sort = internal.FieldID
 	}
 
-	params := db.ListParams{
+	params := internal.ListParams{
 		Page:           page,
 		Size:           size,
 		SortBy:         sort,

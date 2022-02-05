@@ -2,32 +2,38 @@ package internal
 
 import (
 	"os"
+	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type BaseConfig struct {
-	ID        primitive.ObjectID `bson:"_id" json:"id"`
-	SBID      primitive.ObjectID `bson:"accountId" json:"-"`
-	Name      string             `bson:"name" json:"name"`
-	Whitelist []string           `bson:"whitelist" json:"whitelist"`
-	IsActive  bool               `bson:"active" json:"-"`
+	ID            string    `bson:"_id" json:"id"`
+	CustomerID    string    `bson:"accountId" json:"-"`
+	Name          string    `bson:"name" json:"name"`
+	AllowedDomain []string  `bson:"whitelist" json:"whitelist"`
+	IsActive      bool      `bson:"active" json:"-"`
+	Created       time.Time `json:"created"`
+}
+
+type PagedResult struct {
+	Page    int64                    `json:"page"`
+	Size    int64                    `json:"size"`
+	Total   int64                    `json:"total"`
+	Results []map[string]interface{} `json:"results"`
+}
+
+type ListParams struct {
+	Page           int64
+	Size           int64
+	SortBy         string
+	SortDescending bool
 }
 
 var (
 	//Tokens     map[string]Auth       = make(map[string]Auth)
 	//Bases      map[string]BaseConfig = make(map[string]BaseConfig)
 	HashSecret = jwt.NewHS256([]byte(os.Getenv("JWT_SECRET")))
-)
-
-const (
-	FieldID        = "_id"
-	FieldAccountID = "accountId"
-	FieldOwnerID   = "sb_owner"
-	FieldToken     = "token"
-	FieldIsActive  = "active"
-	FieldRole      = "role"
 )
 
 const (

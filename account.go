@@ -17,8 +17,6 @@ import (
 	"github.com/stripe/stripe-go/v71/billingportal/session"
 	"github.com/stripe/stripe-go/v71/customer"
 	"github.com/stripe/stripe-go/v71/sub"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var (
@@ -98,9 +96,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create the account
-	acctID := primitive.NewObjectID()
-	doc := internal.Customer{
-		ID:             acctID,
+
+	cust := internal.Customer{
 		Email:          email,
 		StripeID:       stripeCustomerID,
 		SubscriptionID: subID,
@@ -108,7 +105,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Created:        time.Now(),
 	}
 
-	if err := internal.CreateAccount(db, doc); err != nil {
+	cust, err = datastore.CreateCustomer(cust)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -130,14 +128,14 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	base := internal.BaseConfig{
-		ID:        primitive.NewObjectID(),
-		SBID:      acctID,
-		Name:      dbName,
-		IsActive:  active,
-		Whitelist: []string{"localhost"},
+		CustomerID:    cust.ID,
+		Name:          dbName,
+		IsActive:      active,
+		AllowedDomain: []string{"localhost"},
 	}
 
-	if err := internal.CreateBase(db, base); err != nil {
+	bc, err := datastore.CreateBase(base)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -192,7 +190,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>If you have any questions, please reply to this email.</p>
 	<p>Good luck with your projects.</p>
 	<p>Dominic<br />Founder</p>
-	`, base.ID.Hex(), email, pw, rootToken)
+	`, bc.ID, email, pw, rootToken)
 
 	ed := internal.SendMailData{
 		From:     FromEmail,

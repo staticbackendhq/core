@@ -1,49 +1,24 @@
 package function
 
 import (
-	"context"
 	"log"
 	"time"
 
-	"github.com/staticbackendhq/core/db"
 	"github.com/staticbackendhq/core/internal"
 
 	"github.com/go-co-op/gocron"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type TaskScheduler struct {
 	Client    *mongo.Client
 	Volatile  internal.PubSuber
+	DataStore internal.Persister
 	Scheduler *gocron.Scheduler
 }
 
-const (
-	TaskTypeFunction = "function"
-	TaskTypeMessage  = "message"
-)
-
-type Task struct {
-	ID       primitive.ObjectID `bson:"_id" json:"id"`
-	Name     string             `bson:"name" json:"name"`
-	Type     string             `bson:"type" json:"type"`
-	Value    string             `bson:"value" json:"value"`
-	Meta     interface{}        `bson:"meta" json:"meta"`
-	Interval string             `bson:"invertal" json:"interval"`
-	LastRun  time.Time          `bson:"last" json:"last"`
-
-	BaseName string `bson:"-" json:"base"`
-}
-
-type MetaMessage struct {
-	Data    string `bson:"data" json:"data"`
-	Channel string `bson:"channel" json:"channel"`
-}
-
 func (ts *TaskScheduler) Start() {
-	tasks, err := ts.listTasks()
+	tasks, err := ts.DataStore.ListTasks()
 	if err != nil {
 		log.Println("error loading tasks: ", err)
 		return
@@ -58,49 +33,6 @@ func (ts *TaskScheduler) Start() {
 			log.Printf("error scheduling this task: %s -> %v\n", task.ID.Hex(), err)
 		}
 	}
-}
-
-func (ts *TaskScheduler) listTasks() ([]Task, error) {
-	bases, err := internal.ListDatabases(ts.Client.Database("sbsys"))
-	if err != nil {
-		return nil, err
-	}
-
-	filter := bson.M{}
-
-	//TODO: Might be worth doing this concurrently
-	var results []Task
-
-	ctx := context.Background()
-
-	for _, base := range bases {
-		db := ts.Client.Database(base.Name)
-		cur, err := db.Collection("sb_tasks").Find(ctx, filter)
-		if err != nil {
-			return nil, err
-		}
-		defer cur.Close(ctx)
-
-		var tasks []Task
-
-		for cur.Next(ctx) {
-			var t Task
-			if err := cur.Decode(&t); err != nil {
-				return nil, err
-			}
-
-			t.BaseName = base.Name
-
-			tasks = append(tasks, t)
-		}
-		if err := cur.Err(); err != nil {
-			return nil, err
-		}
-
-		results = append(results, tasks...)
-	}
-
-	return results, nil
 }
 
 func (ts *TaskScheduler) run(task Task) {

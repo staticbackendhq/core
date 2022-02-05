@@ -1,4 +1,4 @@
-package internal
+package mongo
 
 import (
 	"fmt"
@@ -8,7 +8,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func ListFormSubmissions(db *mongo.Database, name string) ([]bson.M, error) {
+func (mg *Mongo) ListFormSubmissions(dbName, name string) (results []map[string]interface{}, err error) {
+	db := mg.Client.Database(dbName)
+
 	opt := options.Find()
 	opt.SetLimit(100)
 	opt.SetSort(bson.M{FieldID: -1})
@@ -18,13 +20,12 @@ func ListFormSubmissions(db *mongo.Database, name string) ([]bson.M, error) {
 		filter["form"] = name
 	}
 
-	cur, err := db.Collection("sb_forms").Find(ctx, filter, opt)
+	cur, err := db.Collection("sb_forms").Find(mg.Ctx, filter, opt)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer cur.Close(ctx)
 
-	var results []bson.M
 	for cur.Next(ctx) {
 		var result bson.M
 		if err := cur.Decode(&result); err != nil {
@@ -37,19 +38,21 @@ func ListFormSubmissions(db *mongo.Database, name string) ([]bson.M, error) {
 		results = append(results, result)
 	}
 	if err := cur.Err(); err != nil {
-		return nil, err
+		return
 	}
 
 	if len(results) == 0 {
-		results = make([]bson.M, 1)
+		results = make([]map[string]interface{}, 1)
 	}
 
-	return results, nil
+	return
 }
 
-func GetForms(db *mongo.Database) ([]string, error) {
+func (mg *Mongo) GetForms(dbName string) ([]string, error) {
+	db := mg.Client.Database(dbName)
+
 	pipeline := mongo.Pipeline{bson.D{{"$group", bson.D{{"_id", "$form"}}}}}
-	cur, err := db.Collection("sb_forms").Aggregate(ctx, pipeline)
+	cur, err := db.Collection("sb_forms").Aggregate(mg.Ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
