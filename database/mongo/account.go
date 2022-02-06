@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"errors"
+	"time"
 
 	"github.com/staticbackendhq/core/internal"
 	"go.mongodb.org/mongo-driver/bson"
@@ -25,7 +26,7 @@ type LocalToken struct {
 	Password  string             `bson:"pw" json:"-"`
 	Role      int                `bson:"role" json:"role"`
 	ResetCode string             `bson:"resetCode" json:"-"`
-	Created time.Time `bson:"created" json:"created"`
+	Created   time.Time          `bson:"created" json:"created"`
 }
 
 func toLocalToken(token internal.Token) LocalToken {
@@ -39,35 +40,35 @@ func toLocalToken(token internal.Token) LocalToken {
 		return LocalToken{}
 	}
 
-	return LocalToken(
-		ID: id,
+	return LocalToken{
+		ID:        id,
 		AccountID: acctID,
-		Token: token.Token,
-		Email: token.Email,
-		Password: token.Password,
-		Role: token.Role,
+		Token:     token.Token,
+		Email:     token.Email,
+		Password:  token.Password,
+		Role:      token.Role,
 		ResetCode: token.ResetCode,
-		Created: token.Created,
-	)
+		Created:   token.Created,
+	}
 }
 
 func fromLocalToken(tok LocalToken) internal.Token {
 	return internal.Token{
-		ID: tok.ID.Hex(),
+		ID:        tok.ID.Hex(),
 		AccountID: tok.AccountID.Hex(),
-		Token: tok.Token,
-		Email: tok.Email,
-		Password: tok.Password,
-		Role: tok.Role,
+		Token:     tok.Token,
+		Email:     tok.Email,
+		Password:  tok.Password,
+		Role:      tok.Role,
 		ResetCode: tok.ResetCode,
-		Created: tok.Created,
+		Created:   tok.Created,
 	}
 }
 
 func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok internal.Token, err error) {
 	db := mg.Client.Database(dbName)
 
-	id, err := primitive.NewObjectIDFromHex(tokenID)
+	id, err := primitive.ObjectIDFromHex(tokenID)
 	if err != nil {
 		return
 	}
@@ -83,12 +84,12 @@ func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok internal.Token, e
 func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok internal.Token, err error) {
 	db := mg.Client.Database(dbName)
 
-	id, err := primitive.NewObjectIDFromHex(tokenID)
+	id, err := primitive.ObjectIDFromHex(tokenID)
 	if err != nil {
 		return
 	}
 
-	acctID, err := primitive.NewObjectIDFromHex(accountID)
+	acctID, err := primitive.ObjectIDFromHex(accountID)
 	if err != nil {
 		return
 	}
@@ -98,7 +99,7 @@ func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok in
 		FieldAccountID: acctID,
 		FieldToken:     token,
 	}
-	
+
 	var lt LocalToken
 
 	sr := db.Collection("sb_tokens").FindOne(mg.Ctx, filter)

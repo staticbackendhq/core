@@ -8,9 +8,6 @@ import (
 
 	"github.com/staticbackendhq/core/internal"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-
 	"github.com/gbrlsnchs/jwt/v3"
 )
 
@@ -18,7 +15,7 @@ const (
 	RootRole = 100
 )
 
-func RequireAuth(client *mongo.Client, volatile internal.PubSuber) Middleware {
+func RequireAuth(datastore internal.Persister, volatile internal.PubSuber) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
@@ -28,8 +25,8 @@ func RequireAuth(client *mongo.Client, volatile internal.PubSuber) Middleware {
 				// to next security check.
 				if strings.HasPrefix(r.URL.Path, "/db/pub_") || strings.HasPrefix(r.URL.Path, "/query/pub_") {
 					a := internal.Auth{
-						AccountID: primitive.NewObjectID(),
-						UserID:    primitive.NewObjectID(),
+						AccountID: "public_repo_called",
+						UserID:    "public_repo_called",
 						Email:     "",
 						Role:      0,
 						Token:     "pub",
@@ -55,7 +52,7 @@ func RequireAuth(client *mongo.Client, volatile internal.PubSuber) Middleware {
 
 			ctx := r.Context()
 
-			auth, err := ValidateAuthKey(client, volatile, ctx, key)
+			auth, err := ValidateAuthKey(datastore, volatile, ctx, key)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -68,7 +65,7 @@ func RequireAuth(client *mongo.Client, volatile internal.PubSuber) Middleware {
 	}
 }
 
-func ValidateAuthKey(client *mongo.Client, volatile internal.PubSuber, ctx context.Context, key string) (internal.Auth, error) {
+func ValidateAuthKey(datastore internal.Persister, volatile internal.PubSuber, ctx context.Context, key string) (internal.Auth, error) {
 	a := internal.Auth{}
 
 	var pl internal.JWTPayload
@@ -81,8 +78,6 @@ func ValidateAuthKey(client *mongo.Client, volatile internal.PubSuber, ctx conte
 		return a, fmt.Errorf("invalid StaticBackend public token")
 	}
 
-	db := client.Database(conf.Name)
-
 	var auth internal.Auth
 	if err := volatile.GetTyped(pl.Token, &auth); err == nil {
 		return auth, nil
@@ -93,12 +88,7 @@ func ValidateAuthKey(client *mongo.Client, volatile internal.PubSuber, ctx conte
 		return a, fmt.Errorf("invalid authentication token")
 	}
 
-	id, err := primitive.ObjectIDFromHex(parts[0])
-	if err != nil {
-		return a, fmt.Errorf("invalid API key format")
-	}
-
-	token, err := internal.FindToken(db, id, parts[1])
+	token, err := datastore.FindToken(conf.Name, parts[0], parts[1])
 	if err != nil {
 		return a, fmt.Errorf("error retrieving your token: %s", err.Error())
 	}
@@ -122,7 +112,7 @@ func ValidateAuthKey(client *mongo.Client, volatile internal.PubSuber, ctx conte
 	return a, nil
 }
 
-func RequireRoot(client *mongo.Client) Middleware {
+func RequireRoot(datastore internal.Persister) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
@@ -155,7 +145,7 @@ func RequireRoot(client *mongo.Client) Middleware {
 				return
 			}
 
-			tok, err := ValidateRootToken(client, conf.Name, key)
+			tok, err := ValidateRootToken(datastore, conf.Name, key)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -176,7 +166,7 @@ func RequireRoot(client *mongo.Client) Middleware {
 	}
 }
 
-func ValidateRootToken(client *mongo.Client, base, token string) (internal.Token, error) {
+func ValidateRootToken(datastore internal.Persister, base, token string) (internal.Token, error) {
 	tok := internal.Token{}
 
 	parts := strings.Split(token, "|")
@@ -184,21 +174,11 @@ func ValidateRootToken(client *mongo.Client, base, token string) (internal.Token
 		return tok, fmt.Errorf("invalid root token")
 	}
 
-	id, err := primitive.ObjectIDFromHex(parts[0])
-	if err != nil {
-		return tok, fmt.Errorf("invalid root token")
-	}
-
-	acctID, err := primitive.ObjectIDFromHex(parts[1])
-	if err != nil {
-		return tok, fmt.Errorf("invalid root token")
-	}
-
+	id := parts[0]
+	acctID := parts[1]
 	token = parts[2]
 
-	db := client.Database(base)
-
-	tok, err = internal.FindRootToken(db, id, acctID, token)
+	tok, err := datastore.FindRootToken(base, id, acctID, token)
 	if err != nil {
 		return tok, err
 	} else if tok.Role < RootRole {

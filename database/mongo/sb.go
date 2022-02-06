@@ -97,7 +97,7 @@ func (mg *Mongo) CreateBase(base internal.BaseConfig) (internal.BaseConfig, erro
 func (mg *Mongo) EmailExists(email string) (bool, error) {
 	db := mg.Client.Database("sbsys")
 
-	count, err := db.Collection("accounts").CountDocuments(ctx, bson.M{"email": email})
+	count, err := db.Collection("accounts").CountDocuments(mg.Ctx, bson.M{"email": email})
 	if err != nil {
 		return false, err
 	}
@@ -115,7 +115,7 @@ func (mg *Mongo) FindAccount(customerID string) (cus internal.Customer, err erro
 	var lc LocalCustomer
 
 	filter := bson.M{FieldID: accountID}
-	sr := db.Collection("accounts").FindOne(ctx, filter)
+	sr := db.Collection("accounts").FindOne(mg.Ctx, filter)
 	err = sr.Decode(&lc)
 	cus = fromLocalCustomer(lc)
 	return
@@ -159,13 +159,13 @@ func (mg *Mongo) ListDatabases() (results []internal.BaseConfig, err error) {
 
 	for cur.Next(mg.Ctx) {
 		var lb LocalBase
-		if err := cur.Decode(&lb); err != nil {
+		if err = cur.Decode(&lb); err != nil {
 			return
 		}
 
 		results = append(results, fromLocalBase(lb))
 	}
-	if err := cur.Err(); err != nil {
+	if err = cur.Err(); err != nil {
 		return
 	}
 

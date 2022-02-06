@@ -43,7 +43,7 @@ func (mg *Mongo) ListTasks() ([]internal.Task, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer cur.Close(ctx)
+		defer cur.Close(mg.Ctx)
 
 		var tasks []internal.Task
 

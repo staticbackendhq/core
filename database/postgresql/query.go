@@ -60,6 +60,9 @@ func secureRead(auth internal.Auth, col string) string {
 		return "WHERE account_id = $1 "
 	case internal.PermOwner:
 		return "WHERE account_id = $1 AND owner_id = $2 "
+	default:
+		//TODO: double-check, why would we have this default
+		return "WHERE 1=1 "
 	}
 }
 
@@ -73,10 +76,24 @@ func secureWrite(auth internal.Auth, col string) string {
 		return "WHERE account_id = $1 "
 	case internal.PermOwner:
 		return "WHERE account_id = $1 AND owner_id = $2 "
+	default:
+		//TODO: double-check, why would we have this default
+		return "WHERE 1=1 "
 	}
 }
 
 func setPaging(params internal.ListParams) string {
+	if len(params.SortBy) == 0 {
+		params.SortBy = "created"
+	}
+
+	direction := "ASC"
+	if params.SortDescending {
+		direction = "DESC"
+	}
+
+	orderBy := fmt.Sprintf("ORDER BY %s %s", params.SortBy, direction)
+
 	offset := (params.Page - 1) * params.Size
-	return fmt.Sprintf("LIMIT %d OFFSET %d", params.Size, offset)
+	return fmt.Sprintf("%s\nLIMIT %d OFFSET %d", orderBy, params.Size, offset)
 }

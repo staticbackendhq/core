@@ -28,20 +28,18 @@ func (ts *TaskScheduler) Start() {
 	ts.Scheduler.TagsUnique()
 
 	for _, task := range tasks {
-		_, err := ts.Scheduler.Cron(task.Interval).Tag(task.ID.Hex()).Do(ts.run, task)
+		_, err := ts.Scheduler.Cron(task.Interval).Tag(task.ID).Do(ts.run, task)
 		if err != nil {
-			log.Printf("error scheduling this task: %s -> %v\n", task.ID.Hex(), err)
+			log.Printf("error scheduling this task: %s -> %v\n", task.ID, err)
 		}
 	}
 }
 
-func (ts *TaskScheduler) run(task Task) {
-	curDB := ts.Client.Database(task.BaseName)
-
+func (ts *TaskScheduler) run(task internal.Task) {
 	// the task must run as the root base user
 	var auth internal.Auth
 	if err := ts.Volatile.GetTyped("root:"+task.BaseName, &auth); err != nil {
-		tok, err := internal.GetRootForBase(curDB)
+		tok, err := ts.DataStore.GetRootForBase(task.BaseName)
 		if err != nil {
 			log.Printf("error finding root token for base %s: %v\n", task.BaseName, err)
 			return
@@ -62,27 +60,26 @@ func (ts *TaskScheduler) run(task Task) {
 	}
 
 	switch task.Type {
-	case TaskTypeFunction:
-		ts.execFunction(curDB, auth, task)
-	case TaskTypeMessage:
-		ts.sendMessage(curDB, auth, task)
+	case internal.TaskTypeFunction:
+		ts.execFunction(auth, task)
+	case internal.TaskTypeMessage:
+		ts.sendMessage(auth, task)
 	}
 }
 
-func (ts *TaskScheduler) execFunction(curDB *mongo.Database, auth internal.Auth, task Task) {
-
-	fn, err := GetForExecution(curDB, task.Value)
+func (ts *TaskScheduler) execFunction(auth internal.Auth, task internal.Task) {
+	fn, err := ts.DataStore.GetFunctionForExecution(task.BaseName, task.Value)
 	if err != nil {
-		log.Printf("cannot find function %s on task %s", task.Value, task.ID.Hex())
+		log.Printf("cannot find function %s on task %s", task.Value, task.ID)
 		return
 	}
 
 	exe := &ExecutionEnvironment{
-		Auth:     auth,
-		DB:       curDB,
-		Base:     &db.Base{PublishDocument: ts.Volatile.PublishDocument},
-		Volatile: ts.Volatile,
-		Data:     fn,
+		Auth:      auth,
+		BaseName:  task.BaseName,
+		DataStore: ts.DataStore,
+		Volatile:  ts.Volatile,
+		Data:      fn,
 	}
 
 	if err := exe.Execute(task.Name); err != nil {
@@ -90,17 +87,17 @@ func (ts *TaskScheduler) execFunction(curDB *mongo.Database, auth internal.Auth,
 	}
 }
 
-func (ts *TaskScheduler) sendMessage(curDB *mongo.Database, auth internal.Auth, task Task) {
+func (ts *TaskScheduler) sendMessage(auth internal.Auth, task internal.Task) {
 	token := auth.ReconstructToken()
 
-	meta, ok := task.Meta.(MetaMessage)
+	meta, ok := task.Meta.(internal.MetaMessage)
 	if !ok {
-		log.Println("unable to get meta data for type MetaMessage for task: ", task.ID.Hex())
+		log.Println("unable to get meta data for type MetaMessage for task: ", task.ID)
 		return
 	}
 
 	msg := internal.Command{
-		SID:     task.ID.Hex(),
+		SID:     task.ID,
 		Type:    task.Value,
 		Data:    meta.Data,
 		Channel: meta.Channel,
@@ -108,6 +105,6 @@ func (ts *TaskScheduler) sendMessage(curDB *mongo.Database, auth internal.Auth, 
 	}
 
 	if err := ts.Volatile.Publish(msg); err != nil {
-		log.Println("error publishing message from task", task.ID.Hex(), err)
+		log.Println("error publishing message from task", task.ID, err)
 	}
 }

@@ -35,5 +35,15 @@ type Persister interface {
 	ListFormSubmissions(dbName, name string) ([]map[string]interface{}, error)
 	GetForms(dbName string) ([]string, error)
 
+	AddFunction(dbName string, data ExecData) (string, error)
+	UpdateFunction(dbName, id, code, trigger string) error
+	GetFunctionForExecution(dbName, name string) (ExecData, error)
+	GetFunctionByID(dbName, id string) (ExecData, error)
+	GetFunctionByName(dbName, name string) (ExecData, error)
+	ListFunctions(dbName string) ([]ExecData, error)
+	ListFunctionsByTrigger(dbName, trigger string) ([]ExecData, error)
+	DeleteFunction(dbName, name string) error
+	RanFunction(dbName, id string, rh ExecHistory) error
+
 	ListTasks() ([]Task, error)
 }

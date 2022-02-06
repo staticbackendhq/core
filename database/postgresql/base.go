@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/staticbackendhq/core/internal"
@@ -18,7 +19,7 @@ type Document struct {
 	Data      map[string]interface{}
 }
 
-func (pg *PostgreSQL) CreateDocument(auth Auth, dbName, col string, doc map[string]interface{}) (inserted map[string]interface{}, err error) {
+func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc map[string]interface{}) (inserted map[string]interface{}, err error) {
 	inserted = make(map[string]interface{})
 
 	//TODO: find a good way to prevent doing the create
@@ -45,27 +46,56 @@ func (pg *PostgreSQL) CreateDocument(auth Auth, dbName, col string, doc map[stri
 		RETURNING id;
 	`, dbName, col)
 
-	err = pg.DB.QueryRow(qry, auth.accountId, auth.UserID).Scan(&id)
+	err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&id)
 
 	inserted[FieldID] = id
-	inserted[FieldAccountID] = auth.accountId
+	inserted[FieldAccountID] = auth.AccountID
 
 	return
 }
 
-func (pg *PostgreSQL) ListDocuments(auth Auth, dbName, col string, params ListParams) (result internal.PagedResult, err error) {
+func (pg *PostgreSQL) BulkCreateDocument(auth internal.Auth, dbName, col string, docs []interface{}) error {
+	//TODO: Naive implementation, not sure if PostgreSQL
+	// has a better way for bulk insert, but will suffice for now.
+	for _, doc := range docs {
+		d, ok := doc.(map[string]interface{})
+		if !ok {
+			return errors.New("unable to cast doc as map[string]interface{}")
+		}
+
+		if _, err := pg.CreateDocument(auth, dbName, col, d); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pg *PostgreSQL) ListDocuments(auth internal.Auth, dbName, col string, params internal.ListParams) (result internal.PagedResult, err error) {
 	where := secureRead(auth, col)
 
 	paging := setPaging(params)
 
+	result.Page = params.Page
+	result.Size = params.Size
+
 	qry := fmt.Sprintf(`
+		SELECT COUNT(*) 
+		FROM %s.%s 
+		%s
+	`, dbName, col, where)
+
+	if err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&result.Total); err != nil {
+		return
+	}
+
+	qry = fmt.Sprintf(`
 		SELECT * 
 		FROM %s.%s 
 		%s
 		%s
 	`, dbName, col, where, paging)
 
-	rows, err := pg.DB.Query(qry, auth.accountId, auth.userID)
+	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
 		return
 	}
@@ -80,7 +110,7 @@ func (pg *PostgreSQL) ListDocuments(auth Auth, dbName, col string, params ListPa
 		doc.Data[FieldID] = doc.ID
 		doc.Data[FieldAccountID] = doc.AccountID
 
-		result = append(results, doc.Data)
+		result.Results = append(result.Results, doc.Data)
 	}
 
 	err = rows.Err()
@@ -98,9 +128,9 @@ func (pg *PostgreSQL) GetDocumentByID(auth internal.Auth, dbName, col, id string
 		SELECT * 
 		FROM %s.%s 
 		%s AND id = $3
-	`, dbName, col)
+	`, dbName, col, where)
 
-	row := pg.DB.QueryRow(qry, auth.accountId, auth.userID, id)
+	row := pg.DB.QueryRow(qry, auth.AccountID, auth.UserID, id)
 
 	var doc Document
 	if err := scanDocument(row, &doc); err != nil {
@@ -127,6 +157,46 @@ func (pg *PostgreSQL) UpdateDocument(auth internal.Auth, dbName, col, id string,
 	}
 
 	return pg.GetDocumentByID(auth, dbName, col, id)
+}
+
+func (pg *PostgreSQL) DeleteDocument(auth internal.Auth, dbName, col, id string) (int64, error) {
+	where := secureWrite(auth, col)
+
+	qry := fmt.Sprintf(`
+		DELETE 
+		FROM %s.%s 
+		%s AND id = $3
+	`, dbName, col, where)
+
+	res, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, id)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func (pg *PostgreSQL) ListCollections(dbName string) (results []string, err error) {
+	qry := fmt.Sprintf(`
+		SELECT table_name FROM information_schema.tables WHERE table_schema='%s'
+	`, dbName)
+
+	rows, err := pg.DB.Query(qry)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		if err = rows.Scan(&name); err != nil {
+			return
+		}
+
+		results = append(results, name)
+	}
+
+	err = rows.Err()
+	return
 }
 
 func scanDocument(rows Scanner, doc *Document) error {

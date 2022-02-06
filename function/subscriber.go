@@ -5,8 +5,6 @@ import (
 	"log"
 
 	"github.com/staticbackendhq/core/internal"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Subscriber struct {
@@ -51,18 +49,18 @@ func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 		return
 	}
 
-	var ids []primitive.ObjectID
+	var ids []string
 
-	key := fmt.Sprintf("%s:%s", exe.DB.Name(), msg.Type)
+	key := fmt.Sprintf("%s:%s", exe.BaseName, msg.Type)
 	if err := sub.PubSub.GetTyped(key, &ids); err != nil {
-		funcs, err := ListByTrigger(exe.DB, msg.Type)
+		funcs, err := exe.DataStore.ListFunctionsByTrigger(exe.BaseName, msg.Type)
 		if err != nil {
 			log.Println("error getting functions by trigger: ", err)
 			return
 		}
 
 		for _, fn := range funcs {
-			if err := sub.PubSub.SetTyped("fn_"+fn.ID.Hex(), fn); err != nil {
+			if err := sub.PubSub.SetTyped("fn_"+fn.ID, fn); err != nil {
 				log.Println("error adding function  to cache: ", err)
 				return
 			}
@@ -74,8 +72,8 @@ func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 	}
 
 	for _, id := range ids {
-		var fn ExecData
-		if err := sub.PubSub.GetTyped("fn_"+id.Hex(), &fn); err != nil {
+		var fn internal.ExecData
+		if err := sub.PubSub.GetTyped("fn_"+id, &fn); err != nil {
 			log.Println("error getting function out of cache: ", err)
 			return
 		}

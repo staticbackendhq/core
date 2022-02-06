@@ -96,7 +96,7 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 		case internal.PermGroup:
 			filter = bson.M{FieldAccountID: acctID}
 		case internal.PermOwner:
-			filter = bson.M{internal.FieldAccountID: auth.AccountID, internal.FieldOwnerID: userID}
+			filter = bson.M{FieldAccountID: auth.AccountID, FieldOwnerID: userID}
 		}
 	}
 
@@ -126,11 +126,11 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 	if err != nil {
 		return result, err
 	}
-	defer cur.Close(ctx)
+	defer cur.Close(mg.Ctx)
 
 	var results []map[string]interface{}
 
-	for cur.Next(ctx) {
+	for cur.Next(mg.Ctx) {
 		var v map[string]interface{}
 		err := cur.Decode(&v)
 		if err != nil {
@@ -138,7 +138,7 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 		}
 
 		v["id"] = v[FieldID]
-		delete(v, internal.FieldID)
+		delete(v, FieldID)
 		delete(v, FieldOwnerID)
 
 		results = append(results, v)
@@ -159,7 +159,7 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter map[string]interface{}, params internal.ListParams) (internal.PagedResult, error) {
 	db := mg.Client.Database(dbName)
 
-	result := PagedResult{
+	result := internal.PagedResult{
 		Page: params.Page,
 		Size: params.Size,
 	}
@@ -212,10 +212,10 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 	if err != nil {
 		return result, err
 	}
-	defer cur.Close(ctx)
+	defer cur.Close(mg.Ctx)
 
 	var results []map[string]interface{}
-	for cur.Next(ctx) {
+	for cur.Next(mg.Ctx) {
 		var v map[string]interface{}
 		if err := cur.Decode(&v); err != nil {
 			return result, err
@@ -437,10 +437,10 @@ func (mg *Mongo) ListCollections(dbName string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close(ctx)
+	defer cur.Close(mg.Ctx)
 
 	var names []string
-	for cur.Next(ctx) {
+	for cur.Next(mg.Ctx) {
 		var result bson.M
 		err := cur.Decode(&result)
 		if err != nil {
@@ -453,7 +453,7 @@ func (mg *Mongo) ListCollections(dbName string) ([]string, error) {
 	return names, nil
 }
 
-func parseObjectID(auth internal.Auth) (acctID, userID string, err error) {
+func parseObjectID(auth internal.Auth) (acctID, userID primitive.ObjectID, err error) {
 	acctID, err = primitive.ObjectIDFromHex(auth.AccountID)
 	if err != nil {
 		return

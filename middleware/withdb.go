@@ -2,16 +2,12 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/staticbackendhq/core/internal"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func WithDB(client *mongo.Client, volatile internal.PubSuber) Middleware {
+func WithDB(datastore internal.Persister, volatile internal.PubSuber) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("SB-PUBLIC-KEY")
@@ -31,7 +27,6 @@ func WithDB(client *mongo.Client, volatile internal.PubSuber) Middleware {
 
 			if len(key) == 0 {
 				http.Error(w, "invalid StaticBackend public key", http.StatusUnauthorized)
-				log.Println("invalid StaticBackend key")
 				return
 			}
 
@@ -42,16 +37,7 @@ func WithDB(client *mongo.Client, volatile internal.PubSuber) Middleware {
 				ctx = context.WithValue(ctx, ContextBase, conf)
 			} else {
 				// let's try to see if they are allow to use a database
-				db := client.Database("sbsys")
-
-				oid, err := primitive.ObjectIDFromHex(key)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					log.Println("unable to convert id to ObjectID", err)
-					return
-				}
-
-				conf, err = internal.FindDatabase(db, oid)
+				conf, err = datastore.FindDatabase(key)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return

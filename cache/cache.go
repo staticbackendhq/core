@@ -178,19 +178,19 @@ func (c *Cache) HasPermission(token, repo, payload string) bool {
 
 	switch internal.ReadPermission(repo) {
 	case internal.PermGroup:
-		acctID, ok := docs[internal.FieldAccountID]
+		acctID, ok := docs["accountId"]
 		if !ok {
 			return false
 		}
 
-		return fmt.Sprintf("%v", acctID) == me.AccountID.Hex()
+		return fmt.Sprintf("%v", acctID) == me.AccountID
 	case internal.PermOwner:
-		owner, ok := docs[internal.FieldOwnerID]
+		owner, ok := docs["ownerId"]
 		if !ok {
 			return false
 		}
 
-		return fmt.Sprintf("%v", owner) == me.UserID.Hex()
+		return fmt.Sprintf("%v", owner) == me.UserID
 	default:
 		return true
 	}

@@ -12,17 +12,16 @@ import (
 
 	"github.com/dop251/goja"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type ExecutionEnvironment struct {
 	Auth      internal.Auth
-	DB        *mongo.Database
-	datastore internal.Persister
+	BaseName  string
+	DataStore internal.Persister
 	Volatile  internal.PubSuber
-	Data      ExecData
+	Data      internal.ExecData
 
-	CurrentRun ExecHistory
+	CurrentRun internal.ExecHistory
 }
 
 type Result struct {
@@ -52,7 +51,7 @@ func (env *ExecutionEnvironment) Execute(data interface{}) error {
 		return fmt.Errorf("error preparing argument: %v", err)
 	}
 
-	env.CurrentRun = ExecHistory{
+	env.CurrentRun = internal.ExecHistory{
 		ID:      primitive.NewObjectID().Hex(),
 		Version: env.Data.Version,
 		Started: time.Now(),
@@ -133,7 +132,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: "the second argument should be an object"})
 		}
 
-		doc, err := env.Base.Add(env.Auth, env.DB, col, doc)
+		doc, err := env.DataStore.CreateDocument(env.Auth, env.BaseName, col, doc)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error calling create(): %s", err.Error())})
 		}
@@ -163,7 +162,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			}
 		}
 
-		result, err := env.Base.List(env.Auth, env.DB, col, params)
+		result, err := env.DataStore.ListDocuments(env.Auth, env.BaseName, col, params)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error executing list: %v", err)})
 		}
@@ -188,7 +187,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: "the second argument should be a string"})
 		}
 
-		doc, err := env.Base.GetByID(env.Auth, env.DB, col, id)
+		doc, err := env.DataStore.GetDocumentByID(env.Auth, env.BaseName, col, id)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error calling get(): %s", err.Error())})
 		}
@@ -212,7 +211,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: "the second argument should be a query filter: [['field', '==', 'value'], ...]"})
 		}
 
-		filter, err := env.datastore.ParseQuery(clauses)
+		filter, err := env.DataStore.ParseQuery(clauses)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error parsing query filter: %v", err)})
 		}
@@ -227,7 +226,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			}
 		}
 
-		result, err := env.Base.Query(env.Auth, env.DB, col, filter, params)
+		result, err := env.DataStore.QueryDocuments(env.Auth, env.BaseName, col, filter, params)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error executing query: %v", err)})
 		}
@@ -258,7 +257,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error executing update: %v", err)})
 		}
 
-		updated, err := env.Base.Update(env.Auth, env.DB, col, id, doc)
+		updated, err := env.DataStore.UpdateDocument(env.Auth, env.BaseName, col, id, doc)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error executing update: %v", err)})
 		}
@@ -282,7 +281,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: "the second argument should be a string"})
 		}
 
-		deleted, err := env.Base.Delete(env.Auth, env.DB, col, id)
+		deleted, err := env.DataStore.DeleteDocument(env.Auth, env.BaseName, col, id)
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error executing del: %v", err)})
 		}
@@ -292,22 +291,23 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 }
 
 func (*ExecutionEnvironment) clean(doc map[string]interface{}) error {
-	if id, ok := doc["id"]; ok {
-		oid, ok := id.(primitive.ObjectID)
-		if !ok {
-			return fmt.Errorf("unable to cast document id")
+	//TODONOW: not sure what was the exact used for this clean-up
+	/*
+		if id, ok := doc["id"]; ok {
+			oid, ok := id.(primitive.ObjectID)
+			if !ok {
+				return fmt.Errorf("unable to cast document id")
+			}
+			doc["id"] = oid.Hex()
 		}
-		doc["id"] = oid.Hex()
-	}
 
-	if id, ok := doc[internal.FieldAccountID]; ok {
-		oid, ok := id.(primitive.ObjectID)
-		if !ok {
-			return fmt.Errorf("unable to cast document accountId")
-		}
-		doc[internal.FieldAccountID] = oid.Hex()
-	}
-
+		if id, ok := doc[internal.FieldAccountID]; ok {
+			oid, ok := id.(primitive.ObjectID)
+			if !ok {
+				return fmt.Errorf("unable to cast document accountId")
+			}
+			doc[internal.FieldAccountID] = oid.Hex()
+		}*/
 	return nil
 }
 
@@ -330,7 +330,7 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
 		}
 
 		msg := internal.Command{
-			SID:     env.Data.ID.Hex(),
+			SID:     env.Data.ID,
 			Type:    typ,
 			Data:    string(b),
 			Channel: channel,
@@ -357,7 +357,7 @@ func (env *ExecutionEnvironment) complete(err error) {
 	}
 
 	//TODO: this needs to be regrouped and ran un batch
-	if err := Ran(env.DB, env.Data.ID, env.CurrentRun); err != nil {
+	if err := env.DataStore.RanFunction(env.BaseName, env.Data.ID, env.CurrentRun); err != nil {
 		//TODO: do something with those error
 		log.Println("error logging function complete: ", err)
 	}
