@@ -2,11 +2,26 @@ package mongo
 
 import (
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func (mg *Mongo) AddFormSubmission(dbName, form string, doc map[string]interface{}) error {
+	db := mg.Client.Database(dbName)
+
+	doc[FieldID] = primitive.NewObjectID()
+	doc[FieldFormName] = form
+	doc["sb_posted"] = time.Now()
+
+	if _, err := db.Collection("sb_forms").InsertOne(mg.Ctx, doc); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (mg *Mongo) ListFormSubmissions(dbName, name string) (results []map[string]interface{}, err error) {
 	db := mg.Client.Database(dbName)

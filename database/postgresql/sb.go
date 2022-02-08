@@ -123,6 +123,15 @@ func (pg *PostgreSQL) ListDatabases() (results []internal.BaseConfig, err error)
 	return
 }
 
+func (pg *PostgreSQL) IncrementMonthlyEmailSent(baseID string) error {
+	_, err := pg.DB.Exec(`
+		UPDATE sb.apps SET monthly_email_sent = monthly_email_sent + 1
+		WHERE id = $1;
+	`, baseID)
+
+	return err
+}
+
 func scanCustomer(rows Scanner, c *internal.Customer) error {
 	return rows.Scan(
 		&c.ID,

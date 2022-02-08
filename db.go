@@ -14,12 +14,10 @@ import (
 	"github.com/staticbackendhq/core/cache"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Database struct {
-	client *mongo.Client
-	cache  *cache.Cache
+	cache *cache.Cache
 }
 
 func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
@@ -58,8 +56,6 @@ func (database *Database) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, _ := ShiftPath(r.URL.Path)
 
@@ -75,7 +71,7 @@ func (database *Database) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc, err = database.base.Add(auth, curDB, col, doc)
+	doc, err = datastore.CreateDocument(auth, conf.Name, col, doc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -91,8 +87,6 @@ func (database *Database) bulkAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, _ := ShiftPath(r.URL.Path)
 
@@ -102,7 +96,7 @@ func (database *Database) bulkAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := database.base.BulkAdd(auth, curDB, col, v); err != nil {
+	if err := datastore.BulkCreateDocument(auth, conf.Name, col, v); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -125,12 +119,10 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, _ := ShiftPath(r.URL.Path)
 
-	result, err := database.base.List(auth, curDB, col, params)
+	result, err := datastore.ListDocuments(auth, conf.Name, col, params)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -146,15 +138,13 @@ func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
 	col, id := "", ""
 
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, r.URL.Path = ShiftPath(r.URL.Path)
 	id, r.URL.Path = ShiftPath(r.URL.Path)
 
-	result, err := database.base.GetByID(auth, curDB, col, id)
+	result, err := datastore.GetDocumentByID(auth, conf.Name, col, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -180,9 +170,6 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 	page, size := getPagination(r.URL)
 
 	sort := r.URL.Query().Get("sort")
-	if len(sort) == 0 {
-		sort = internal.FieldID
-	}
 
 	params := internal.ListParams{
 		Page:           page,
@@ -198,14 +185,12 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
 	var col string
 
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, r.URL.Path = ShiftPath(r.URL.Path)
 
-	result, err := database.base.Query(auth, curDB, col, filter, params)
+	result, err := datastore.QueryDocuments(auth, conf.Name, col, filter, params)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -220,8 +205,6 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	curDB := database.client.Database(conf.Name)
 
 	col, id := "", ""
 
@@ -241,7 +224,7 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := database.base.Update(auth, curDB, col, id, doc)
+	result, err := datastore.UpdateDocument(auth, conf.Name, col, id, doc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -257,8 +240,6 @@ func (database *Database) increase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
 	// /db/col/id
 	col := getURLPart(r.URL.Path, 2)
 	id := getURLPart(r.URL.Path, 3)
@@ -272,7 +253,7 @@ func (database *Database) increase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := database.base.Increase(auth, curDB, col, id, v.Field, v.Range); err != nil {
+	if err := datastore.IncrementValue(auth, conf.Name, col, id, v.Field, v.Range); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -287,15 +268,13 @@ func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
 	col, id := "", ""
 
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, r.URL.Path = ShiftPath(r.URL.Path)
 	id, r.URL.Path = ShiftPath(r.URL.Path)
 
-	count, err := database.base.Delete(auth, curDB, col, id)
+	count, err := datastore.DeleteDocument(auth, conf.Name, col, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -316,9 +295,7 @@ func (database *Database) listCollections(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	curDB := database.client.Database(conf.Name)
-
-	names, err := database.base.ListCollections(curDB)
+	names, err := datastore.ListCollections(conf.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

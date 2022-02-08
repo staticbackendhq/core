@@ -40,8 +40,6 @@ const (
 )
 
 var (
-	client *mongo.Client
-
 	datastore internal.Persister
 	volatile  *cache.Cache
 	emailer   internal.Mailer

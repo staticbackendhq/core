@@ -1,16 +1,9 @@
 package staticbackend
 
 import (
-	"context"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func submitForm(w http.ResponseWriter, r *http.Request) {
@@ -20,18 +13,12 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database(conf.Name)
-
 	form := ""
 
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	form, r.URL.Path = ShiftPath(r.URL.Path)
 
-	doc := bson.M{
-		"_id":       primitive.NewObjectID(),
-		"form":      form,
-		"sb_posted": time.Now(),
-	}
+	doc := make(map[string]interface{})
 
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -44,15 +31,7 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for key, val := range r.Form {
-		k := strings.ToLower(key)
-		if k != "_id" && k != "form" {
-			doc[key] = strings.Join(val, " ; ")
-		}
-	}
-
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	if _, err := db.Collection("sb_forms").InsertOne(ctx, doc); err != nil {
+	if err := datastore.AddFormSubmission(conf.Name, form, doc); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -67,11 +46,9 @@ func listForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	formName := r.URL.Query().Get("name")
 
-	results, err := internal.ListFormSubmissions(curDB, formName)
+	results, err := datastore.ListFormSubmissions(conf.Name, formName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

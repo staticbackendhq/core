@@ -50,8 +50,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database("sbsys")
-	exists, err := internal.EmailExists(db, email)
+	exists, err := datastore.EmailExists(email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -115,7 +114,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	retry := 10
 	dbName := randStringRunes(12)
 	for {
-		exists, err = internal.DatabaseExists(db, dbName)
+		exists, err = datastore.DatabaseExists(dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -142,10 +141,9 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	// we create an admin user
 	// we make sure to switch DB
-	db = client.Database(dbName)
 	pw := randStringRunes(6)
 
-	if _, _, err := a.membership.createAccountAndUser(db, email, pw, 100); err != nil {
+	if _, _, err := a.membership.createAccountAndUser(dbName, email, pw, 100); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -165,13 +163,13 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		signUpURL = s.URL
 	}
 
-	token, err := internal.FindTokenByEmail(db, email)
+	token, err := datastore.FindTokenByEmail(dbName, email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	rootToken := fmt.Sprintf("%s|%s|%s", token.ID.Hex(), token.AccountID.Hex(), token.Token)
+	rootToken := fmt.Sprintf("%s|%s|%s", token.ID, token.AccountID, token.Token)
 
 	//TODO: Have html template for those
 	body := fmt.Sprintf(`
@@ -239,9 +237,7 @@ func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database("sbsys")
-
-	cus, err := internal.FindAccount(db, conf.SBID)
+	cus, err := datastore.FindAccount(conf.CustomerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

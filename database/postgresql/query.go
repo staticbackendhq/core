@@ -9,7 +9,8 @@ import (
 )
 
 func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{}, error) {
-	filter := bson.M{}
+	filter := make(map[string]interface{})
+
 	for i, clause := range clauses {
 		if len(clause) != 3 {
 			return filter, fmt.Errorf("The %d query clause did not contains the required 3 parameters (field, operator, value)", i+1)
@@ -20,6 +21,8 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 			return filter, fmt.Errorf("The %d query clause's field parameter must be a string: %v", i+1, clause[0])
 		}
 
+		field = fmt.Sprintf("data#>>'{%s}'", field)
+
 		op, ok := clause[1].(string)
 		if !ok {
 			return filter, fmt.Errorf("The %d query clause's operator must be a string: %v", i+1, clause[1])
@@ -27,27 +30,27 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 
 		switch op {
 		case "=", "==":
-			filter[field] = clause[2]
+			filter[field+" = "] = clause[2]
 		case "!=", "<>":
-			filter[field] = bson.M{"$ne": clause[2]}
-		case ">":
-			filter[field] = bson.M{"$gt": clause[2]}
-		case "<":
-			filter[field] = bson.M{"$lt": clause[2]}
-		case ">=":
-			filter[field] = bson.M{"$gte": clause[2]}
-		case "<=":
-			filter[field] = bson.M{"$lte": clause[2]}
-		case "in":
-			filter[field] = bson.M{"$in": clause[2]}
-		case "!in", "nin":
-			filter[field] = bson.M{"$nin": clause[2]}
+			filter[field+" != "] = bson.M{"$ne": clause[2]}
+		case ">", "<", ">=", "<=":
+			filter[field+" "+op+" "] = bson.M{"$gt": clause[2]}
+		case "in", "!in":
+			//TODO: Implement the value in array or value not in array
+			return filter, fmt.Errorf("array lookup is not implemented yet for PostgreSQL.", i+1, op)
 		default:
 			return filter, fmt.Errorf("The %d query clause's operator: %s is not supported at the moment.", i+1, op)
 		}
 	}
 
 	return filter, nil
+}
+
+func applyFilter(where string, filters map[string]interface{}) string {
+	for field, val := range filters {
+		where = fmt.Sprintf(" AND %s %v", field, val)
+	}
+	return where
 }
 
 func secureRead(auth internal.Auth, col string) string {

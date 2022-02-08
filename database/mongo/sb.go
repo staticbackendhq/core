@@ -51,11 +51,12 @@ func (mg *Mongo) CreateCustomer(customer internal.Customer) (internal.Customer, 
 }
 
 type LocalBase struct {
-	ID        primitive.ObjectID `bson:"_id" json:"id"`
-	SBID      primitive.ObjectID `bson:"accountId" json:"-"`
-	Name      string             `bson:"name" json:"name"`
-	Whitelist []string           `bson:"whitelist" json:"whitelist"`
-	IsActive  bool               `bson:"active" json:"-"`
+	ID               primitive.ObjectID `bson:"_id" json:"id"`
+	SBID             primitive.ObjectID `bson:"accountId" json:"-"`
+	Name             string             `bson:"name" json:"name"`
+	Whitelist        []string           `bson:"whitelist" json:"whitelist"`
+	IsActive         bool               `bson:"active" json:"-"`
+	MonthlyEmailSent int                `bson:"mes" json:"-"`
 }
 
 func toLocalBase(b internal.BaseConfig) LocalBase {
@@ -170,4 +171,20 @@ func (mg *Mongo) ListDatabases() (results []internal.BaseConfig, err error) {
 	}
 
 	return
+}
+
+func (mg *Mongo) IncrementMonthlyEmailSent(baseID string) error {
+	db := mg.Client.Database("sbsys")
+
+	id, err := primitive.ObjectIDFromHex(baseID)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{FieldID: id}
+	update := bson.M{"$inc": bson.M{"mes": 1}}
+	if _, err := db.Collection("bases").UpdateOne(mg.Ctx, filter, update); err != nil {
+		return err
+	}
+	return nil
 }

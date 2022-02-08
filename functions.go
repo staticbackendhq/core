@@ -20,15 +20,13 @@ func (f *functions) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data function.ExecData
+	var data internal.ExecData
 	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
-	if _, err := function.Add(curDB, data); err != nil {
+	if _, err := datastore.AddFunction(conf.Name, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -43,8 +41,6 @@ func (f *functions) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	data := new(struct {
 		ID      string `json:"id"`
 		Code    string `json:"code"`
@@ -55,7 +51,7 @@ func (f *functions) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := function.Update(curDB, data.ID, data.Code, data.Trigger); err != nil {
+	if err := datastore.UpdateFunction(conf.Name, data.ID, data.Code, data.Trigger); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -70,15 +66,8 @@ func (f *functions) del(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	name := getURLPart(r.URL.Path, 3)
-	if err := function.Delete(curDB, name); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := function.Delete(curDB, name); err != nil {
+	if err := datastore.DeleteFunction(conf.Name, name); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -93,25 +82,23 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data function.ExecData
+	var data internal.ExecData
 	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
-	fn, err := function.GetForExecution(curDB, data.FunctionName)
+	fn, err := datastore.GetFunctionForExecution(conf.Name, data.FunctionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	env := &function.ExecutionEnvironment{
-		Auth: auth,
-		DB:   curDB,
-		Base: f.base,
-		Data: fn,
+		Auth:      auth,
+		BaseName:  conf.Name,
+		DataStore: datastore,
+		Data:      fn,
 	}
 
 	if err := env.Execute(r); err != nil {
@@ -129,9 +116,7 @@ func (f *functions) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
-	results, err := function.List(curDB)
+	results, err := datastore.ListFunctions(conf.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -147,11 +132,9 @@ func (f *functions) info(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	name := getURLPart(r.URL.Path, 3)
 
-	fn, err := function.GetByName(curDB, name)
+	fn, err := datastore.GetFunctionByName(conf.Name, name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

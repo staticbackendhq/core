@@ -10,6 +10,7 @@ import (
 const (
 	FieldID        = "id"
 	FieldAccountID = "accountId"
+	FieldFormName  = "sb_form"
 )
 
 type Document struct {
@@ -117,9 +118,53 @@ func (pg *PostgreSQL) ListDocuments(auth internal.Auth, dbName, col string, para
 	return
 }
 
-/*func (pg *PostgreSQL) QueryDocuments(auth Auth, dbName, col string, filter map[string]interface{}, params ListParams) (internal.PagedResult, error) {
-	return errors.New("not implemented")
-}*/
+func (pg *PostgreSQL) QueryDocuments(auth internal.Auth, dbName, col string, filters map[string]interface{}, params internal.ListParams) (result internal.PagedResult, err error) {
+	where := secureRead(auth, col)
+	where = applyFilter(where, filters)
+
+	paging := setPaging(params)
+
+	result.Page = params.Page
+	result.Size = params.Size
+
+	qry := fmt.Sprintf(`
+		SELECT COUNT(*) 
+		FROM %s.%s 
+		%s
+	`, dbName, col, where)
+
+	if err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&result.Total); err != nil {
+		return
+	}
+
+	qry = fmt.Sprintf(`
+		SELECT * 
+		FROM %s.%s 
+		%s
+		%s
+	`, dbName, col, where, paging)
+
+	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var doc Document
+		if err = scanDocument(rows, &doc); err != nil {
+			return
+		}
+
+		doc.Data[FieldID] = doc.ID
+		doc.Data[FieldAccountID] = doc.AccountID
+
+		result.Results = append(result.Results, doc.Data)
+	}
+
+	err = rows.Err()
+	return
+}
 
 func (pg *PostgreSQL) GetDocumentByID(auth internal.Auth, dbName, col, id string) (map[string]interface{}, error) {
 	where := secureRead(auth, col)
@@ -157,6 +202,21 @@ func (pg *PostgreSQL) UpdateDocument(auth internal.Auth, dbName, col, id string,
 	}
 
 	return pg.GetDocumentByID(auth, dbName, col, id)
+}
+
+func (pg *PostgreSQL) IncrementValue(auth internal.Auth, dbName, col, id, field string, n int) error {
+	where := secureWrite(auth, col)
+
+	qry := fmt.Sprintf(`
+		UPDATE %s.%s SET
+			%s = %s + $4
+		%s AND id = $3
+	`, dbName, col, field, field, where)
+
+	if _, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, id, n); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (pg *PostgreSQL) DeleteDocument(auth internal.Auth, dbName, col, id string) (int64, error) {

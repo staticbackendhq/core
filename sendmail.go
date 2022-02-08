@@ -1,14 +1,12 @@
 package staticbackend
 
 import (
-	"context"
+	"log"
 	"net/http"
 
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
-
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func sudoSendMail(w http.ResponseWriter, r *http.Request) {
@@ -39,15 +37,9 @@ func sudoSendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database("sbsys")
-
-	ctx := context.Background()
-
-	filter := bson.M{internal.FieldID: config.SBID}
-	update := bson.M{"$inc": bson.M{"mes": 1}}
-	if _, err := db.Collection("accounts").UpdateOne(ctx, filter, update); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if err := datastore.IncrementMonthlyEmailSent(config.ID); err != nil {
+		//TODO: do something better with this error
+		log.Println("error increasing monthly email sent: ", err)
 	}
 
 	respond(w, http.StatusOK, true)

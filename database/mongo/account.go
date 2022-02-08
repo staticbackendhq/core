@@ -16,6 +16,7 @@ const (
 	FieldToken     = "token"
 	FieldIsActive  = "active"
 	FieldRole      = "role"
+	FieldFormName  = "form"
 )
 
 type LocalToken struct {
