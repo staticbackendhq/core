@@ -12,8 +12,6 @@ import (
 	"github.com/staticbackendhq/core/middleware"
 
 	"github.com/staticbackendhq/core/cache"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Database struct {
@@ -284,8 +282,8 @@ func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 }
 
 func (database *Database) newID(w http.ResponseWriter, r *http.Request) {
-	id := primitive.NewObjectID()
-	respond(w, http.StatusOK, id.Hex())
+	id := datastore.NewID()
+	respond(w, http.StatusOK, id)
 }
 
 func (database *Database) listCollections(w http.ResponseWriter, r *http.Request) {

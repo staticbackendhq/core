@@ -277,10 +277,13 @@ func (mg *Mongo) RanFunction(dbName, id string, rh internal.ExecHistory) error {
 		return err
 	}
 
+	rh.ID = primitive.NewObjectID().Hex()
+	leh := toLocalExecHistory([]internal.ExecHistory{rh})[0]
+
 	filter := bson.M{FieldID: oid}
 	update := bson.M{
 		"$set":  bson.M{"lr": time.Now()},
-		"$push": bson.M{"h": rh},
+		"$push": bson.M{"h": leh},
 	}
 	res := db.Collection("sb_functions").FindOneAndUpdate(mg.Ctx, filter, update)
 	if err := res.Err(); err != nil {

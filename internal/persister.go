@@ -6,6 +6,8 @@ const (
 )
 
 type Persister interface {
+	Ping() error
+
 	// customer / app related
 	CreateCustomer(Customer) (Customer, error)
 	CreateBase(BaseConfig) (BaseConfig, error)
@@ -15,6 +17,9 @@ type Persister interface {
 	DatabaseExists(name string) (bool, error)
 	ListDatabases() ([]BaseConfig, error)
 	IncrementMonthlyEmailSent(baseID string) error
+	GetCustomerByStripeID(stripeID string) (cus Customer, err error)
+	ActivateCustomer(customerID string) error
+	NewID() string
 
 	// user account and token
 	CreateUserAccount(dbName, email string) (id string, err error)
@@ -57,4 +62,9 @@ type Persister interface {
 	RanFunction(dbName, id string, rh ExecHistory) error
 
 	ListTasks() ([]Task, error)
+
+	// Files / storage
+	AddFile(dbName string, f File) (id string, err error)
+	GetFileByID(dbName, fileID string) (f File, err error)
+	DeleteFile(dbName, fileID string) error
 }

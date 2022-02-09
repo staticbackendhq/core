@@ -1,7 +1,6 @@
 package staticbackend
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -9,9 +8,6 @@ import (
 
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func upload(w http.ResponseWriter, r *http.Request) {
@@ -25,8 +21,6 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	db := client.Database(config.Name)
 
 	file, h, err := r.FormFile("file")
 	if err != nil {
@@ -47,11 +41,11 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 	name := r.Form.Get("name")
 	if len(name) == 0 {
-		name = primitive.NewObjectID().Hex()
+		name = randStringRunes(32)
 	}
 
 	fileKey := fmt.Sprintf("%s/%s/%s%s",
-		auth.AccountID.Hex(),
+		auth.AccountID,
 		config.Name,
 		name,
 		ext,
@@ -64,24 +58,17 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc := bson.M{
-		"accountId": auth.AccountID,
-		"key":       fileKey,
-		"url":       url,
-		"size":      h.Size,
-		"on":        time.Now(),
+	f := internal.File{
+		AccountID: auth.AccountID,
+		Key:       fileKey,
+		URL:       url,
+		Size:      h.Size,
+		Uploaded:  time.Now(),
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	res, err := db.Collection("sb_files").InsertOne(ctx, doc)
+	newID, err := datastore.AddFile(config.Name, f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	newID, ok := res.InsertedID.(primitive.ObjectID)
-	if !ok {
-		http.Error(w, "unable to retrived the inserted id", http.StatusInternalServerError)
 		return
 	}
 
@@ -89,7 +76,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		ID  string `json:"id"`
 		URL string `json:"url"`
 	})
-	data.ID = newID.Hex()
+	data.ID = newID
 	data.URL = url
 
 	respond(w, http.StatusOK, data)
@@ -102,40 +89,21 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database(config.Name)
-
-	oid, err := primitive.ObjectIDFromHex(r.URL.Query().Get("id"))
+	fileID := r.URL.Query().Get("id")
+	f, err := datastore.GetFileByID(config.Name, fileID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	ctx := context.Background()
-	var result bson.M
-
-	filter := bson.M{internal.FieldID: oid}
-
-	sr := db.Collection("sb_files").FindOne(ctx, filter)
-	if err := sr.Decode(&result); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	} else if err := sr.Err(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fileKey, ok := result["key"].(string)
-	if !ok {
-		http.Error(w, "unable to retrive the file id", http.StatusInternalServerError)
-		return
-	}
+	fileKey := f.Key
 
 	if err := storer.Delete(fileKey); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if _, err := db.Collection("sb_files").DeleteOne(ctx, filter); err != nil {
+	if err := datastore.DeleteFile(config.Name, f.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

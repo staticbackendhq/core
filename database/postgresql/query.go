@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/staticbackendhq/core/internal"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{}, error) {
@@ -13,7 +12,7 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 
 	for i, clause := range clauses {
 		if len(clause) != 3 {
-			return filter, fmt.Errorf("The %d query clause did not contains the required 3 parameters (field, operator, value)", i+1)
+			return filter, fmt.Errorf("the %d query clause did not contains the required 3 parameters (field, operator, value)", i+1)
 		}
 
 		field, ok := clause[0].(string)
@@ -32,9 +31,9 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 		case "=", "==":
 			filter[field+" = "] = clause[2]
 		case "!=", "<>":
-			filter[field+" != "] = bson.M{"$ne": clause[2]}
+			filter[field+" != "] = clause[2]
 		case ">", "<", ">=", "<=":
-			filter[field+" "+op+" "] = bson.M{"$gt": clause[2]}
+			filter[field+" "+op+" "] = clause[2]
 		case "in", "!in":
 			//TODO: Implement the value in array or value not in array
 			return filter, fmt.Errorf("array lookup is not implemented yet for PostgreSQL.", i+1, op)

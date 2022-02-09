@@ -13,3 +13,7 @@ type PostgreSQL struct {
 func New(db *sql.DB) internal.Persister {
 	return &PostgreSQL{DB: db}
 }
+
+func (pg *PostgreSQL) Ping() error {
+	return pg.DB.Ping()
+}

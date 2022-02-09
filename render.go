@@ -9,9 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var (
@@ -104,15 +101,10 @@ func renderErr(w http.ResponseWriter, r *http.Request, err error) {
 
 func customFuncs() template.FuncMap {
 	return template.FuncMap{
-		"getField": func(s string, doc bson.M) string {
+		"getField": func(s string, doc map[string]interface{}) string {
 			v, ok := doc[s]
 			if !ok {
 				return "n/a"
-			}
-
-			oid, ok := v.(primitive.ObjectID)
-			if ok {
-				return oid.Hex()
 			}
 
 			date, ok := doc[s].(time.Time)

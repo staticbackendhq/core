@@ -25,8 +25,7 @@ import (
 	"github.com/staticbackendhq/core/storage"
 
 	"github.com/stripe/stripe-go/v71"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	mongodrv "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"golang.org/x/sync/errgroup"
@@ -68,8 +67,8 @@ func Start(dbHost, port string) {
 		if strings.HasPrefix(key, "__tmp__experimental_public") {
 			// let's create the most minimal authentication possible
 			a := internal.Auth{
-				AccountID: primitive.NewObjectID(),
-				UserID:    primitive.NewObjectID(),
+				AccountID: randStringRunes(30),
+				UserID:    randStringRunes(30),
 				Email:     "exp@tmp.com",
 				Role:      0,
 				Token:     key,
@@ -82,7 +81,7 @@ func Start(dbHost, port string) {
 			return key, nil
 		}
 
-		auth, err := middleware.ValidateAuthKey(client, volatile, ctx, key)
+		auth, err := middleware.ValidateAuthKey(datastore, volatile, ctx, key)
 		if err != nil {
 			return "", err
 		}
@@ -105,26 +104,25 @@ func Start(dbHost, port string) {
 	}, volatile)
 
 	database := &Database{
-		client: client,
-		cache:  volatile,
+		cache: volatile,
 		//TODONOW: related to publishing event
 		//base:   &db.Base{PublishDocument: volatile.PublishDocument},
 	}
 
 	pubWithDB := []middleware.Middleware{
 		middleware.Cors(),
-		middleware.WithDB(client, volatile),
+		middleware.WithDB(datastore, volatile),
 	}
 
 	stdAuth := []middleware.Middleware{
 		middleware.Cors(),
-		middleware.WithDB(client, volatile),
-		middleware.RequireAuth(client, volatile),
+		middleware.WithDB(datastore, volatile),
+		middleware.RequireAuth(datastore, volatile),
 	}
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(client, volatile),
-		middleware.RequireRoot(client),
+		middleware.WithDB(datastore, volatile),
+		middleware.RequireRoot(datastore),
 	}
 
 	m := &membership{volatile: volatile}
@@ -190,7 +188,7 @@ func Start(dbHost, port string) {
 	http.Handle("/sse/msg", middleware.Chain(http.HandlerFunc(receiveMessage), pubWithDB...))
 
 	// server-side functions
-	f := &functions{base: &db.Base{PublishDocument: volatile.PublishDocument}}
+	f := &functions{datastore: datastore}
 	http.Handle("/fn/add", middleware.Chain(http.HandlerFunc(f.add), stdRoot...))
 	http.Handle("/fn/update", middleware.Chain(http.HandlerFunc(f.update), stdRoot...))
 	http.Handle("/fn/delete/", middleware.Chain(http.HandlerFunc(f.del), stdRoot...))
@@ -200,7 +198,7 @@ func Start(dbHost, port string) {
 	http.Handle("/fn", middleware.Chain(http.HandlerFunc(f.list), stdRoot...))
 
 	// ui routes
-	webUI := ui{base: &db.Base{PublishDocument: volatile.PublishDocument}}
+	webUI := ui{}
 	http.HandleFunc("/ui/login", webUI.auth)
 	http.Handle("/ui/db", middleware.Chain(http.HandlerFunc(webUI.dbCols), stdRoot...))
 	http.Handle("/ui/db/save", middleware.Chain(http.HandlerFunc(webUI.dbSave), stdRoot...))
@@ -246,28 +244,20 @@ func Start(dbHost, port string) {
 }
 
 func initServices(dbHost string) {
-	if err := openDatabase(dbHost); err != nil {
-		log.Fatal(err)
-	}
-
 	persister := os.Getenv("DATA_STORE")
 	if strings.EqualFold(persister, "mongo") {
-		datastore = mongo.New(client)
+		cl, err := openMongoDatabase(dbHost)
+		if err != nil {
+			log.Fatal(err)
+		}
+		datastore = mongo.New(cl)
 	} else {
-		//TODO: This should be move elsewhere
-
-		// default is "postgresql"
-		connStr := "user=postgres password=example dbname=test sslmode=disable"
-		dbConn, err := sql.Open("postgres", connStr)
+		cl, err := openPGDatabase(dbHost)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		if err := db.Ping(); err != nil {
-			log.Fatal(err)
-		}
-
-		datastore = postgresql.New(dbConn)
+		datastore = postgresql.New(cl)
 	}
 
 	volatile = cache.NewCache()
@@ -313,8 +303,8 @@ func initServices(dbHost string) {
 		}
 
 		exe.Auth = auth
-		exe.Base = &db.Base{PublishDocument: volatile.PublishDocument}
-		exe.DB = client.Database(conf.Name)
+		exe.BaseName = conf.Name
+		exe.DataStore = datastore
 		exe.Volatile = volatile
 
 		return exe, nil
@@ -323,27 +313,39 @@ func initServices(dbHost string) {
 	// start system events subscriber
 	go sub.Start()
 }
-func openDatabase(dbHost string) error {
+func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {
 	uri := dbHost
 
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	cl, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	cl, err := mongodrv.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
-		return fmt.Errorf("cannot connect to mongo: %v", err)
+		return nil, fmt.Errorf("cannot connect to mongo: %v", err)
 	}
 
 	if err := cl.Ping(ctx, readpref.Primary()); err != nil {
-		return fmt.Errorf("Ping failed: %v", err)
+		return nil, fmt.Errorf("Ping failed: %v", err)
 	}
 
-	client = cl
-	return nil
+	return cl, nil
+}
+
+func openPGDatabase(dbHost string) (*sql.DB, error) {
+	// default is "postgresql"
+	//connStr := "user=postgres password=example dbname=test sslmode=disable"
+	dbConn, err := sql.Open("postgres", dbHost)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := dbConn.Ping(); err != nil {
+		return nil, err
+	}
+
+	return dbConn, nil
 }
 
 func ping(w http.ResponseWriter, r *http.Request) {
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-
-	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+	if err := datastore.Ping(); err != nil {
 		http.Error(w, "connection failed to database, I'm down.", http.StatusInternalServerError)
 		return
 	}

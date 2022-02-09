@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Auth represents an authenticated user.
@@ -37,8 +36,8 @@ var (
 )
 
 type Account struct {
-	ID    primitive.ObjectID `bson:"_id" json:"id"`
-	Email string             `bson:"email" json:"email"`
+	ID    string `json:"id"`
+	Email string `json:"email"`
 }
 
 type Token struct {

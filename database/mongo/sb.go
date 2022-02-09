@@ -173,6 +173,21 @@ func (mg *Mongo) ListDatabases() (results []internal.BaseConfig, err error) {
 	return
 }
 
+func (mg *Mongo) GetCustomerByStripeID(stripeID string) (cus internal.Customer, err error) {
+	db := mg.Client.Database("sbsys")
+
+	var acct LocalCustomer
+	sr := db.Collection("accounts").FindOne(mg.Ctx, bson.M{"stripeId": stripeID})
+	if err = sr.Decode(&acct); err != nil {
+		return
+	} else if err = sr.Err(); err != nil {
+		return
+	}
+
+	cus = fromLocalCustomer(acct)
+	return
+}
+
 func (mg *Mongo) IncrementMonthlyEmailSent(baseID string) error {
 	db := mg.Client.Database("sbsys")
 
@@ -187,4 +202,29 @@ func (mg *Mongo) IncrementMonthlyEmailSent(baseID string) error {
 		return err
 	}
 	return nil
+}
+
+func (mg *Mongo) ActivateCustomer(customerID string) error {
+	db := mg.Client.Database("sbsys")
+
+	oid, err := primitive.ObjectIDFromHex(customerID)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{FieldID: oid}
+	update := bson.M{"$set": bson.M{"active": true}}
+
+	res := db.Collection("accounts").FindOneAndUpdate(mg.Ctx, filter, update)
+	if err := res.Err(); err != nil {
+		return err
+	}
+
+	filter = bson.M{FieldAccountID: oid}
+	res = db.Collection("bases").FindOneAndUpdate(mg.Ctx, filter, update)
+	return res.Err()
+}
+
+func (mg *Mongo) NewID() string {
+	return primitive.NewObjectID().Hex()
 }

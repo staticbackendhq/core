@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/staticbackendhq/core/internal"
 )
@@ -130,6 +131,36 @@ func (pg *PostgreSQL) IncrementMonthlyEmailSent(baseID string) error {
 	`, baseID)
 
 	return err
+}
+
+func (pg *PostgreSQL) GetCustomerByStripeID(stripeID string) (cus internal.Customer, err error) {
+	row := pg.DB.QueryRow(`
+		SELECT * 
+		FROM sb.customers 
+		WHERE stripe_id = $1
+	`, stripeID)
+
+	err = scanCustomer(row, &cus)
+	return
+}
+
+func (pg *PostgreSQL) ActivateCustomer(customerID string) error {
+	_, err := pg.DB.Exec(`
+		UPDATE sb.customers SET is_active = 1 WHERE id = $1;
+		UPDATE sb.apps SET is_active = 1 WHERE customer_id = $1;
+	`, customerID)
+
+	return err
+}
+
+func (pg *PostgreSQL) NewID() string {
+	var id string
+	if err := pg.DB.QueryRow(`SELECT uuid_generate_v4 ()`).Scan(&id); err != nil {
+		//TODO: do something with this error
+		log.Println("error in postgresql.NewID: ", err)
+		return ""
+	}
+	return id
 }
 
 func scanCustomer(rows Scanner, c *internal.Customer) error {

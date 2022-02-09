@@ -11,7 +11,6 @@ import (
 	"github.com/staticbackendhq/core/internal"
 
 	"github.com/dop251/goja"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ExecutionEnvironment struct {
@@ -52,7 +51,6 @@ func (env *ExecutionEnvironment) Execute(data interface{}) error {
 	}
 
 	env.CurrentRun = internal.ExecHistory{
-		ID:      primitive.NewObjectID().Hex(),
 		Version: env.Data.Version,
 		Started: time.Now(),
 		Output:  make([]string, 0),

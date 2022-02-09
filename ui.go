@@ -8,16 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type ui struct {
-}
+type ui struct{}
 
 func (ui) login(w http.ResponseWriter, r *http.Request) {
 	render(w, r, "login.html", nil, nil)
@@ -33,8 +28,7 @@ func (ui) createApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db := client.Database("sbsys")
-	exists, err := internal.EmailExists(db, email)
+	exists, err := datastore.EmailExists(email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -51,21 +45,13 @@ func (ui) auth(w http.ResponseWriter, r *http.Request) {
 	pk := r.Form.Get("pk")
 	token := r.Form.Get("token")
 
-	id, err := primitive.ObjectIDFromHex(pk)
+	conf, err := datastore.FindDatabase(pk)
 	if err != nil {
 		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "This app does not exists"})
 		return
 	}
 
-	db := client.Database("sbsys")
-
-	conf, err := internal.FindDatabase(db, id)
-	if err != nil {
-		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "This app does not exists"})
-		return
-	}
-
-	if _, err := middleware.ValidateRootToken(client, conf.Name, token); err != nil {
+	if _, err := middleware.ValidateRootToken(datastore, conf.Name, token); err != nil {
 		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "invalid public key / token"})
 		return
 	}
@@ -98,20 +84,18 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	data := new(struct {
 		Collection     string
 		Collections    []string
 		Columns        []string
-		Docs           []bson.M
+		Docs           []map[string]interface{}
 		SortBy         string
 		SortDescending string
 		FilterFields   string
 		Query          string
 	})
 
-	names, err := x.base.ListCollections(curDB)
+	names, err := datastore.ListCollections(conf.Name)
 	if err != nil {
 		renderErr(w, r, err)
 		return
@@ -130,7 +114,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		SortBy:         "id",
 	}
 
-	var filter bson.M
+	filter := make(map[string]interface{})
 
 	// handle post
 	if r.Method == http.MethodPost {
@@ -160,13 +144,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 	var list internal.PagedResult
 	if len(filter) == 0 {
-		list, err = x.base.List(auth, curDB, col, params)
+		list, err = datastore.ListDocuments(auth, conf.Name, col, params)
 		if err != nil {
 			renderErr(w, r, err)
 			return
 		}
 	} else {
-		list, err = x.base.Query(auth, curDB, col, filter, params)
+		list, err = datastore.QueryDocuments(auth, conf.Name, col, filter, params)
 		if err != nil {
 			renderErr(w, r, err)
 			return
@@ -196,12 +180,10 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	col := r.URL.Query().Get("col")
 	id := getURLPart(r.URL.Path, 3)
 
-	doc, err := x.base.GetByID(auth, curDB, col, id)
+	doc, err := datastore.GetDocumentByID(auth, conf.Name, col, id)
 	if err != nil {
 		renderErr(w, r, err)
 		return
@@ -213,7 +195,7 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 		Doc        interface{}
 	})
 
-	var docs []bson.M
+	var docs []map[string]interface{}
 	docs = append(docs, doc)
 
 	data.Collection = col
@@ -232,15 +214,13 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	id := r.Form.Get("id")
 	col := r.Form.Get("col")
 	field := r.Form.Get("field")
 	value := r.Form.Get("value")
 	typ := r.Form.Get("type")
 
-	update := bson.M{}
+	update := make(map[string]interface{})
 
 	if typ == "int" {
 		i, err := strconv.ParseInt(value, 10, 64)
@@ -264,7 +244,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 		update[field] = value
 	}
 
-	if _, err := x.base.Update(auth, curDB, col, id, update); err != nil {
+	if _, err := datastore.UpdateDocument(auth, conf.Name, col, id, update); err != nil {
 		renderErr(w, r, err)
 		return
 	}
@@ -280,12 +260,10 @@ func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	col := r.URL.Query().Get("col")
 	id := getURLPart(r.URL.Path, 4)
 
-	if _, err := x.base.Delete(auth, curDB, col, id); err != nil {
+	if _, err := datastore.DeleteDocument(auth, conf.Name, col, id); err != nil {
 		renderErr(w, r, err)
 		return
 	}
@@ -293,7 +271,7 @@ func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ui/db", http.StatusSeeOther)
 }
 
-func (ui) readColumnNames(docs []bson.M) []string {
+func (ui) readColumnNames(docs []map[string]interface{}) []string {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -326,15 +304,13 @@ func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 
 	formName := r.URL.Query().Get("fn")
 
-	curDB := client.Database(conf.Name)
-
-	forms, err := internal.GetForms(curDB)
+	forms, err := datastore.GetForms(conf.Name)
 	if err != nil {
 		renderErr(w, r, err)
 		return
 	}
 
-	entries, err := internal.ListFormSubmissions(curDB, formName)
+	entries, err := datastore.ListFormSubmissions(conf.Name, formName)
 	if err != nil {
 		renderErr(w, r, err)
 		return
@@ -343,7 +319,7 @@ func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 	var data = new(struct {
 		FormName string
 		Forms    []string
-		Entries  []bson.M
+		Entries  []map[string]interface{}
 	})
 
 	data.FormName = formName
@@ -360,11 +336,9 @@ func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	id := getURLPart(r.URL.Path, 4)
 
-	if _, err := x.base.Delete(auth, curDB, "sb_forms", id); err != nil {
+	if _, err := datastore.DeleteDocument(auth, conf.Name, "sb_forms", id); err != nil {
 		renderErr(w, r, err)
 		return
 	}
@@ -379,9 +353,7 @@ func (x ui) fnList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
-	results, err := function.List(curDB)
+	results, err := datastore.ListFunctions(conf.Name)
 	if err != nil {
 		renderErr(w, r, err)
 		return
@@ -391,7 +363,7 @@ func (x ui) fnList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (x *ui) fnNew(w http.ResponseWriter, r *http.Request) {
-	fn := function.ExecData{}
+	fn := internal.ExecData{}
 	render(w, r, "fn_edit.html", fn, nil)
 }
 
@@ -402,11 +374,9 @@ func (x *ui) fnEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	id := getURLPart(r.URL.Path, 3)
 
-	fn, err := function.GetByID(curDB, id)
+	fn, err := datastore.GetFunctionByID(conf.Name, id)
 	if err != nil {
 		renderErr(w, r, err)
 		return
@@ -422,8 +392,6 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	curDB := client.Database(conf.Name)
-
 	r.ParseForm()
 
 	id := r.Form.Get("id")
@@ -432,12 +400,12 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 	code := r.Form.Get("code")
 
 	if id == "new" {
-		fn := function.ExecData{
+		fn := internal.ExecData{
 			FunctionName: name,
 			Code:         code,
 			TriggerTopic: trigger,
 		}
-		newID, err := function.Add(curDB, fn)
+		newID, err := datastore.AddFunction(conf.Name, fn)
 		if err != nil {
 			renderErr(w, r, err)
 			return
@@ -447,7 +415,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := function.Update(curDB, id, code, trigger); err != nil {
+	if err := datastore.UpdateFunction(conf.Name, id, code, trigger); err != nil {
 		renderErr(w, r, err)
 		return
 	}
@@ -461,10 +429,8 @@ func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 		renderErr(w, r, err)
 		return
 	}
-
-	curDB := client.Database(conf.Name)
 	name := getURLPart(r.URL.Path, 4)
-	if err := function.Delete(curDB, name); err != nil {
+	if err := datastore.DeleteFunction(conf.Name, name); err != nil {
 		renderErr(w, r, err)
 		return
 	}

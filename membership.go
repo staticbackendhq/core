@@ -13,7 +13,6 @@ import (
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -187,7 +186,7 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 	tok := internal.Token{
 		AccountID: accountID,
 		Email:     email,
-		Token:     primitive.NewObjectID().Hex(),
+		Token:     datastore.NewID(),
 		Password:  string(b),
 		Role:      role,
 	}
@@ -352,7 +351,7 @@ func (m *membership) getJWT(token string) ([]byte, error) {
 			ExpirationTime: jwt.NumericDate(now.Add(12 * time.Hour)),
 			NotBefore:      jwt.NumericDate(now.Add(30 * time.Minute)),
 			IssuedAt:       jwt.NumericDate(now),
-			JWTID:          primitive.NewObjectID().Hex(),
+			JWTID:          randStringRunes(32), // changed from primitive.NewObjectID
 		},
 		Token: token,
 	}
