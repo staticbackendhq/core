@@ -330,7 +330,6 @@ func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {
 }
 
 func openPGDatabase(dbHost string) (*sql.DB, error) {
-	// default is "postgresql"
 	//connStr := "user=postgres password=example dbname=test sslmode=disable"
 	dbConn, err := sql.Open("postgres", dbHost)
 	if err != nil {

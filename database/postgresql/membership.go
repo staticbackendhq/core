@@ -2,18 +2,19 @@ package postgresql
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/staticbackendhq/core/internal"
 )
 
 func (pg *PostgreSQL) CreateUserAccount(dbName, email string) (id string, err error) {
 	qry := fmt.Sprintf(`
-		INSERT INTO %s.sb_accounts(email)
-		VALUES($1)
+		INSERT INTO %s.sb_accounts(email, created)
+		VALUES($1, $2)
 		RETURNING id;
 	`, dbName)
 
-	err = pg.DB.QueryRow(qry, email).Scan(&id)
+	err = pg.DB.QueryRow(qry, email, time.Now()).Scan(&id)
 	return
 }
 
@@ -80,10 +81,39 @@ func (pg *PostgreSQL) GetFirstTokenFromAccountID(dbName, accountID string) (tok 
 		SELECT * 
 		FROM %s.sb_tokens 
 		WHERE account_id = $1
+		ORDER BY created ASC
+		LIMIT 1
 	`, dbName)
 
 	row := pg.DB.QueryRow(qry, accountID)
 
 	err = scanToken(row, &tok)
 	return
+}
+
+func (pg *PostgreSQL) SetPasswordResetCode(dbName, tokenID, code string) error {
+	qry := fmt.Sprintf(`
+	UPDATE %s.sb_tokens SET
+		reset_code = $2
+	WHERE id = $1
+`, dbName)
+
+	_, err := pg.DB.Exec(qry, tokenID, code)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pg *PostgreSQL) ResetPassword(dbName, email, code, password string) error {
+	qry := fmt.Sprintf(`
+		UPDATE %s.sb_tokens SET
+			password = $3
+		WHERE email = $1 AND reset_code = $2
+	`, dbName)
+
+	if _, err := pg.DB.Exec(qry, email, code, password); err != nil {
+		return err
+	}
+	return nil
 }

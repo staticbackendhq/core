@@ -21,20 +21,21 @@ type Persister interface {
 	ActivateCustomer(customerID string) error
 	NewID() string
 
-	// user account and token
-	CreateUserAccount(dbName, email string) (id string, err error)
-	CreateUserToken(dbName string, tok Token) (id string, err error)
-
+	// system user account function s
 	FindToken(dbName, tokenID, token string) (Token, error)
 	FindRootToken(dbName, tokenID, accountID, token string) (Token, error)
 	GetRootForBase(dbName string) (Token, error)
 	FindTokenByEmail(dbName, email string) (Token, error)
+	UserEmailExists(dbName, email string) (exists bool, err error)
+	GetFirstTokenFromAccountID(dbName, accountID string) (tok Token, err error)
+
+	// membership / account & user functions
+	CreateUserAccount(dbName, email string) (id string, err error)
+	CreateUserToken(dbName string, tok Token) (id string, err error)
 	SetPasswordResetCode(dbName, tokenID, code string) error
 	ResetPassword(dbName, email, code, password string) error
-	UserEmailExists(dbName, email string) (exists bool, err error)
 	SetUserRole(dbName, email string, role int) error
 	UserSetPassword(dbName, tokenID, password string) error
-	GetFirstTokenFromAccountID(dbName, accountID string) (tok Token, err error)
 
 	CreateDocument(auth Auth, dbName, col string, doc map[string]interface{}) (map[string]interface{}, error)
 	BulkCreateDocument(auth Auth, dbName, col string, docs []interface{}) error

@@ -13,8 +13,8 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
       - ./sql/0001_bootstrap_db.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
-  #redis:
-  #  image: "redis:alpine"
-  #  ports:
-  #    - "6379:6379"
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
 

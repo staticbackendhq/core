@@ -3,7 +3,9 @@ package postgresql
 import (
 	"fmt"
 	"log"
+	"strings"
 
+	"github.com/lib/pq"
 	"github.com/staticbackendhq/core/internal"
 )
 
@@ -38,13 +40,14 @@ func (pg *PostgreSQL) CreateBase(base internal.BaseConfig) (b internal.BaseConfi
 
 	var id string
 	err = pg.DB.QueryRow(`
-	INSERT INTO sb.apps(customer_id, name, allowed_domain, is_active, created)
-	VALUES($1, $2, $3, $4, $5)
+	INSERT INTO sb.apps(customer_id, name, allowed_domain, is_active, monthly_email_sent, created)
+	VALUES($1, $2, $3, $4, $5, $6)
 	RETURNING id;
 	`, base.CustomerID,
 		base.Name,
-		base.AllowedDomain,
+		pq.Array(base.AllowedDomain),
 		base.IsActive,
+		base.MonthlySentEmail,
 		base.Created,
 	).Scan(&id)
 	if err != nil {
@@ -52,7 +55,65 @@ func (pg *PostgreSQL) CreateBase(base internal.BaseConfig) (b internal.BaseConfi
 	}
 
 	b.ID = id
+
+	err = pg.createSystemTables(base.Name)
 	return
+}
+
+func (pg *PostgreSQL) createSystemTables(schema string) error {
+	qry := strings.Replace(`
+		CREATE TABLE IF NOT EXISTS {schema}.sb_accounts (
+			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			email TEXT UNIQUE NOT NULL,
+			created timestamp NOT NULL
+		);
+		
+		CREATE TABLE IF NOT EXISTS {schema}.sb_tokens (
+			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			account_id uuid REFERENCES {schema}.sb_accounts(id) ON DELETE CASCADE,
+			token TEXT UNIQUE NOT NULL,
+			email TEXT UNIQUE NOT NULL,
+			password TEXT NOT NULL,
+			role INTEGER NOT NULL,
+			reset_code TEXT NOT NULL,
+			created timestamp NOT NULL			
+		);
+
+		CREATE TABLE IF NOT EXISTS {schema}.sb_files (
+			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			account_id uuid REFERENCES {schema}.sb_accounts(id) ON DELETE CASCADE,
+			key TEXT UNIQUE NOT NULL,
+			url TEXT NOT NULL,
+			size INTEGER NOT NULL,			
+			uploaded timestamp NOT NULL			
+		);
+
+		CREATE TABLE IF NOT EXISTS {schema}.sb_functions (
+			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			function_name TEXT UNIQUE NOT NULL,
+			trigger_topic TEXT NOT NULL,
+			code TEXT NOT NULL,
+			version INTEGER NOT NULL,
+			last_updated timestamp NOT NULL,
+			last_run timestamp NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS {schema}.sb_function_logs (
+			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			function_id uuid REFERENCES {schema}.sb_functions(id) ON DELETE CASCADE,
+			version INTEGER NOT NULL,
+			started timestamp NOT NULL,
+			completed timestamp NOT NULL,
+			success BOOLEAN NOT NULL,
+			output TEXT[] NOT NULL
+		);
+	`, "{schema}", schema, -1)
+
+	if _, err := pg.DB.Exec(qry); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (pg *PostgreSQL) EmailExists(email string) (bool, error) {
@@ -104,7 +165,7 @@ func (pg *PostgreSQL) ListDatabases() (results []internal.BaseConfig, err error)
 	rows, err := pg.DB.Query(`
 		SELECT * 
 		FROM sb.apps 
-		WHERE is_active = 1
+		WHERE is_active = true
 	`)
 	if err != nil {
 		return
@@ -145,12 +206,20 @@ func (pg *PostgreSQL) GetCustomerByStripeID(stripeID string) (cus internal.Custo
 }
 
 func (pg *PostgreSQL) ActivateCustomer(customerID string) error {
-	_, err := pg.DB.Exec(`
-		UPDATE sb.customers SET is_active = 1 WHERE id = $1;
-		UPDATE sb.apps SET is_active = 1 WHERE customer_id = $1;
-	`, customerID)
+	tx, err := pg.DB.Begin()
+	if err != nil {
+		return err
+	}
 
-	return err
+	if _, err := tx.Exec(`UPDATE sb.customers SET is_active = true WHERE id = $1;`, customerID); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(`UPDATE sb.apps SET is_active = true WHERE customer_id = $1;`, customerID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (pg *PostgreSQL) NewID() string {
@@ -179,7 +248,7 @@ func scanBase(rows Scanner, b *internal.BaseConfig) error {
 		&b.ID,
 		&b.CustomerID,
 		&b.Name,
-		&b.AllowedDomain,
+		pq.Array(&b.AllowedDomain),
 		&b.IsActive,
 		&b.MonthlySentEmail,
 		&b.Created,

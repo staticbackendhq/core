@@ -14,6 +14,9 @@ deploy: build
 test:
 	@JWT_SECRET=okdevmode go test --race --cover ./...
 
+test-pg:
+	@JWT_SECRET=okdevmode go test --race --cover ./database/postgresql
+
 docker:
 	docker build . -t staticbackend:latest
 

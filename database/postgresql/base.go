@@ -1,8 +1,11 @@
 package postgresql
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/staticbackendhq/core/internal"
 )
@@ -13,15 +16,31 @@ const (
 	FieldFormName  = "sb_form"
 )
 
+type JSONB map[string]interface{}
+
 type Document struct {
 	ID        string
 	AccountID string
 	OwnerID   string
-	Data      map[string]interface{}
+	Data      JSONB
+	Created   time.Time
+}
+
+func (j JSONB) Value() (driver.Value, error) {
+	return json.Marshal(j)
+}
+
+func (j *JSONB) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(b, &j)
 }
 
 func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc map[string]interface{}) (inserted map[string]interface{}, err error) {
-	inserted = make(map[string]interface{})
+	inserted = doc
 
 	//TODO: find a good way to prevent doing the create
 	// table if not exists each time
@@ -31,9 +50,10 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
 			account_id uuid REFERENCES %s.sb_accounts(id) ON DELETE CASCADE,
 			owner_id uuid REFERENCES %s.sb_tokens(id) ON DELETE CASCADE,
-			data jsonb
-		)
-	`, dbName, col, dbName)
+			data jsonb NOT NULL,
+			created timestamp NOT NULL
+		);
+	`, dbName, col, dbName, dbName)
 
 	if _, err = pg.DB.Exec(qry); err != nil {
 		return
@@ -42,12 +62,17 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 	var id string
 
 	qry = fmt.Sprintf(`
-		INSERT INTO %s.%s(account_id, owner_id, data)
-		VALUES($1, $2, $3)
+		INSERT INTO %s.%s(account_id, owner_id, data, created)
+		VALUES($1, $2, $3, $4)
 		RETURNING id;
 	`, dbName, col)
 
-	err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&id)
+	b, err := json.Marshal(doc)
+	if err != nil {
+		return
+	}
+
+	err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID, b, time.Now()).Scan(&id)
 
 	inserted[FieldID] = id
 	inserted[FieldAccountID] = auth.AccountID
@@ -86,10 +111,14 @@ func (pg *PostgreSQL) ListDocuments(auth internal.Auth, dbName, col string, para
 	`, dbName, col, where)
 
 	if err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&result.Total); err != nil {
+		fmt.Println("error in count")
+		fmt.Println(qry)
 		return
 	}
 
 	qry = fmt.Sprintf(`
+		-- $1: account_id
+		-- $2: user_id
 		SELECT * 
 		FROM %s.%s 
 		%s
@@ -98,6 +127,8 @@ func (pg *PostgreSQL) ListDocuments(auth internal.Auth, dbName, col string, para
 
 	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
+		fmt.Println("error in select")
+		fmt.Println(qry)
 		return
 	}
 	defer rows.Close()
@@ -265,5 +296,6 @@ func scanDocument(rows Scanner, doc *Document) error {
 		&doc.AccountID,
 		&doc.OwnerID,
 		&doc.Data,
+		&doc.Created,
 	)
 }

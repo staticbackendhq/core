@@ -36,7 +36,7 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 			filter[field+" "+op+" "] = clause[2]
 		case "in", "!in":
 			//TODO: Implement the value in array or value not in array
-			return filter, fmt.Errorf("array lookup is not implemented yet for PostgreSQL.", i+1, op)
+			return filter, fmt.Errorf("array lookup is not implemented yet for PostgreSQL at %d op: %s.", i+1, op)
 		default:
 			return filter, fmt.Errorf("The %d query clause's operator: %s is not supported at the moment.", i+1, op)
 		}
@@ -59,7 +59,7 @@ func secureRead(auth internal.Auth, col string) string {
 
 	switch internal.ReadPermission(col) {
 	case internal.PermGroup:
-		return "WHERE account_id = $1 "
+		return "WHERE account_id = $1 AND $2=$2 "
 	case internal.PermOwner:
 		return "WHERE account_id = $1 AND owner_id = $2 "
 	default:
@@ -75,7 +75,7 @@ func secureWrite(auth internal.Auth, col string) string {
 
 	switch internal.WritePermission(col) {
 	case internal.PermGroup:
-		return "WHERE account_id = $1 "
+		return "WHERE account_id = $1 AND $2=$2 "
 	case internal.PermOwner:
 		return "WHERE account_id = $1 AND owner_id = $2 "
 	default:
