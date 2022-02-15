@@ -79,6 +79,13 @@ func (pg *PostgreSQL) createSystemTables(schema string) error {
 			created timestamp NOT NULL			
 		);
 
+		CREATE TABLE IF NOT EXISTS {schema}.sb_forms (
+			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			name TEXT NOT NULL,
+			data JSONB NOT NULL,
+			created timestamp NOT NULL
+		);
+
 		CREATE TABLE IF NOT EXISTS {schema}.sb_files (
 			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
 			account_id uuid REFERENCES {schema}.sb_accounts(id) ON DELETE CASCADE,
@@ -106,6 +113,16 @@ func (pg *PostgreSQL) createSystemTables(schema string) error {
 			completed timestamp NOT NULL,
 			success BOOLEAN NOT NULL,
 			output TEXT[] NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS {schema}.sb_tasks (
+			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			name TEXT UNIQUE NOT NULL,
+			type TEXT NOT NULL,
+			value TEXT NOT NULL,
+			meta TEXT NOT NULL,
+			interval TEXT NOT NULL,
+			last_run timestamp NOT NULL
 		);
 	`, "{schema}", schema, -1)
 

@@ -37,6 +37,7 @@ type Persister interface {
 	SetUserRole(dbName, email string, role int) error
 	UserSetPassword(dbName, tokenID, password string) error
 
+	// base CRUD
 	CreateDocument(auth Auth, dbName, col string, doc map[string]interface{}) (map[string]interface{}, error)
 	BulkCreateDocument(auth Auth, dbName, col string, docs []interface{}) error
 	ListDocuments(auth Auth, dbName, col string, params ListParams) (PagedResult, error)
@@ -48,10 +49,12 @@ type Persister interface {
 	ListCollections(dbName string) ([]string, error)
 	ParseQuery(clauses [][]interface{}) (map[string]interface{}, error)
 
+	// form functions
 	AddFormSubmission(dbName, form string, doc map[string]interface{}) error
 	ListFormSubmissions(dbName, name string) ([]map[string]interface{}, error)
 	GetForms(dbName string) ([]string, error)
 
+	// Function functions
 	AddFunction(dbName string, data ExecData) (string, error)
 	UpdateFunction(dbName, id, code, trigger string) error
 	GetFunctionForExecution(dbName, name string) (ExecData, error)
@@ -62,6 +65,7 @@ type Persister interface {
 	DeleteFunction(dbName, name string) error
 	RanFunction(dbName, id string, rh ExecHistory) error
 
+	// schedule tasks
 	ListTasks() ([]Task, error)
 
 	// Files / storage

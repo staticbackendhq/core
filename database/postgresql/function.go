@@ -2,20 +2,21 @@ package postgresql
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/lib/pq"
 	"github.com/staticbackendhq/core/internal"
 )
 
 func (pg *PostgreSQL) AddFunction(dbName string, data internal.ExecData) (id string, err error) {
 	qry := fmt.Sprintf(`
-		INSERT INTO %s.sb_functions(account_id, name, trigger_topic, code, version, last_updated, last_run)
-		VALUES($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO %s.sb_functions(function_name, trigger_topic, code, version, last_updated, last_run)
+		VALUES($1, $2, $3, $4, $5, $6)
 		RETURNING id;
 	`, dbName)
 
 	err = pg.DB.QueryRow(
 		qry,
-		data.AccountID,
 		data.FunctionName,
 		data.TriggerTopic,
 		data.Code,
@@ -43,7 +44,7 @@ func (pg *PostgreSQL) GetFunctionForExecution(dbName, name string) (result inter
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_functions 
-		WHERE name = $1
+		WHERE function_name = $1
 	`, dbName)
 
 	row := pg.DB.QueryRow(qry, name)
@@ -70,7 +71,7 @@ func (pg *PostgreSQL) GetFunctionByID(dbName, id string) (result internal.ExecDa
 		SELECT * 
 		FROM %s.sb_function_logs 
 		WHERE function_id = $1
-		ORDER BY created DESC
+		ORDER BY completed DESC
 		LIMIT 50;
 	`, dbName)
 
@@ -97,7 +98,7 @@ func (pg *PostgreSQL) GetFunctionByName(dbName, name string) (result internal.Ex
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_functions 
-		WHERE name = $1
+		WHERE function_name = $1
 	`, dbName)
 
 	row := pg.DB.QueryRow(qry, name)
@@ -112,7 +113,7 @@ func (pg *PostgreSQL) GetFunctionByName(dbName, name string) (result internal.Ex
 		SELECT * 
 		FROM %s.sb_function_logs 
 		WHERE function_id = $1
-		ORDER BY created DESC
+		ORDER BY completed DESC
 		LIMIT 50;
 	`, dbName)
 
@@ -191,7 +192,7 @@ func (pg *PostgreSQL) ListFunctionsByTrigger(dbName, trigger string) (results []
 func (pg *PostgreSQL) DeleteFunction(dbName, name string) error {
 	qry := fmt.Sprintf(`
 		DELETE FROM %s.sb_functions
-		WHERE name = $1
+		WHERE function_name = $1
 	`, dbName)
 
 	if _, err := pg.DB.Exec(qry, name); err != nil {
@@ -207,7 +208,7 @@ func (pg *PostgreSQL) RanFunction(dbName, id string, rh internal.ExecHistory) er
 		WHERE id = $1
 	`, dbName)
 
-	if _, err := pg.DB.Exec(qry, id); err != nil {
+	if _, err := pg.DB.Exec(qry, id, time.Now()); err != nil {
 		return err
 	}
 
@@ -223,7 +224,7 @@ func (pg *PostgreSQL) RanFunction(dbName, id string, rh internal.ExecHistory) er
 		rh.Started,
 		rh.Completed,
 		rh.Success,
-		rh.Output,
+		pq.Array(rh.Output),
 	)
 
 	return err
@@ -232,7 +233,6 @@ func (pg *PostgreSQL) RanFunction(dbName, id string, rh internal.ExecHistory) er
 func scanExecData(rows Scanner, ex *internal.ExecData) error {
 	return rows.Scan(
 		&ex.ID,
-		&ex.AccountID,
 		&ex.FunctionName,
 		&ex.TriggerTopic,
 		&ex.Code,
@@ -250,6 +250,6 @@ func scanExecHistory(rows Scanner, h *internal.ExecHistory) error {
 		&h.Started,
 		&h.Completed,
 		&h.Success,
-		&h.Output,
+		pq.Array(&h.Output),
 	)
 }

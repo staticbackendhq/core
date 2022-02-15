@@ -6,29 +6,30 @@ import (
 )
 
 type FormData struct {
-	ID        string
-	AccountID string
-	Name      string
-	Date      map[string]interface{}
-	Created   time.Time
+	ID      string
+	Name    string
+	Data    JSONB
+	Created time.Time
 }
 
 func (pg *PostgreSQL) AddFormSubmission(dbName, form string, doc map[string]interface{}) error {
+	var jsonb JSONB = doc
+
 	qry := fmt.Sprintf(`
 		INSERT INTO %s.sb_forms(name, data, created)
 		VALUES($1, $2, $3)
 	`, dbName)
 
-	if _, err := pg.DB.Exec(qry, form, doc, time.Now()); err != nil {
+	if _, err := pg.DB.Exec(qry, form, jsonb, time.Now()); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (pg *PostgreSQL) ListFormSubmissions(dbName, name string) (results []map[string]interface{}, err error) {
-	where := ""
+	where := "WHERE $1=$1"
 	if len(name) > 0 {
-		where = "WHERE name = $2"
+		where = "WHERE name = $1"
 	}
 
 	qry := fmt.Sprintf(`
@@ -46,7 +47,7 @@ func (pg *PostgreSQL) ListFormSubmissions(dbName, name string) (results []map[st
 	defer rows.Close()
 
 	for rows.Next() {
-		var data map[string]interface{}
+		var data JSONB
 		if err = rows.Scan(&data); err != nil {
 			return
 		}

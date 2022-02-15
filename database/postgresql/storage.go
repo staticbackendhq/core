@@ -8,7 +8,7 @@ import (
 
 func (pg *PostgreSQL) AddFile(dbName string, f internal.File) (id string, err error) {
 	qry := fmt.Sprintf(`
-		INSERT INTO %s.sb_files(account_id, store_key, url, size, created)
+		INSERT INTO %s.sb_files(account_id, key, url, size, uploaded)
 		VALUES($1, $2, $3, $4, $5)
 		RETURNING id;
 	`, dbName)
