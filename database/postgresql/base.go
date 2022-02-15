@@ -228,7 +228,12 @@ func (pg *PostgreSQL) UpdateDocument(auth internal.Auth, dbName, col, id string,
 		%s AND id = $3
 	`, dbName, col, where)
 
-	if _, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, id, doc); err != nil {
+	b, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, id, b); err != nil {
 		return nil, err
 	}
 
@@ -240,7 +245,7 @@ func (pg *PostgreSQL) IncrementValue(auth internal.Auth, dbName, col, id, field 
 
 	qry := fmt.Sprintf(`
 		UPDATE %s.%s SET
-			%s = %s + $4
+		data = jsonb_set(data, '{%s}', (COALESCE(data->>'%s','0')::int + $4)::text::jsonb)
 		%s AND id = $3
 	`, dbName, col, field, field, where)
 

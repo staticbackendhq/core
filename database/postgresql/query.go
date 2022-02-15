@@ -20,7 +20,7 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 			return filter, fmt.Errorf("The %d query clause's field parameter must be a string: %v", i+1, clause[0])
 		}
 
-		field = fmt.Sprintf("data#>>'{%s}'", field)
+		field = fmt.Sprintf(`data->>'%s'`, field)
 
 		op, ok := clause[1].(string)
 		if !ok {
@@ -47,7 +47,7 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 
 func applyFilter(where string, filters map[string]interface{}) string {
 	for field, val := range filters {
-		where = fmt.Sprintf(" AND %s %v", field, val)
+		where += fmt.Sprintf(" AND %s '%v'", field, val)
 	}
 	return where
 }
