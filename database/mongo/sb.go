@@ -66,20 +66,22 @@ func toLocalBase(b internal.BaseConfig) LocalBase {
 	}
 
 	return LocalBase{
-		SBID:      id,
-		Name:      b.Name,
-		Whitelist: b.AllowedDomain,
-		IsActive:  b.IsActive,
+		SBID:             id,
+		Name:             b.Name,
+		Whitelist:        b.AllowedDomain,
+		IsActive:         b.IsActive,
+		MonthlyEmailSent: b.MonthlySentEmail,
 	}
 }
 
 func fromLocalBase(b LocalBase) internal.BaseConfig {
 	return internal.BaseConfig{
-		ID:            b.ID.Hex(),
-		CustomerID:    b.SBID.Hex(),
-		Name:          b.Name,
-		AllowedDomain: b.Whitelist,
-		IsActive:      b.IsActive,
+		ID:               b.ID.Hex(),
+		CustomerID:       b.SBID.Hex(),
+		Name:             b.Name,
+		AllowedDomain:    b.Whitelist,
+		IsActive:         b.IsActive,
+		MonthlySentEmail: b.MonthlyEmailSent,
 	}
 }
 
@@ -227,4 +229,26 @@ func (mg *Mongo) ActivateCustomer(customerID string) error {
 
 func (mg *Mongo) NewID() string {
 	return primitive.NewObjectID().Hex()
+}
+
+func (mg *Mongo) DeleteCustomer(dbName, email string) error {
+	db := mg.Client.Database(dbName)
+
+	if err := db.Drop(mg.Ctx); err != nil {
+		return err
+	}
+
+	db = mg.Client.Database("sbsys")
+
+	filter := bson.M{"email": email}
+	if _, err := db.Collection("accounts").DeleteMany(mg.Ctx, filter); err != nil {
+		return err
+	}
+
+	filter = bson.M{"name": dbName}
+	if _, err := db.Collection("bases").DeleteMany(mg.Ctx, filter); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/staticbackendhq/core/function"
+	"github.com/staticbackendhq/core/internal"
 )
 
 func TestFunctionsExecuteDBOperations(t *testing.T) {
@@ -64,7 +64,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		}
 		
 	}`
-	data := function.ExecData{
+	data := internal.ExecData{
 		FunctionName: "unittest",
 		Code:         code,
 		TriggerTopic: "web",

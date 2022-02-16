@@ -249,6 +249,19 @@ func (pg *PostgreSQL) NewID() string {
 	return id
 }
 
+func (pg *PostgreSQL) DeleteCustomer(dbName, email string) error {
+	_, err := pg.DB.Exec(fmt.Sprintf(`DROP SCHEMA IF EXISTS %s CASCADE;`, dbName))
+	if err != nil {
+		return err
+	}
+
+	_, err = pg.DB.Exec(`
+		DELETE FROM sb.customers WHERE email = $1;
+	`, email)
+
+	return err
+}
+
 func scanCustomer(rows Scanner, c *internal.Customer) error {
 	return rows.Scan(
 		&c.ID,

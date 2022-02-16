@@ -11,11 +11,14 @@ deploy: build
 	scp cmd/staticbackend sb-poc:/home/dstpierre/sb
 	scp -qr ./templates/* sb-poc:/home/dstpierre/templates/
 
-test:
-	@JWT_SECRET=okdevmode go test --race --cover ./...
+alltest:
+	@JWT_SECRET=okdevmode go test --race --cover $(go list ./... | grep -v /postgres-data/)
 
 test-pg:
 	@JWT_SECRET=okdevmode go test --race --cover ./database/postgresql
+
+test-mdb:
+	@JWT_SECRET=okdevmode go test --race --cover ./database/mongo
 
 docker:
 	docker build . -t staticbackend:latest

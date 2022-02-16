@@ -20,6 +20,7 @@ type Persister interface {
 	GetCustomerByStripeID(stripeID string) (cus Customer, err error)
 	ActivateCustomer(customerID string) error
 	NewID() string
+	DeleteCustomer(dbName, email string) error
 
 	// system user account function s
 	FindToken(dbName, tokenID, token string) (Token, error)

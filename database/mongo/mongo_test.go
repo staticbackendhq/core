@@ -1,15 +1,16 @@
-package postgresql
+package mongo
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 	"log"
 	"os"
 	"testing"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/staticbackendhq/core/internal"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 )
 
 var (
-	datastore    *PostgreSQL
+	datastore    *Mongo
 	dbTest       internal.BaseConfig
 	adminAccount internal.Account
 	adminToken   internal.Token
@@ -28,13 +29,18 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	dbConn, err := sql.Open("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable")
+	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	cl, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer dbConn.Close()
+	defer func() {
+		if err := cl.Disconnect(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
-	datastore = &PostgreSQL{DB: dbConn}
+	datastore = &Mongo{Client: cl, Ctx: context.Background()}
 
 	if err := datastore.Ping(); err != nil {
 		log.Fatal(err)
@@ -44,7 +50,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	if err := createCustomerAndSchema(); err != nil {
+	if err := createCustomerAndDB(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -55,7 +61,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func createCustomerAndSchema() error {
+func createCustomerAndDB() error {
 	exists, err := datastore.EmailExists(adminEmail)
 	if err != nil {
 		return err
@@ -86,7 +92,7 @@ func createCustomerAndSchema() error {
 
 	exists, err = datastore.DatabaseExists(confDBName)
 	if exists {
-		return errors.New("testdb schema exists")
+		return errors.New("testdb db exists")
 	}
 
 	base, err = datastore.CreateBase(base)

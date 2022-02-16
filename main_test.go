@@ -1,7 +1,6 @@
 package staticbackend
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,39 +8,53 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/db"
+	"github.com/staticbackendhq/core/database/mongo"
+	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/internal"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
 	dbName       = "unittest"
-	admEmail     = "unit@test.com"
+	admEmail     = "allunit@test.com"
 	password     = "my_unittest_pw"
 	userEmail    = "user@test.com"
 	userPassword = "another_fake_password"
 )
 
 var (
-	database   *Database
 	funexec    *functions
 	wsURL      string
 	pubKey     string
 	adminToken string
 	userToken  string
 	rootToken  string
+
+	database *Database
 )
 
 func TestMain(m *testing.M) {
-	if err := openDatabase("mongodb://localhost:27017"); err != nil {
-		log.Fatal(err)
+	if strings.EqualFold(os.Getenv("DATA_STORE"), "mongo") {
+		cl, err := openMongoDatabase("mongodb://localhost:27017")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		datastore = mongo.New(cl)
+	} else {
+		dbConn, err := openPGDatabase("user=postgres password=postgres dbname=postgres sslmode=disable")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		datastore = postgresql.New(dbConn)
 	}
 
 	volatile = cache.NewCache()
+
+	database = &Database{cache: volatile}
 
 	deleteAndSetupTestAccount()
 
@@ -55,71 +68,50 @@ func TestMain(m *testing.M) {
 
 	wsURL = "ws" + strings.TrimPrefix(ws.URL, "http")
 
-	database = &Database{
-		client: client,
-		cache:  volatile,
-		base:   &db.Base{PublishDocument: volatile.PublishDocument},
-	}
-
-	funexec = &functions{base: &db.Base{PublishDocument: volatile.PublishDocument}}
+	funexec = &functions{datastore: datastore, dbName: dbName}
 
 	os.Exit(m.Run())
 }
 
 func deleteAndSetupTestAccount() {
-	ctx := context.Background()
-
-	if err := client.Database(dbName).Drop(ctx); err != nil {
+	if err := datastore.DeleteCustomer(dbName, admEmail); err != nil {
 		log.Fatal(err)
 	}
 
-	sysDB := client.Database("sbsys")
-
-	if _, err := sysDB.Collection("accounts").DeleteMany(ctx, bson.M{"email": admEmail}); err != nil {
-		log.Fatal(err)
-	}
-
-	if _, err := sysDB.Collection("bases").DeleteOne(ctx, bson.M{"name": dbName}); err != nil {
-		log.Fatal(err)
-	}
-
-	acctID := primitive.NewObjectID()
 	cus := internal.Customer{
-		ID:    acctID,
 		Email: admEmail,
 	}
-
-	if _, err := sysDB.Collection("accounts").InsertOne(ctx, cus); err != nil {
+	cus, err := datastore.CreateCustomer(cus)
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	base := internal.BaseConfig{
-		ID:        primitive.NewObjectID(),
-		SBID:      acctID,
-		Name:      dbName,
-		Whitelist: []string{"localhost"},
-		IsActive:  true,
+		CustomerID:    cus.ID,
+		Name:          dbName,
+		AllowedDomain: []string{"localhost"},
+		IsActive:      true,
+		Created:       time.Now(),
 	}
 
-	if _, err := sysDB.Collection("bases").InsertOne(ctx, base); err != nil {
+	base, err = datastore.CreateBase(base)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	pubKey = base.ID.Hex()
+	pubKey = base.ID
 
 	m := &membership{volatile: volatile}
-
-	db := client.Database(dbName)
-	token, dbToken, err := m.createAccountAndUser(db, admEmail, password, 100)
+	token, dbToken, err := m.createAccountAndUser(dbName, admEmail, password, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	adminToken = string(token)
 
-	rootToken = fmt.Sprintf("%s|%s|%s", dbToken.ID.Hex(), dbToken.AccountID.Hex(), dbToken.Token)
+	rootToken = fmt.Sprintf("%s|%s|%s", dbToken.ID, dbToken.AccountID, dbToken.Token)
 
-	token, _, err = m.createUser(db, dbToken.AccountID, userEmail, userPassword, 0)
+	token, _, err = m.createUser(dbName, dbToken.AccountID, userEmail, userPassword, 0)
 	if err != nil {
 		log.Fatal(err)
 	}

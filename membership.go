@@ -196,6 +196,8 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 		return nil, internal.Token{}, err
 	}
 
+	tok.ID = tokID
+
 	token := fmt.Sprintf("%s|%s", tokID, tok.Token)
 
 	// Get their JWT

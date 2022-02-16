@@ -41,13 +41,13 @@ func dbReq(t *testing.T, hf func(http.ResponseWriter, *http.Request), method, pa
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tok))
 
 	stdAuth := []middleware.Middleware{
-		middleware.WithDB(database.client, volatile),
-		middleware.RequireAuth(database.client, volatile),
+		middleware.WithDB(datastore, volatile),
+		middleware.RequireAuth(datastore, volatile),
 	}
 	if params[0] {
 		stdAuth = []middleware.Middleware{
-			middleware.WithDB(client, volatile),
-			middleware.RequireRoot(client),
+			middleware.WithDB(datastore, volatile),
+			middleware.RequireRoot(datastore),
 		}
 	}
 	h := middleware.Chain(http.HandlerFunc(hf), stdAuth...)
@@ -131,8 +131,8 @@ func TestDBListCollections(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(database.client, volatile),
-		middleware.RequireRoot(database.client),
+		middleware.WithDB(datastore, volatile),
+		middleware.RequireRoot(datastore),
 	}
 	h := middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...)
 

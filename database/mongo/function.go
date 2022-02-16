@@ -58,7 +58,7 @@ func toLocalExecData(ex internal.ExecData) LocalExecData {
 }
 
 func toLocalExecHistory(h []internal.ExecHistory) []LocalExecHistory {
-	var lh []LocalExecHistory
+	lh := make([]LocalExecHistory, 0)
 
 	for _, exh := range h {
 		lh = append(lh, LocalExecHistory{

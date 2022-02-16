@@ -53,6 +53,8 @@ func fromLocalFile(lf LocalFile) internal.File {
 func (mg *Mongo) AddFile(dbName string, f internal.File) (id string, err error) {
 	db := mg.Client.Database(dbName)
 
+	f.ID = primitive.NewObjectID().Hex()
+
 	lf := toLocalFile(f)
 
 	res, err := db.Collection("sb_files").InsertOne(mg.Ctx, lf)
