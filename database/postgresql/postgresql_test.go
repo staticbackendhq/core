@@ -27,6 +27,10 @@ var (
 	adminAuth    internal.Auth
 )
 
+func fakePubDocEvent(channel, typ string, v interface{}) error {
+	return nil
+}
+
 func TestMain(m *testing.M) {
 	dbConn, err := sql.Open("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable")
 	if err != nil {
@@ -34,7 +38,7 @@ func TestMain(m *testing.M) {
 	}
 	defer dbConn.Close()
 
-	datastore = &PostgreSQL{DB: dbConn}
+	datastore = &PostgreSQL{DB: dbConn, PublishDocument: fakePubDocEvent}
 
 	if err := datastore.Ping(); err != nil {
 		log.Fatal(err)

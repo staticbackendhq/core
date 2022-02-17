@@ -28,6 +28,10 @@ var (
 	adminAuth    internal.Auth
 )
 
+func fakePubDocEvent(channel, typ string, v interface{}) error {
+	return nil
+}
+
 func TestMain(m *testing.M) {
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	cl, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
@@ -40,7 +44,11 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	datastore = &Mongo{Client: cl, Ctx: context.Background()}
+	datastore = &Mongo{
+		Client:          cl,
+		Ctx:             context.Background(),
+		PublishDocument: fakePubDocEvent,
+	}
 
 	if err := datastore.Ping(); err != nil {
 		log.Fatal(err)

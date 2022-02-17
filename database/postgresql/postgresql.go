@@ -7,11 +7,12 @@ import (
 )
 
 type PostgreSQL struct {
-	DB *sql.DB
+	DB              *sql.DB
+	PublishDocument internal.PublishDocumentEvent
 }
 
-func New(db *sql.DB) internal.Persister {
-	return &PostgreSQL{DB: db}
+func New(db *sql.DB, pubdoc internal.PublishDocumentEvent) internal.Persister {
+	return &PostgreSQL{DB: db, PublishDocument: pubdoc}
 }
 
 func (pg *PostgreSQL) Ping() error {

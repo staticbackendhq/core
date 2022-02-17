@@ -105,8 +105,6 @@ func Start(dbHost, port string) {
 
 	database := &Database{
 		cache: volatile,
-		//TODONOW: related to publishing event
-		//base:   &db.Base{PublishDocument: volatile.PublishDocument},
 	}
 
 	pubWithDB := []middleware.Middleware{

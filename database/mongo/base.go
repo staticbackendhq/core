@@ -39,8 +39,7 @@ func (mg *Mongo) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 	doc["id"] = doc[FieldID]
 	delete(doc, FieldID)
 
-	// TODONOW: publish this
-	//b.PublishDocument("db-"+col, internal.MsgTypeDBCreated, doc)
+	mg.PublishDocument("db-"+col, internal.MsgTypeDBCreated, doc)
 
 	return doc, nil
 }
@@ -334,8 +333,7 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 	delete(result, FieldID)
 	delete(result, FieldOwnerID)
 
-	//TODONOW: publish db event
-	//b.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
+	mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
 
 	return result, nil
 }
@@ -373,22 +371,12 @@ func (mg *Mongo) IncrementValue(auth internal.Auth, dbName, col, id, field strin
 		return err
 	}
 
-	//TODONOW: publish db event
-	/*
-		var result bson.M
-		sr := db.Collection(col).FindOne(ctx, filter)
-		if err := sr.Decode(&result); err != nil {
-			return err
-		} else if err := sr.Err(); err != nil {
-			return err
-		}
+	updated, err := mg.GetDocumentByID(auth, dbName, col, id)
+	if err != nil {
+		return err
+	}
 
-		result["id"] = result[internal.FieldID]
-		delete(result, internal.FieldID)
-		delete(result, internal.FieldOwnerID)
-
-		b.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
-	*/
+	mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, updated)
 
 	return nil
 }
@@ -424,8 +412,7 @@ func (mg *Mongo) DeleteDocument(auth internal.Auth, dbName, col, id string) (int
 		return 0, err
 	}
 
-	//TODONOW: public db event
-	//b.PublishDocument("db-"+col, internal.MsgTypeDBDeleted, id)
+	mg.PublishDocument("db-"+col, internal.MsgTypeDBDeleted, id)
 
 	return res.DeletedCount, nil
 }

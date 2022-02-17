@@ -10,14 +10,16 @@ import (
 )
 
 type Mongo struct {
-	Client *mongo.Client
-	Ctx    context.Context
+	Client          *mongo.Client
+	Ctx             context.Context
+	PublishDocument internal.PublishDocumentEvent
 }
 
-func New(client *mongo.Client) internal.Persister {
+func New(client *mongo.Client, pubdoc internal.PublishDocumentEvent) internal.Persister {
 	return &Mongo{
-		Client: client,
-		Ctx:    context.Background(),
+		Client:          client,
+		Ctx:             context.Background(),
+		PublishDocument: pubdoc,
 	}
 }
 

@@ -77,6 +77,8 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 	inserted[FieldID] = id
 	inserted[FieldAccountID] = auth.AccountID
 
+	pg.PublishDocument("db-"+col, internal.MsgTypeDBCreated, inserted)
+
 	return
 }
 
@@ -237,7 +239,14 @@ func (pg *PostgreSQL) UpdateDocument(auth internal.Auth, dbName, col, id string,
 		return nil, err
 	}
 
-	return pg.GetDocumentByID(auth, dbName, col, id)
+	updated, err := pg.GetDocumentByID(auth, dbName, col, id)
+	if err != nil {
+		return nil, err
+	}
+
+	pg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, updated)
+
+	return updated, nil
 }
 
 func (pg *PostgreSQL) IncrementValue(auth internal.Auth, dbName, col, id, field string, n int) error {
@@ -252,6 +261,14 @@ func (pg *PostgreSQL) IncrementValue(auth internal.Auth, dbName, col, id, field 
 	if _, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, id, n); err != nil {
 		return err
 	}
+
+	updated, err := pg.GetDocumentByID(auth, dbName, col, id)
+	if err != nil {
+		return err
+	}
+
+	pg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, updated)
+
 	return nil
 }
 
@@ -268,6 +285,8 @@ func (pg *PostgreSQL) DeleteDocument(auth internal.Auth, dbName, col, id string)
 	if err != nil {
 		return 0, err
 	}
+
+	pg.PublishDocument("db-"+col, internal.MsgTypeDBDeleted, id)
 	return res.RowsAffected()
 }
 
