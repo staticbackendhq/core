@@ -2,8 +2,11 @@ package mongo
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/staticbackendhq/core/internal"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (mg *Mongo) ParseQuery(clauses [][]interface{}) (map[string]interface{}, error) {
@@ -46,4 +49,30 @@ func (mg *Mongo) ParseQuery(clauses [][]interface{}) (map[string]interface{}, er
 	}
 
 	return filter, nil
+}
+
+func secureRead(acctID, userID primitive.ObjectID, role int, col string, filter bson.M) {
+	// if they're not root and repo is not public
+	if !strings.HasPrefix(col, "pub_") && role < 100 {
+		switch internal.ReadPermission(col) {
+		case internal.PermGroup:
+			filter[FieldAccountID] = acctID
+		case internal.PermOwner:
+			filter[FieldAccountID] = acctID
+			filter[FieldOwnerID] = userID
+		}
+	}
+}
+
+func secureWrite(acctID, userID primitive.ObjectID, role int, col string, filter bson.M) {
+	// if they are not "root", we use permission
+	if role < 100 {
+		switch internal.WritePermission(col) {
+		case internal.PermGroup:
+			filter[FieldAccountID] = acctID
+		case internal.PermOwner:
+			filter[FieldAccountID] = acctID
+			filter[FieldOwnerID] = userID
+		}
+	}
 }

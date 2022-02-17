@@ -53,7 +53,7 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 			data jsonb NOT NULL,
 			created timestamp NOT NULL
 		);
-	`, dbName, col, dbName, dbName)
+	`, dbName, internal.CleanCollectionName(col), dbName, dbName)
 
 	if _, err = pg.DB.Exec(qry); err != nil {
 		return
@@ -65,7 +65,7 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 		INSERT INTO %s.%s(account_id, owner_id, data, created)
 		VALUES($1, $2, $3, $4)
 		RETURNING id;
-	`, dbName, col)
+	`, dbName, internal.CleanCollectionName(col))
 
 	b, err := json.Marshal(doc)
 	if err != nil {
@@ -110,22 +110,18 @@ func (pg *PostgreSQL) ListDocuments(auth internal.Auth, dbName, col string, para
 		SELECT COUNT(*) 
 		FROM %s.%s 
 		%s
-	`, dbName, col, where)
+	`, dbName, internal.CleanCollectionName(col), where)
 
 	if err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&result.Total); err != nil {
-		fmt.Println("error in count")
-		fmt.Println(qry)
 		return
 	}
 
 	qry = fmt.Sprintf(`
-		-- $1: account_id
-		-- $2: user_id
 		SELECT * 
 		FROM %s.%s 
 		%s
 		%s
-	`, dbName, col, where, paging)
+	`, dbName, internal.CleanCollectionName(col), where, paging)
 
 	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
@@ -164,7 +160,7 @@ func (pg *PostgreSQL) QueryDocuments(auth internal.Auth, dbName, col string, fil
 		SELECT COUNT(*) 
 		FROM %s.%s 
 		%s
-	`, dbName, col, where)
+	`, dbName, internal.CleanCollectionName(col), where)
 
 	if err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&result.Total); err != nil {
 		return
@@ -175,7 +171,7 @@ func (pg *PostgreSQL) QueryDocuments(auth internal.Auth, dbName, col string, fil
 		FROM %s.%s 
 		%s
 		%s
-	`, dbName, col, where, paging)
+	`, dbName, internal.CleanCollectionName(col), where, paging)
 
 	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
@@ -206,7 +202,7 @@ func (pg *PostgreSQL) GetDocumentByID(auth internal.Auth, dbName, col, id string
 		SELECT * 
 		FROM %s.%s 
 		%s AND id = $3
-	`, dbName, col, where)
+	`, dbName, internal.CleanCollectionName(col), where)
 
 	row := pg.DB.QueryRow(qry, auth.AccountID, auth.UserID, id)
 
@@ -228,7 +224,7 @@ func (pg *PostgreSQL) UpdateDocument(auth internal.Auth, dbName, col, id string,
 		UPDATE %s.%s SET
 			data = data || $4
 		%s AND id = $3
-	`, dbName, col, where)
+	`, dbName, internal.CleanCollectionName(col), where)
 
 	b, err := json.Marshal(doc)
 	if err != nil {
@@ -256,7 +252,7 @@ func (pg *PostgreSQL) IncrementValue(auth internal.Auth, dbName, col, id, field 
 		UPDATE %s.%s SET
 		data = jsonb_set(data, '{%s}', (COALESCE(data->>'%s','0')::int + $4)::text::jsonb)
 		%s AND id = $3
-	`, dbName, col, field, field, where)
+	`, dbName, internal.CleanCollectionName(col), field, field, where)
 
 	if _, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, id, n); err != nil {
 		return err
@@ -279,7 +275,7 @@ func (pg *PostgreSQL) DeleteDocument(auth internal.Auth, dbName, col, id string)
 		DELETE 
 		FROM %s.%s 
 		%s AND id = $3
-	`, dbName, col, where)
+	`, dbName, internal.CleanCollectionName(col), where)
 
 	res, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, id)
 	if err != nil {

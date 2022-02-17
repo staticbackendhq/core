@@ -2,6 +2,8 @@ package internal
 
 import (
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -71,4 +73,14 @@ func (msg Command) IsDBEvent() bool {
 		return true
 	}
 	return false
+}
+
+func CleanCollectionName(col string) string {
+	if strings.EqualFold(os.Getenv("KEEP_PERM_COL_NAME"), "yes") {
+		return col
+	}
+
+	re := regexp.MustCompile(`_\d\d\d_`)
+	return re.ReplaceAllString(col, "")
+
 }

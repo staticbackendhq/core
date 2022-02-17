@@ -1,3 +1,3 @@
 package internal
 
-type PublishDocumentEvent func(channel, typ string, v interface{}) error
+type PublishDocumentEvent func(channel, typ string, v interface{})

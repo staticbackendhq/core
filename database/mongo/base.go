@@ -32,7 +32,7 @@ func (mg *Mongo) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 	doc[FieldAccountID] = acctID
 	doc[FieldOwnerID] = userID
 
-	if _, err := db.Collection(col).InsertOne(mg.Ctx, doc); err != nil {
+	if _, err := db.Collection(internal.CleanCollectionName(col)).InsertOne(mg.Ctx, doc); err != nil {
 		return nil, err
 	}
 
@@ -68,7 +68,7 @@ func (mg *Mongo) BulkCreateDocument(auth internal.Auth, dbName, col string, docs
 		doc[FieldOwnerID] = userID
 	}
 
-	if _, err := db.Collection(col).InsertMany(mg.Ctx, docs); err != nil {
+	if _, err := db.Collection(internal.CleanCollectionName(col)).InsertMany(mg.Ctx, docs); err != nil {
 		return err
 	}
 	return nil
@@ -89,17 +89,9 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 
 	filter := bson.M{}
 
-	// if they're not root
-	if !strings.HasPrefix(col, "pub_") && auth.Role < 100 {
-		switch internal.ReadPermission(col) {
-		case internal.PermGroup:
-			filter = bson.M{FieldAccountID: acctID}
-		case internal.PermOwner:
-			filter = bson.M{FieldAccountID: auth.AccountID, FieldOwnerID: userID}
-		}
-	}
+	secureRead(acctID, userID, auth.Role, col, filter)
 
-	count, err := db.Collection(col).CountDocuments(mg.Ctx, filter)
+	count, err := db.Collection(internal.CleanCollectionName(col)).CountDocuments(mg.Ctx, filter)
 	if err != nil {
 		return result, err
 	}
@@ -121,7 +113,7 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 	opt.SetLimit(params.Size)
 	opt.SetSort(sortBy)
 
-	cur, err := db.Collection(col).Find(mg.Ctx, filter, opt)
+	cur, err := db.Collection(internal.CleanCollectionName(col)).Find(mg.Ctx, filter, opt)
 	if err != nil {
 		return result, err
 	}
@@ -168,19 +160,9 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 		return result, err
 	}
 
-	// either not a public repo or not root
-	if strings.HasPrefix(col, "pub_") == false && auth.Role < 100 {
-		switch internal.ReadPermission(col) {
-		case internal.PermGroup:
-			filter[FieldAccountID] = acctID
-		case internal.PermOwner:
-			filter[FieldAccountID] = acctID
-			filter[FieldOwnerID] = userID
-		}
+	secureRead(acctID, userID, auth.Role, col, filter)
 
-	}
-
-	count, err := db.Collection(col).CountDocuments(mg.Ctx, filter)
+	count, err := db.Collection(internal.CleanCollectionName(col)).CountDocuments(mg.Ctx, filter)
 	if err != nil {
 		return result, err
 	}
@@ -207,7 +189,7 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 	opt.SetLimit(params.Size)
 	opt.SetSort(sortBy)
 
-	cur, err := db.Collection(col).Find(mg.Ctx, filter, opt)
+	cur, err := db.Collection(internal.CleanCollectionName(col)).Find(mg.Ctx, filter, opt)
 	if err != nil {
 		return result, err
 	}
@@ -253,18 +235,9 @@ func (mg *Mongo) GetDocumentByID(auth internal.Auth, dbName, col, id string) (ma
 
 	filter := bson.M{FieldID: oid}
 
-	// if they're not root and repo is not public
-	if !strings.HasPrefix(col, "pub_") && auth.Role < 100 {
-		switch internal.ReadPermission(col) {
-		case internal.PermGroup:
-			filter[FieldAccountID] = acctID
-		case internal.PermOwner:
-			filter[FieldAccountID] = acctID
-			filter[FieldOwnerID] = userID
-		}
-	}
+	secureRead(acctID, userID, auth.Role, col, filter)
 
-	sr := db.Collection(col).FindOne(mg.Ctx, filter)
+	sr := db.Collection(internal.CleanCollectionName(col)).FindOne(mg.Ctx, filter)
 	if err := sr.Decode(&result); err != nil {
 		return result, err
 	} else if err := sr.Err(); err != nil {
@@ -298,16 +271,7 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 
 	filter := bson.M{FieldID: oid}
 
-	// if they are not "root", we use permission
-	if auth.Role < 100 {
-		switch internal.WritePermission(col) {
-		case internal.PermGroup:
-			filter[FieldAccountID] = acctID
-		case internal.PermOwner:
-			filter[FieldAccountID] = acctID
-			filter[FieldOwnerID] = userID
-		}
-	}
+	secureWrite(acctID, userID, auth.Role, col, filter)
 
 	newProps := bson.M{}
 	for k, v := range doc {
@@ -316,13 +280,13 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 
 	update := bson.M{"$set": newProps}
 
-	res := db.Collection(col).FindOneAndUpdate(mg.Ctx, filter, update)
+	res := db.Collection(internal.CleanCollectionName(col)).FindOneAndUpdate(mg.Ctx, filter, update)
 	if err := res.Err(); err != nil {
 		return doc, err
 	}
 
 	var result bson.M
-	sr := db.Collection(col).FindOne(mg.Ctx, filter)
+	sr := db.Collection(internal.CleanCollectionName(col)).FindOne(mg.Ctx, filter)
 	if err := sr.Decode(&result); err != nil {
 		return doc, err
 	} else if err := sr.Err(); err != nil {
@@ -353,20 +317,11 @@ func (mg *Mongo) IncrementValue(auth internal.Auth, dbName, col, id, field strin
 
 	filter := bson.M{FieldID: oid}
 
-	// if they are not "root", we use permission
-	if auth.Role < 100 {
-		switch internal.WritePermission(col) {
-		case internal.PermGroup:
-			filter[FieldAccountID] = acctID
-		case internal.PermOwner:
-			filter[FieldAccountID] = acctID
-			filter[FieldOwnerID] = userID
-		}
-	}
+	secureWrite(acctID, userID, auth.Role, col, filter)
 
 	update := bson.M{"$inc": bson.M{field: n}}
 
-	res := db.Collection(col).FindOneAndUpdate(mg.Ctx, filter, update)
+	res := db.Collection(internal.CleanCollectionName(col)).FindOneAndUpdate(mg.Ctx, filter, update)
 	if err := res.Err(); err != nil {
 		return err
 	}
@@ -396,18 +351,9 @@ func (mg *Mongo) DeleteDocument(auth internal.Auth, dbName, col, id string) (int
 
 	filter := bson.M{FieldID: oid}
 
-	// if they're not root
-	if auth.Role < 100 {
-		switch internal.WritePermission(col) {
-		case internal.PermGroup:
-			filter[FieldAccountID] = acctID
-		case internal.PermOwner:
-			filter[FieldAccountID] = acctID
-			filter[FieldOwnerID] = userID
-		}
-	}
+	secureWrite(acctID, userID, auth.Role, col, filter)
 
-	res, err := db.Collection(col).DeleteOne(mg.Ctx, filter)
+	res, err := db.Collection(internal.CleanCollectionName(col)).DeleteOne(mg.Ctx, filter)
 	if err != nil {
 		return 0, err
 	}

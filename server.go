@@ -242,23 +242,23 @@ func Start(dbHost, port string) {
 }
 
 func initServices(dbHost string) {
+	volatile = cache.NewCache()
+
 	persister := os.Getenv("DATA_STORE")
 	if strings.EqualFold(persister, "mongo") {
 		cl, err := openMongoDatabase(dbHost)
 		if err != nil {
 			log.Fatal(err)
 		}
-		datastore = mongo.New(cl)
+		datastore = mongo.New(cl, volatile.PublishDocument)
 	} else {
 		cl, err := openPGDatabase(dbHost)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		datastore = postgresql.New(cl)
+		datastore = postgresql.New(cl, volatile.PublishDocument)
 	}
-
-	volatile = cache.NewCache()
 
 	mp := os.Getenv("MAIL_PROVIDER")
 	if strings.EqualFold(mp, internal.MailProviderSES) {

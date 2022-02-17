@@ -20,6 +20,9 @@ test-pg:
 test-mdb:
 	@JWT_SECRET=okdevmode go test --race --cover ./database/mongo
 
+test-intl:
+	@JWT_SECRET=okdevmode go test --race --cover ./internal
+
 docker:
 	docker build . -t staticbackend:latest
 

@@ -27,8 +27,8 @@ var (
 	adminAuth    internal.Auth
 )
 
-func fakePubDocEvent(channel, typ string, v interface{}) error {
-	return nil
+func fakePubDocEvent(channel, typ string, v interface{}) {
+	//no event pub in those tests
 }
 
 func TestMain(m *testing.M) {
