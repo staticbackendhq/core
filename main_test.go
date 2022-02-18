@@ -36,23 +36,23 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	volatile = cache.NewCache()
+
 	if strings.EqualFold(os.Getenv("DATA_STORE"), "mongo") {
 		cl, err := openMongoDatabase("mongodb://localhost:27017")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		datastore = mongo.New(cl)
+		datastore = mongo.New(cl, volatile.PublishDocument)
 	} else {
 		dbConn, err := openPGDatabase("user=postgres password=postgres dbname=postgres sslmode=disable")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		datastore = postgresql.New(dbConn)
+		datastore = postgresql.New(dbConn, volatile.PublishDocument)
 	}
-
-	volatile = cache.NewCache()
 
 	database = &Database{cache: volatile}
 

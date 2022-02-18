@@ -12,7 +12,7 @@ deploy: build
 	scp -qr ./templates/* sb-poc:/home/dstpierre/templates/
 
 alltest:
-	@JWT_SECRET=okdevmode go test --race --cover $(go list ./... | grep -v /postgres-data/)
+	@JWT_SECRET=okdevmode go test --race --cover ./...
 
 test-pg:
 	@JWT_SECRET=okdevmode go test --race --cover ./database/postgresql

@@ -12,7 +12,6 @@ import (
 
 type LocalExecData struct {
 	ID           primitive.ObjectID `bson:"_id" json:"id"`
-	AccountID    primitive.ObjectID `bson:"accountId" json:"accountId"`
 	FunctionName string             `bson:"name" json:"name"`
 	TriggerTopic string             `bson:"tr" json:"trigger"`
 	Code         string             `bson:"code" json:"code"`
@@ -38,15 +37,8 @@ func toLocalExecData(ex internal.ExecData) LocalExecData {
 		return LocalExecData{}
 	}
 
-	aid, err := primitive.ObjectIDFromHex(ex.AccountID)
-	if err != nil {
-		//TODO: fin a way to handle this error properly
-		return LocalExecData{}
-	}
-
 	return LocalExecData{
 		ID:           oid,
-		AccountID:    aid,
 		FunctionName: ex.FunctionName,
 		TriggerTopic: ex.TriggerTopic,
 		Code:         ex.Code,
@@ -77,7 +69,6 @@ func toLocalExecHistory(h []internal.ExecHistory) []LocalExecHistory {
 func fromLocalExecData(lex LocalExecData) internal.ExecData {
 	return internal.ExecData{
 		ID:           lex.ID.Hex(),
-		AccountID:    lex.AccountID.Hex(),
 		FunctionName: lex.FunctionName,
 		TriggerTopic: lex.TriggerTopic,
 		Code:         lex.Code,
