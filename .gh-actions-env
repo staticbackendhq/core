@@ -1,11 +1,11 @@
 APP_ENV=dev
-DATABASE_URL=mongodb://mongo:27017
+DATABASE_URL=mongodb://localhost:27017
 DATA_STORE=mongo
 JWT_SECRET=changeMe
 MAIL_PROVIDER=dev
 STORAGE_PROVIDER=local
 FROM_EMAIL=you@domain.com
 FROM_NAME=Your company
-REDIS_HOST=redis:6379
+REDIS_HOST=localhost:6379
 REDIS_PASSWORD=
 LOCAL_STORAGE_URL=http://localhost:8099
