@@ -13,6 +13,7 @@ import (
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
+	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
 )
 
@@ -55,6 +56,13 @@ func TestMain(m *testing.M) {
 	}
 
 	database = &Database{cache: volatile}
+
+	mp := os.Getenv("MAIL_PROVIDER")
+	if strings.EqualFold(mp, internal.MailProviderSES) {
+		emailer = email.AWSSES{}
+	} else {
+		emailer = email.Dev{}
+	}
 
 	deleteAndSetupTestAccount()
 

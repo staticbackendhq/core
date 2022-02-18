@@ -1,24 +1,22 @@
 package staticbackend
 
 import (
+	"os"
 	"testing"
 
-	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
 )
 
-func Test_Sendmail_AWS(t *testing.T) {
-	emailer := &email.AWSSES{}
-
+func Test_Sendmail(t *testing.T) {
 	data := internal.SendMailData{
-		FromName: "My name here",
-		From:     "delivery@tangara.io",
-		To:       "dominicstpierre@gmail.com",
+		FromName: os.Getenv("FROM_NAME"),
+		From:     os.Getenv("FROM_EMAIL"),
+		To:       "dominicstpierre+unittest@gmail.com",
 		ToName:   "Dominic St-Pierre",
 		Subject:  "From unit test",
 		HTMLBody: "<h1>hello</h1><p>working</p>",
 		TextBody: "Hello\nworking",
-		ReplyTo:  "dominic@focuscentric.com",
+		ReplyTo:  os.Getenv("FROM_EMAIL"),
 	}
 	if err := emailer.Send(data); err != nil {
 		t.Error(err)
