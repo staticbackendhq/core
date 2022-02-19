@@ -1,7 +1,3 @@
-**JAMstack Boston talk**: I'm gonna give a talk on Nov 23rd @ 6pm EST on 
-StaticBackend. If you're interested: https://www.meetup.com/JAMstack-Boston/events/281827534/
-
-
 <p align="center">
 	<img src="https://staticbackend.com/img/logo-sb-no-text.png"  alt="StaticBackend logo">
 	<br />
@@ -17,8 +13,9 @@ StaticBackend. If you're interested: https://www.meetup.com/JAMstack-Boston/even
 # StaticBackend - simple backend for your apps
 
 [StaticBackend](https://staticbackend.com) is a simple backend that handles 
-user management, database, file storage, forms, and real-time experiences via 
-channel/topic-based communication for web and mobile applications.
+user management, database, file storage, forms, real-time experiences via 
+channel/topic-based communication, and server-side functions for web and mobile 
+applications.
 
 You can think of it as a lightweight Firebase replacement you may self-host. No 
 vendor lock-in, and your data stays in your control.
@@ -46,12 +43,15 @@ a good fit.
 
 I'm personally using it to build SaaS:
 
+* [Vivid - Automatic video clips for podcasts](https://vivid.fm)
 * [Tangara - one page checkout for creators](https://tangara.io)
+
+It can be used from client-side and/or server-side.
 
 ## How it works / dev workflow
 
 The main idea is that StaticBackend is your backend API for your frontend apps. 
-A performant free and open-source Firebase alternative.
+A performant free and open-source self-hosted Firebase alternative.
 
 _Note that it can also be used from your backend code as well._
 
@@ -78,7 +78,7 @@ login = async () => {
 		console.error(res.content);
 		return;
 	}
-	token = res.content();
+	token = res.content;
 
 	createTask();
 }
@@ -114,7 +114,9 @@ From there you build your application using the
 the [real-time component](https://staticbackend.com/docs/websocket/),
 the [storage API](https://staticbackend.com/docs/storage/), etc.
 
-You may use server-side libraries for Node and Go or use an HTTP client 
+StaticBackend provides commonly used building blocks for web applications.
+
+You may use server-side libraries for Node, Python and Go or use an HTTP client 
 and use your preferred language.
 
 ## Get started with the self-hosted version
@@ -128,7 +130,7 @@ Please refer to this [guide here](https://staticbackend.com/getting-started/self
 
 We also have this 
 [blog post](https://staticbackend.com/blog/get-started-self-hosted-version/) 
-that also includes the above video.
+that includes the above video.
 
 If you have Docker & Docker Compose ready, here's how you can have your server 
 up and running in dev mode in 30 seconds:
@@ -167,7 +169,8 @@ This is normal, as you're trying to request protected API, but you're all set.
 The next step is to visit [http://localhost:8099](http://localhost:8099) and 
 create your first app. Please note that in dev mode you'll have to look at your 
 docker compose output terminal to see the content of the email after creating 
-your app.
+your app. This email contains all the keys and your super user account 
+information.
 
 ## Documentation
 
@@ -182,17 +185,22 @@ Please help us improve if you have any feedback.
 * [Database](https://staticbackend.com/docs/database/)
 * [Real-time communication](https://staticbackend.com/docs/websocket/)
 * [File storage](https://staticbackend.com/docs/storage/)
+* [Server-side functions](https://staticbackend.com/docs/functions/)
+* [Send emails](https://staticbackend.com/docs/sendmail/)
+* [Caching](https://staticbackend.com/docs/cache/)
+* 
 * [Forms](https://staticbackend.com/docs/forms/)
+* [Root token](https://staticbackend.com/docs/root-token/)
 
 ## Librairies & CLI
 
 We [provide a CLI](https://staticbackend.com/getting-started/) for local 
 development if you want to get things started without any infrastructure and 
-for prototyping. 
+for prototyping / testing. Please note the dev server has a very limited 
+functionalities compares to the full self-hosted version.
 
-You can use the CLI to manage your database and form submission. This is the 
-only interface we currently have to interact with your database, other than via 
-code. There will be a web UI available before v1.0 is released.
+You can use the CLI to manage your database, form submissions, and deploy 
+server-side-functions. We have an alpha Web UI as well to manage your resources.
 
 We have a page listing our 
 [client-side and server-side libraries](https://staticbackend.com/docs/libraries/).
@@ -207,12 +215,13 @@ Here's the examples we have created so far:
 * [To-do list example](https://staticbackend.com/getting-started/)
 * [Realtime collaboration](https://staticbackend.com/blog/realtime-collaboration-example/)
 * [Live chat using server-side function & real-time component](https://staticbackend.com/blog/server-side-functions-task-scheduler-example/)
+* [Jamstack Bostom talk](https://www.youtube.com/watch?v=Uf-K6io9p7w)
 
 ## Deploying in production
 
 We've not written anything yet regarding deploying, but once you have the 
-core` built into a binary and have access to MongoDB and Redis in production you 
-should be able to deploy it like any other Go server.
+core` built into a binary and have access to either PostgreSQL or MongoDB, and 
+Redis in production you should be able to deploy it like any other Go server.
 
 We'll have documentation and an example soon for deploying to DigitalOcean.
 

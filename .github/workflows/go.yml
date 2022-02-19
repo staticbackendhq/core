@@ -30,8 +30,8 @@ jobs:
     - name: Test (Mongo data store)
       run: make alltest
     
-    - name: Change DATA_STORAGE to PostgreSQL
-      run: sed -i 's/DATA_STORAGE=mongo/DATA_STORAGE=pg/g' .env
+    - name: Change DATA_STORE to PostgreSQL
+      run: sed -i 's/DATA_STORE=mongo/DATA_STORE=pg/g' .env
     
     - name: Change DATABASE_URL to PG connection string
       run: sed -i 's/DATABASE_URL=mongodb:\/\/localhost:27017/DATABASE_URL=user=postgres password=postgres dbname=postgres sslmode=disable/g' .env

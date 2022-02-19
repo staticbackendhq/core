@@ -1,5 +1,20 @@
 # Changelog for StaticBackend
 
+### Feb 19, 2022 v1.2.0
+
+*  Created a data persistance interface to support different data store.
+* Added support for PostgreSQL.
+* Database tests for PostgreSQL and MongoDB.
+* Default Docker Compose for demo use PostgreSQL.
+
+### Jan 1, 2022
+
+* Added atomic worker queue
+
+### Nov 17, 2021
+
+* Added graceful shutdown
+
 ### Oct 31, 2021 v1.1.0
 
 * Added reset password flow and made the reset code generation avail from backend.

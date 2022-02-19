@@ -5,14 +5,31 @@ services:
     ports:
       - "8099:8099"
     env_file:
-      - ./.demo.env
+      - .env
+    depends_on:
+      - "db"
+    #  - "redis"
 
-  mongo:
-    image: mongo:3-stretch
-    volumes:
-      - ./mongodata:/data/db/mongo
+  # For PostgreSQL
+  db:
+    image: postgres
+    restart: always
     ports:
-      - "27017:27017"
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes: 
+      - ../postgres-data:/var/lib/postgresql/data
+      - ./sql/0001_bootstrap_db.sql:/docker-entrypoint-initdb.d/create_tables.sql
+
+  # For MongoDB    
+  #mongo:
+  #  image: mongo:3-stretch
+  #  volumes:
+  #    - ./mongodata:/data/db/mongo
+  #  ports:
+  #    - "27017:27017"
 
   redis:
     image: "redis:alpine"

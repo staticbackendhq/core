@@ -23,7 +23,7 @@ test-mdb:
 test-intl:
 	@JWT_SECRET=okdevmode go test --race --cover ./internal
 
-docker:
+docker: build
 	docker build . -t staticbackend:latest
 
 pkg: build
