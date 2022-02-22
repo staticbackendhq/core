@@ -1,5 +1,13 @@
 # Changelog for StaticBackend
 
+### Feb 22, 2022 v1.2.1
+
+* Fixed issue with form submission (thanks c-nv-s)
+* Fixed issue with the `query` function inside the server-side runtime 
+function execution.
+* Added PostgreSQL indexes when creating base tables on the `account_id` and 
+added indexes for the `sb` schema.
+
 ### Feb 19, 2022 v1.2.0
 
 *  Created a data persistance interface to support different data store.
