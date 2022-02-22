@@ -3,6 +3,8 @@ package staticbackend
 import (
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/staticbackendhq/core/internal"
@@ -10,9 +12,10 @@ import (
 
 func TestFunctionsExecuteDBOperations(t *testing.T) {
 	code := `
-	log("works here");
 	function handle(body) {
+		log(body);
 		var o = {
+			from: body.from,
 			desc: "yep", 
 			done: false, 
 			subobj: {
@@ -31,6 +34,10 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			log("ERROR: getting doc by id");
 			log(getRes.content);
 			return;
+		} else if (getRes.content.from != "val from unit test") {
+			log("ERROR: asserting data from request body");
+			log(getRes.content);
+			return;			
 		}
 
 		var updata = getRes.content;
@@ -52,6 +59,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		if (qres.content.results.length != 1) {
 			log("ERROR");
 			log("expected results to have 1 doc, got: " + qres.content.results.length);
+			log(qres);
 			return;
 		}
 
@@ -81,7 +89,10 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		t.Errorf("add: expected status 200 got %s", addResp.Status)
 	}
 
-	execResp := dbReq(t, funexec.exec, "POST", "/", data, true)
+	val := url.Values{}
+	val.Add("from", "val from unit test")
+
+	execResp := dbReq(t, funexec.exec, "POST", "/fn/exec/unittest", val, false, true)
 	if execResp.StatusCode != http.StatusOK {
 		b, err := io.ReadAll(execResp.Body)
 		if err != nil {
@@ -91,5 +102,33 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 
 		t.Log(string(b))
 		t.Errorf("expected status 200 got %s", execResp.Status)
+	}
+
+	infoResp := dbReq(t, funexec.info, "GET", "/fn/info/unittest", nil, true)
+
+	var checkFn internal.ExecData
+	if err := parseBody(infoResp.Body, &checkFn); err != nil {
+		t.Fatal(err)
+	}
+	defer infoResp.Body.Close()
+
+	var errorLines []string
+	foundError := false
+	for _, h := range checkFn.History {
+		for _, line := range h.Output {
+			if strings.Index(line, "ERROR") > -1 {
+				errorLines = h.Output
+				foundError = true
+				break
+			}
+		}
+
+		if foundError {
+			break
+		}
+	}
+
+	if foundError {
+		t.Errorf("found error in function exec log: %v", errorLines)
 	}
 }

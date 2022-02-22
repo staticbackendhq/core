@@ -85,6 +85,7 @@ func (pg *PostgreSQL) createSystemTables(schema string) error {
 			data JSONB NOT NULL,
 			created timestamp NOT NULL
 		);
+		CREATE INDEX IF NOT EXISTS sb_forms_name_idx ON {schema}.sb_forms (name);			
 
 		CREATE TABLE IF NOT EXISTS {schema}.sb_files (
 			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
@@ -94,6 +95,7 @@ func (pg *PostgreSQL) createSystemTables(schema string) error {
 			size INTEGER NOT NULL,			
 			uploaded timestamp NOT NULL			
 		);
+		CREATE INDEX IF NOT EXISTS sb_files_acctid_idx ON {schema}.sb_files (account_id);
 
 		CREATE TABLE IF NOT EXISTS {schema}.sb_functions (
 			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
@@ -104,6 +106,7 @@ func (pg *PostgreSQL) createSystemTables(schema string) error {
 			last_updated timestamp NOT NULL,
 			last_run timestamp NOT NULL
 		);
+		CREATE INDEX IF NOT EXISTS sb_functions_trigger_topic_idx ON {schema}.sb_functions (trigger_topic);
 
 		CREATE TABLE IF NOT EXISTS {schema}.sb_function_logs (
 			id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),

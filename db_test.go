@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -14,23 +15,43 @@ import (
 	"github.com/staticbackendhq/core/middleware"
 )
 
-// dbReq post on behalf of adminToken by default (use params[0] true for root)
+// dbReq post on behalf of adminToken by default (use:
+// params[0] true for root)
+// params[1] true for Content-Type application/x-www-form-urlencoded
 func dbReq(t *testing.T, hf func(http.ResponseWriter, *http.Request), method, path string, v interface{}, params ...bool) *http.Response {
 	if params == nil {
-		params = make([]bool, 0)
+		params = make([]bool, 2)
 	}
 
-	if len(params) == 0 {
+	for i := len(params); i < 2; i++ {
 		params = append(params, false)
 	}
 
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal("error marshaling post data:", err)
+	var payload []byte
+	if params[1] {
+		val, ok := v.(url.Values)
+		if !ok {
+			t.Fatal("expected v to be url.Value")
+		}
+
+		payload = []byte(val.Encode())
+	} else {
+		b, err := json.Marshal(v)
+		if err != nil {
+			t.Fatal("error marshaling post data:", err)
+		}
+
+		payload = b
 	}
 
-	req := httptest.NewRequest(method, path, bytes.NewReader(b))
+	req := httptest.NewRequest(method, path, bytes.NewReader(payload))
 	w := httptest.NewRecorder()
+
+	if params[1] {
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	} else {
+		req.Header.Add("Content-Type", "application/json")
+	}
 
 	req.Header.Set("SB-PUBLIC-KEY", pubKey)
 

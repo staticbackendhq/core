@@ -42,6 +42,8 @@ func (j *JSONB) Scan(value interface{}) error {
 func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc map[string]interface{}) (inserted map[string]interface{}, err error) {
 	inserted = doc
 
+	cleancol := internal.CleanCollectionName(col)
+
 	//TODO: find a good way to prevent doing the create
 	// table if not exists each time
 
@@ -53,7 +55,9 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 			data jsonb NOT NULL,
 			created timestamp NOT NULL
 		);
-	`, dbName, internal.CleanCollectionName(col), dbName, dbName)
+
+		CREATE INDEX IF NOT EXISTS %s_acctid_idx ON %s.%s (account_id);			
+	`, dbName, cleancol, dbName, dbName, cleancol, dbName, cleancol)
 
 	if _, err = pg.DB.Exec(qry); err != nil {
 		return

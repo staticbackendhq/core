@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
@@ -76,7 +77,7 @@ func (env *ExecutionEnvironment) prepareArguments(vm *goja.Runtime, data interfa
 		defer r.Body.Close()
 
 		// let's ready the HTTP body
-		if r.Header.Get("Content-Type") == "application/json" {
+		if strings.EqualFold(r.Header.Get("Content-Type"), "application/json") {
 			var v interface{}
 			if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 				return nil, err
@@ -87,7 +88,12 @@ func (env *ExecutionEnvironment) prepareArguments(vm *goja.Runtime, data interfa
 			if err := r.ParseForm(); err != nil {
 				return nil, err
 			}
-			args = append(args, vm.ToValue(r.Form))
+
+			val := make(map[string]interface{})
+			for k, v := range r.Form {
+				val[k] = strings.Join(v, ", ")
+			}
+			args = append(args, vm.ToValue(val))
 		}
 
 		args = append(args, vm.ToValue(r.URL.Query()))
@@ -222,6 +228,12 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 					return vm.ToValue(Result{Content: "the second argument should be an object"})
 				}
 			}
+		}
+
+		// apply default page and limit
+		if params.Size == 0 {
+			params.Size = 25
+			params.Page = 1
 		}
 
 		result, err := env.DataStore.QueryDocuments(env.Auth, env.BaseName, col, filter, params)

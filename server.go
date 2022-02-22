@@ -192,7 +192,7 @@ func Start(dbHost, port string) {
 	http.Handle("/fn/delete/", middleware.Chain(http.HandlerFunc(f.del), stdRoot...))
 	http.Handle("/fn/del/", middleware.Chain(http.HandlerFunc(f.del), stdRoot...))
 	http.Handle("/fn/info/", middleware.Chain(http.HandlerFunc(f.info), stdRoot...))
-	http.Handle("/fn/exec", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
+	http.Handle("/fn/exec/", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
 	http.Handle("/fn", middleware.Chain(http.HandlerFunc(f.list), stdRoot...))
 
 	// ui routes

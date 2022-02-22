@@ -82,13 +82,16 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data internal.ExecData
+	//TODONOW: this is not needed as only the fn name is required here
+	/*var data internal.ExecData
 	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	}
+	}*/
 
-	fn, err := datastore.GetFunctionForExecution(conf.Name, data.FunctionName)
+	functionName := getURLPart(r.URL.Path, 3)
+
+	fn, err := datastore.GetFunctionForExecution(conf.Name, functionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

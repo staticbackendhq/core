@@ -2,6 +2,7 @@ package staticbackend
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/staticbackendhq/core/middleware"
 )
@@ -20,8 +21,15 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 
 	doc := make(map[string]interface{})
 
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
+	//TODO: Why forms would need multiplart/form-data
+	// There's no file upload available via form
+	/*if err := r.ParseMultipartForm(32 << 20); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}*/
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -29,6 +37,10 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form.Get("_hp_")) > 0 {
 		http.Error(w, "invalid form field present", http.StatusBadRequest)
 		return
+	}
+
+	for k, v := range r.Form {
+		doc[k] = strings.Join(v, ", ")
 	}
 
 	if err := datastore.AddFormSubmission(conf.Name, form, doc); err != nil {
