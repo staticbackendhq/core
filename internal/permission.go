@@ -20,7 +20,7 @@ func GetPermission(col string) (owner string, group string, everyone string) {
 	owner, group, everyone = "7", "4", "0"
 
 	re := regexp.MustCompile(`_\d\d\d_$`)
-	if re.MatchString(col) == false {
+	if !re.MatchString(col) {
 		return
 	}
 

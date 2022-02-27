@@ -53,7 +53,7 @@ func applyFilter(where string, filters map[string]interface{}) string {
 }
 
 func secureRead(auth internal.Auth, col string) string {
-	if strings.HasPrefix(col, "pub_") || auth.Role < 100 {
+	if strings.HasPrefix(col, "pub_") && auth.Role < 100 {
 		return "WHERE 1=1 "
 	}
 
@@ -63,13 +63,13 @@ func secureRead(auth internal.Auth, col string) string {
 	case internal.PermOwner:
 		return "WHERE account_id = $1 AND owner_id = $2 "
 	default:
-		//TODO: double-check, why would we have this default
-		return "WHERE 1=1 "
+		//for read permission to everyone i.e. col-name_774_
+		return "WHERE $1=$1 AND $2=$2 "
 	}
 }
 
 func secureWrite(auth internal.Auth, col string) string {
-	if strings.HasPrefix(col, "pub_") || auth.Role < 100 {
+	if strings.HasPrefix(col, "pub_") && auth.Role < 100 {
 		return "WHERE 1=1 "
 	}
 
@@ -79,8 +79,12 @@ func secureWrite(auth internal.Auth, col string) string {
 	case internal.PermOwner:
 		return "WHERE account_id = $1 AND owner_id = $2 "
 	default:
-		//TODO: double-check, why would we have this default
-		return "WHERE 1=1 "
+		//for write permission to everyone i.e. col-name_776_
+		// This should probably get more warning in the doc.
+		// All logged-in users can update/delete data.
+		// There's use cases for that, and it's certainly opt-in
+		// but it's not recommended.
+		return "WHERE $1=$1 AND $2=$2 "
 	}
 }
 
