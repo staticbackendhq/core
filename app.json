@@ -1,6 +1,7 @@
 {
   "name": "StaticBackend",
   "description": "Backend API for web/mobile app.",
+	"logo": "https://staticbackend.com/img/logo-small.png",
   "keywords": [
     "dbaas",
     "backend",
@@ -39,7 +40,9 @@
     }
   },
 	"addons": [
-    "openredis",
+    {
+      "plan": "heroku-redis"
+    },
     {
       "plan": "heroku-postgresql",
       "options": {
