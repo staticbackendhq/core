@@ -37,7 +37,11 @@
 		"REDIS_PASSWORD": {
       "description": "Password for Redis",
       "value": ""
-    }
+    },
+		"GOVERSION": {
+			"description": "trying to tell Heroku to use go1.17",
+			"value": "go1.17"
+		}
   },
 	"addons": [
     {

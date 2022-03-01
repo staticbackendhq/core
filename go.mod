@@ -1,6 +1,6 @@
 module github.com/staticbackendhq/core
 
-go 1.13
+go 1.16
 
 require (
 	github.com/aws/aws-sdk-go v1.27.2
