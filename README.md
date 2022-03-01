@@ -121,6 +121,13 @@ and use your preferred language.
 
 ## Get started with the self-hosted version
 
+### Deploy buttons
+
+**Heroku**: Deploy an instance to your Heroku account.
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/staticbackendhq/core)
+
+
 [![Get started with self-hosted version](https://img.youtube.com/vi/vQjfaMxidx4/0.jpg)](https://www.youtube.com/watch?v=vQjfaMxidx4)
 
 _Click on the image above to see a video showing how to get started with the 
