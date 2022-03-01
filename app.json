@@ -1,0 +1,50 @@
+{
+  "name": "StaticBackend",
+  "description": "Backend API for web/mobile app.",
+  "keywords": [
+    "dbaas",
+    "backend",
+    "backend-api",
+    "firebase"
+  ],
+  "website": "https://staticbackend.com",
+  "repository": "https://github.com/staticbackendhq/core",
+	"scripts": {
+		"postdeploy": "psql ${DATABASE_URL} -f sql/0001_bootstrap_db.sql"
+	},
+	"env": {
+    "DATA_STORE": {
+      "description": "Determines which database engine to use (mongo | pg).",
+      "value": "pg"
+    },
+		"JWT_SECRET": {
+      "description": "Token use to encrypt the session tokens.",
+      "generator": "secret"
+    },
+		"MAIL_PROVIDER": {
+      "description": "Determines which email provider to use (dev | ses)",
+      "value": "dev"
+    },		
+		"STORAGE_PROVIDER": {
+      "description": "Determines which storage provider to use (local | s3)",
+      "value": "s3"
+    },
+		"REDIS_HOST": {
+      "description": "Host for Redis",
+      "value": "redis:6379"
+    },
+		"REDIS_PASSWORD": {
+      "description": "Password for Redis",
+      "value": ""
+    }
+  },
+	"addons": [
+    "openredis",
+    {
+      "plan": "heroku-postgresql",
+      "options": {
+        "version": "14"
+      }
+    }
+  ]
+}
