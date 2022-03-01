@@ -30,14 +30,6 @@
       "description": "Determines which storage provider to use (local | s3)",
       "value": "s3"
     },
-		"REDIS_HOST": {
-      "description": "Host for Redis",
-      "value": "redis:6379"
-    },
-		"REDIS_PASSWORD": {
-      "description": "Password for Redis",
-      "value": ""
-    },
 		"GOVERSION": {
 			"description": "trying to tell Heroku to use go1.17",
 			"value": "go1.17"

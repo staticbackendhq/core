@@ -20,11 +20,22 @@ type Cache struct {
 
 // NewCache returns an initiated Redis client
 func NewCache() *Cache {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_HOST"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       0, // use default DB
-	})
+	var err error
+	var opt *redis.Options
+
+	if uri := os.Getenv("REDIS_URL"); len(uri) > 0 {
+		opt, err = redis.ParseURL(uri)
+		if err != nil {
+			log.Fatal("invalid REDIS_URL value: ", err)
+		}
+	} else {
+		opt = &redis.Options{
+			Addr:     os.Getenv("REDIS_HOST"),
+			Password: os.Getenv("REDIS_PASSWORD"),
+			DB:       0, // use default DB
+		}
+	}
+	rdb := redis.NewClient(opt)
 
 	return &Cache{
 		Rdb: rdb,
