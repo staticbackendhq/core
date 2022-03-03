@@ -13,9 +13,11 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/lib/pq v1.10.4 // indirect
+	github.com/spf13/afero v1.8.1 // indirect
 	github.com/stripe/stripe-go/v71 v71.44.0
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.7.0
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/text v0.3.7 // indirect
 )

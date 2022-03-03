@@ -257,7 +257,7 @@ func initServices(dbHost string) {
 			log.Fatal(err)
 		}
 
-		datastore = postgresql.New(cl, volatile.PublishDocument)
+		datastore = postgresql.New(cl, volatile.PublishDocument, "./sql/")
 	}
 
 	mp := os.Getenv("MAIL_PROVIDER")

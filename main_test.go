@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 
-		datastore = postgresql.New(dbConn, volatile.PublishDocument)
+		datastore = postgresql.New(dbConn, volatile.PublishDocument, "./sql/")
 	}
 
 	database = &Database{cache: volatile}

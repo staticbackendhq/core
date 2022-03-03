@@ -127,6 +127,12 @@ and use your preferred language.
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/staticbackendhq/core)
 
+**Render**: Deploy an instance to your Render account
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+### Docker or manual setup
+
 
 [![Get started with self-hosted version](https://img.youtube.com/vi/vQjfaMxidx4/0.jpg)](https://www.youtube.com/watch?v=vQjfaMxidx4)
 

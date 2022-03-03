@@ -3,12 +3,15 @@ package postgresql
 import (
 	"database/sql"
 	"errors"
+	"io"
 	"log"
 	"os"
+	"path"
 	"testing"
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/spf13/afero"
 	"github.com/staticbackendhq/core/internal"
 )
 
@@ -32,6 +35,13 @@ func fakePubDocEvent(channel, typ string, v interface{}) {
 }
 
 func TestMain(m *testing.M) {
+	migrationPath = "./sql/"
+	appFS = afero.NewMemMapFs()
+
+	if err := copyMigrationsToFS(); err != nil {
+		log.Fatal(err)
+	}
+
 	dbConn, err := sql.Open("postgres", "user=postgres password=postgres dbname=postgres sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
@@ -134,5 +144,38 @@ func createAdminAccountAndToken() error {
 		Role:      100,
 		Token:     adminToken.Token,
 	}
+	return nil
+}
+
+func copyMigrationsToFS() error {
+	if err := appFS.Mkdir("sql", 0664); err != nil {
+		return err
+	}
+
+	files, err := os.ReadDir("../../sql/")
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		f, err := appFS.Create("./sql/" + file.Name())
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		src, err := os.Open(path.Join("../../sql", file.Name()))
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+
+		if n, err := io.Copy(f, src); err != nil {
+			return err
+		} else if n == 0 {
+			return errors.New("unable to copy migration file")
+		}
+	}
+
 	return nil
 }

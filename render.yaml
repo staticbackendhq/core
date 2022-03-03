@@ -1,0 +1,44 @@
+services:
+  # main StaticBackend backend API
+  - type: web
+    name: backend
+    env: go
+    repo: https://github.com/staticbackendhq/core.git
+    buildCommand: "cd cmd && go build -o backend"
+    startCommand: "./cmd/backend"
+    healthCheckPath: /
+    envVars:
+      - key: REDIS_HOST
+        fromService:
+          name: redis
+          type: pserv
+          property: hostport
+      - key: DATA_STORE
+        value: pg
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MAIL_PROVIDER
+        value: dev
+      - key: STORAGE_PROVIDER
+        value: s3
+      - key: DATABASE_URL
+        fromService:
+          name: postgres
+          property: connectionString
+    # redis
+  - type: pserv
+    name: redis
+    env: docker
+    repo: https://github.com/render-examples/redis.git # optional
+    envVars:
+      - key: GENERATED_SECRET
+        generateValue: true # will generate a base64-encoded 256-bit secret
+      - key: DASHBOARD_SECRET
+        sync: false
+    disk:
+      name: redis-data
+      mountPath: /var/lib/redis
+      sizeGB: 2
+  # database
+  databases:
+    - name: postgres
