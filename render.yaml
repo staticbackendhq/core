@@ -37,5 +37,6 @@ services:
       name: redis-data
       mountPath: /var/lib/redis
       sizeGB: 2
-  databases:
-    - name: postgres
+
+databases:
+  - name: postgres
