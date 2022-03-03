@@ -1,5 +1,4 @@
 services:
-  # main StaticBackend backend API
   - type: web
     name: backend
     env: go
@@ -25,20 +24,18 @@ services:
         fromService:
           name: postgres
           property: connectionString
-    # redis
   - type: pserv
     name: redis
     env: docker
-    repo: https://github.com/render-examples/redis.git # optional
+    repo: https://github.com/render-examples/redis.git
     envVars:
       - key: GENERATED_SECRET
-        generateValue: true # will generate a base64-encoded 256-bit secret
+        generateValue: true
       - key: DASHBOARD_SECRET
         sync: false
     disk:
       name: redis-data
       mountPath: /var/lib/redis
       sizeGB: 2
-  # database
   databases:
     - name: postgres
