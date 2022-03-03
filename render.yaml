@@ -21,7 +21,7 @@ services:
       - key: STORAGE_PROVIDER
         value: s3
       - key: DATABASE_URL
-        fromService:
+        fromDatabase:
           name: postgres
           property: connectionString
   - type: pserv
