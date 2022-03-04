@@ -32,7 +32,9 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		var getRes = getById("jsexec", result.content.id)
 		if (!getRes.ok) {
 			log("ERROR: getting doc by id");
-			log(getRes.content);
+			log("id:");
+			log(getRes.content.id);
+			log("end id");
 			return;
 		} else if (getRes.content.from != "val from unit test") {
 			log("ERROR: asserting data from request body");

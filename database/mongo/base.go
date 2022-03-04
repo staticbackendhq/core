@@ -28,7 +28,9 @@ func (mg *Mongo) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 		return nil, err
 	}
 
-	doc[FieldID] = primitive.NewObjectID()
+	newID := primitive.NewObjectID()
+
+	doc[FieldID] = newID
 	doc[FieldAccountID] = acctID
 	doc[FieldOwnerID] = userID
 
@@ -36,8 +38,7 @@ func (mg *Mongo) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 		return nil, err
 	}
 
-	doc["id"] = doc[FieldID]
-	delete(doc, FieldID)
+	cleanMap(doc)
 
 	mg.PublishDocument("db-"+col, internal.MsgTypeDBCreated, doc)
 
@@ -128,9 +129,7 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 			return result, err
 		}
 
-		v["id"] = v[FieldID]
-		delete(v, FieldID)
-		delete(v, FieldOwnerID)
+		cleanMap(v)
 
 		results = append(results, v)
 	}
@@ -202,9 +201,7 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 			return result, err
 		}
 
-		v["id"] = v[FieldID]
-		delete(v, FieldID)
-		delete(v, FieldOwnerID)
+		cleanMap(v)
 
 		results = append(results, v)
 	}
@@ -244,9 +241,7 @@ func (mg *Mongo) GetDocumentByID(auth internal.Auth, dbName, col, id string) (ma
 		return result, err
 	}
 
-	result["id"] = result[FieldID]
-	delete(result, FieldID)
-	delete(result, FieldOwnerID)
+	cleanMap(result)
 
 	return result, nil
 }
@@ -293,9 +288,7 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 		return doc, err
 	}
 
-	result["id"] = result[FieldID]
-	delete(result, FieldID)
-	delete(result, FieldOwnerID)
+	cleanMap(result)
 
 	mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
 
@@ -393,4 +386,23 @@ func parseObjectID(auth internal.Auth) (acctID, userID primitive.ObjectID, err e
 	}
 	userID, err = primitive.ObjectIDFromHex(auth.UserID)
 	return
+}
+
+func cleanMap(m map[string]interface{}) {
+	oid, ok := m[FieldID].(primitive.ObjectID)
+	if !ok {
+		return
+	}
+
+	m["id"] = oid.Hex()
+	delete(m, FieldID)
+
+	oid, ok = m[FieldAccountID].(primitive.ObjectID)
+	if !ok {
+		return
+	}
+
+	m[FieldAccountID] = oid.Hex()
+
+	delete(m, FieldOwnerID)
 }
