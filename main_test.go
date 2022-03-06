@@ -15,6 +15,7 @@ import (
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/storage"
 )
 
 const (
@@ -26,6 +27,7 @@ const (
 )
 
 var (
+	extexec    *extras
 	funexec    *functions
 	wsURL      string
 	pubKey     string
@@ -38,6 +40,8 @@ var (
 
 func TestMain(m *testing.M) {
 	volatile = cache.NewCache()
+
+	storer = storage.Local{}
 
 	if strings.EqualFold(os.Getenv("DATA_STORE"), "mongo") {
 		cl, err := openMongoDatabase("mongodb://localhost:27017")
@@ -77,6 +81,8 @@ func TestMain(m *testing.M) {
 	wsURL = "ws" + strings.TrimPrefix(ws.URL, "http")
 
 	funexec = &functions{datastore: datastore, dbName: dbName}
+
+	extexec = &extras{}
 
 	os.Exit(m.Run())
 }

@@ -17,6 +17,9 @@ alltest:
 thistest:
 	@JWT_SECRET=okdevmode go test -run "$2" --race --cover
 
+test-core:
+	@JWT_SECRET=okdevmode go test --race --cover ./
+
 test-pg:
 	@JWT_SECRET=okdevmode go test --race --cover ./database/postgresql
 
@@ -25,6 +28,9 @@ test-mdb:
 
 test-intl:
 	@JWT_SECRET=okdevmode go test --race --cover ./internal
+
+test-extra:
+	@JWT_SECRET=okdevmode go test --race --cover ./extra
 
 docker: build
 	docker build . -t staticbackend:latest

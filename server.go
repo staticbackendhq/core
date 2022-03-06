@@ -195,6 +195,10 @@ func Start(dbHost, port string) {
 	http.Handle("/fn/exec/", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
 	http.Handle("/fn", middleware.Chain(http.HandlerFunc(f.list), stdRoot...))
 
+	// extras routes
+	ex := &extras{}
+	http.Handle("/extra/resizeimg", middleware.Chain(http.HandlerFunc(ex.resizeImage), stdRoot...))
+
 	// ui routes
 	webUI := ui{}
 	http.HandleFunc("/ui/login", webUI.auth)
