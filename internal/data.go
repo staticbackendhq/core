@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -36,8 +37,16 @@ type ListParams struct {
 var (
 	//Tokens     map[string]Auth       = make(map[string]Auth)
 	//Bases      map[string]BaseConfig = make(map[string]BaseConfig)
-	HashSecret = jwt.NewHS256([]byte(os.Getenv("JWT_SECRET")))
+	HashSecret *jwt.HMACSHA
 )
+
+func init() {
+	secret := os.Getenv("JWT_SECRET")
+	if len(secret) == 0 {
+		secret = fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	HashSecret = jwt.NewHS256([]byte(secret))
+}
 
 const (
 	SystemID = "sb"

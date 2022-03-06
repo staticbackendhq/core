@@ -51,7 +51,10 @@ func Start(dbHost, port string) {
 	stripe.Key = os.Getenv("STRIPE_KEY")
 
 	if err := loadTemplates(); err != nil {
-		log.Fatal("error loading templates: ", err)
+		// if we're running from the CLI, no need to load templates
+		if len(os.Getenv("SB_FROM_CLI")) == 0 {
+			log.Fatal("error loading templates: ", err)
+		}
 	}
 
 	initServices(dbHost)
