@@ -26,6 +26,9 @@ test-pg:
 test-mdb:
 	@JWT_SECRET=okdevmode go test --race --cover ./database/mongo
 
+test-mem:
+	@JWT_SECRET=okdevmode go test --race --cover ./database/memory
+
 test-intl:
 	@JWT_SECRET=okdevmode go test --race --cover ./internal
 

@@ -4,12 +4,13 @@ go 1.16
 
 require (
 	github.com/aws/aws-sdk-go v1.27.2
+	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/dop251/goja v0.0.0-20210804101310-32956a348b49
 	github.com/gbrlsnchs/jwt/v3 v3.0.0-rc.1
 	github.com/go-co-op/gocron v1.6.2
 	github.com/go-redis/redis/v8 v8.4.4
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.1.4
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/lib/pq v1.10.4
