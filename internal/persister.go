@@ -7,6 +7,7 @@ const (
 
 type Persister interface {
 	Ping() error
+	CreateIndex(dbName, col, field string) error
 
 	// customer / app related
 	CreateCustomer(Customer) (Customer, error)

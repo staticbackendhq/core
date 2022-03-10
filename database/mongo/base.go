@@ -2,7 +2,9 @@ package mongo
 
 import (
 	"fmt"
+	"log"
 	"strings"
+	"sync"
 
 	"github.com/staticbackendhq/core/internal"
 
@@ -42,7 +44,76 @@ func (mg *Mongo) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 
 	mg.PublishDocument("db-"+col, internal.MsgTypeDBCreated, doc)
 
+	go mg.ensureIndex(dbName, internal.CleanCollectionName(col))
+
 	return doc, nil
+}
+
+var (
+	checkIndex = make(map[string]bool)
+	mutx       = sync.RWMutex{}
+)
+
+func (mg *Mongo) ensureIndex(dbName, col string) {
+	key := fmt.Sprintf("%s_%s", dbName, col)
+
+	mutx.RLock()
+	if _, ok := checkIndex[key]; ok {
+		return
+	}
+	mutx.RUnlock()
+
+	db := mg.Client.Database(dbName)
+
+	dbCol := db.Collection(col)
+
+	cur, err := dbCol.Indexes().List(mg.Ctx)
+	if err != nil {
+		//TODO: report this error
+		log.Println("error getting col indexes: ", err)
+		return
+	}
+
+	found := false
+	for cur.Next(mg.Ctx) {
+		var v bson.M
+		if err := cur.Decode(&v); err != nil {
+			//TODO: report this error
+			log.Println("cannot cast to IndexModel: ", err)
+			return
+		}
+
+		keys, ok := v["key"].(bson.M)
+		if !ok {
+			//TODO: report this error
+			log.Println("unable to cast IndexModel Key to map")
+			return
+		}
+
+		for k := range keys {
+			if k == "accountId" {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			break
+		}
+	}
+
+	mutx.Lock()
+	checkIndex[key] = true
+	mutx.Unlock()
+
+	if found {
+		return
+	}
+
+	if err := mg.CreateIndex(dbName, col, FieldAccountID); err != nil {
+		//TODO: report this error
+		log.Println("error creating accountId idx: ", err)
+	}
 }
 
 func (mg *Mongo) BulkCreateDocument(auth internal.Auth, dbName, col string, docs []interface{}) error {

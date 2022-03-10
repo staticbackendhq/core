@@ -179,3 +179,17 @@ func copyMigrationsToFS() error {
 
 	return nil
 }
+
+func TestCreateIndex(t *testing.T) {
+	data := make(map[string]interface{})
+	data["idxfield"] = "unit test"
+	data["value"] = 123
+
+	if _, err := datastore.CreateDocument(adminAuth, confDBName, "testindex", data); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := datastore.CreateIndex(confDBName, "testindex", "idxfield"); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -21,10 +21,10 @@ test-core:
 	@JWT_SECRET=okdevmode go test --race --cover ./
 
 test-pg:
-	@JWT_SECRET=okdevmode go test --race --cover ./database/postgresql
+	cd database/postgresql && go test --race --cover
 
 test-mdb:
-	@JWT_SECRET=okdevmode go test --race --cover ./database/mongo
+	cd database/mongo && go test --race --cover 
 
 test-intl:
 	@JWT_SECRET=okdevmode go test --race --cover ./internal

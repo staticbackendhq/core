@@ -143,6 +143,7 @@ func Start(dbHost, port string) {
 	http.Handle("/inc/", middleware.Chain(http.HandlerFunc(database.increase), stdAuth...))
 	http.Handle("/sudoquery/", middleware.Chain(http.HandlerFunc(database.query), stdRoot...))
 	http.Handle("/sudolistall/", middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...))
+	http.Handle("/sudo/index", middleware.Chain(http.HandlerFunc(database.index), stdRoot...))
 	http.Handle("/sudo/", middleware.Chain(http.HandlerFunc(database.dbreq), stdRoot...))
 	http.Handle("/newid", middleware.Chain(http.HandlerFunc(database.newID), stdAuth...))
 

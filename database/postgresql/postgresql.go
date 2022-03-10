@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/afero"
 	"github.com/staticbackendhq/core/internal"
@@ -35,4 +36,22 @@ func New(db *sql.DB, pubdoc internal.PublishDocumentEvent, migPath string) inter
 
 func (pg *PostgreSQL) Ping() error {
 	return pg.DB.Ping()
+}
+
+func (pg *PostgreSQL) CreateIndex(dbName, col, field string) error {
+	qry := `
+		CREATE INDEX IF NOT EXISTS 
+			idx_{col}_{field} 
+		ON {schema}.{col} 
+		USING btree ((data->'{col}'))
+	`
+
+	qry = strings.Replace(qry, "{col}", internal.CleanCollectionName(col), -1)
+	qry = strings.Replace(qry, "{field}", field, -1)
+	qry = strings.Replace(qry, "{schema}", dbName, -1)
+
+	if _, err := pg.DB.Exec(qry); err != nil {
+		return err
+	}
+	return nil
 }
