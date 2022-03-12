@@ -247,6 +247,10 @@ Same for contributing. The easiest is to get in touch first. We're working
 to make it easier to contribute code. If you'd like to work on something 
 precise let us know.
 
+Here are videos made specifically for people wanting to contribute:
+
+* [Intro, setup, running tests, project structure](https://youtu.be/uTj7UEbg0p4)
+
 
 ## Open source, sponsors, paid SaaS
 
