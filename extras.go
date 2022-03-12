@@ -11,12 +11,12 @@ import (
 	"github.com/staticbackendhq/core/extra"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/sms"
 )
 
 type extras struct{}
 
 func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Header.Get("Content-Type"))
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		fmt.Println("cannot parse form")
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -103,4 +103,19 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 	data.URL = url
 
 	respond(w, http.StatusOK, data)
+}
+
+func (ex *extras) sudoSendSMS(w http.ResponseWriter, r *http.Request) {
+	var data sms.SMSData
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := sms.Send(data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
 }
