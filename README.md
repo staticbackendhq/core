@@ -153,7 +153,7 @@ $> git clone git@github.com:staticbackendhq/core.git
 $> cd core
 $> cp .demo.env .env
 $> docker build . -t staticbackend:latest
-$> docker-compuse -f docker-compose-demo.yml up
+$> docker-compose -f docker-compose-demo.yml up
 ```
 
 Test your instance:
