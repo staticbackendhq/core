@@ -203,6 +203,7 @@ func Start(dbHost, port string) {
 	ex := &extras{}
 	http.Handle("/extra/resizeimg", middleware.Chain(http.HandlerFunc(ex.resizeImage), stdAuth...))
 	http.Handle("/extra/sms", middleware.Chain(http.HandlerFunc(ex.sudoSendSMS), stdRoot...))
+	http.Handle("/extra/htmltox", middleware.Chain(http.HandlerFunc(ex.htmlToX), stdAuth...))
 
 	// ui routes
 	webUI := ui{}

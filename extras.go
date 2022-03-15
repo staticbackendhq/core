@@ -2,12 +2,15 @@ package staticbackend
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/chromedp"
 	"github.com/staticbackendhq/core/extra"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
@@ -66,8 +69,8 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileKey := fmt.Sprintf("%s/%s/%s%s",
-		auth.AccountID,
 		config.Name,
+		auth.AccountID,
 		name,
 		ext,
 	)
@@ -118,4 +121,110 @@ func (ex *extras) sudoSendSMS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusOK, true)
+}
+
+type ConvertParam struct {
+	ToPDF    bool   `json:"toPDF"`
+	URL      string `json:"url"`
+	FullPage bool   `json:"fullpage"`
+}
+
+func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
+	config, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var data ConvertParam
+	if parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// make sure it can timeout
+	cctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
+
+	ctx, cancel := chromedp.NewContext(cctx)
+	defer cancel()
+
+	var buf []byte
+
+	if err := chromedp.Run(ctx, ex.toBytes(data, &buf)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ext := ".png"
+	if data.ToPDF {
+		ext = ".pdf"
+	}
+
+	fileKey := fmt.Sprintf("%s/%s/%d%s",
+		config.Name,
+		auth.AccountID,
+		time.Now().UnixNano(),
+		ext,
+	)
+
+	ufd := internal.UploadFileData{
+		FileKey: fileKey,
+		File:    bytes.NewReader(buf),
+	}
+	fileURL, err := storer.Save(ufd)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	f := internal.File{
+		AccountID: auth.AccountID,
+		Key:       fileKey,
+		URL:       fileURL,
+		Size:      int64(len(buf)),
+		Uploaded:  time.Now(),
+	}
+
+	newID, err := datastore.AddFile(config.Name, f)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	result := new(struct {
+		ID  string `json:"id"`
+		URL string `json:"url"`
+	})
+	result.ID = newID
+	result.URL = fileURL
+
+	respond(w, http.StatusOK, data)
+}
+
+func (ex *extras) toBytes(data ConvertParam, res *[]byte) chromedp.Tasks {
+	return chromedp.Tasks{
+		chromedp.EmulateViewport(1280, 768),
+		chromedp.Navigate(data.URL),
+		chromedp.WaitReady("body"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var buf []byte
+			var err error
+			if data.ToPDF {
+				buf, _, err = page.PrintToPDF().Do(ctx)
+			} else {
+				params := page.CaptureScreenshot()
+				// TODO: This should capture full screen ?!?
+				params.CaptureBeyondViewport = data.FullPage
+
+				buf, err = params.Do(ctx)
+			}
+			if err != nil {
+				return err
+			}
+
+			*res = buf
+			return nil
+
+		}),
+	}
 }

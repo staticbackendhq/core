@@ -18,13 +18,13 @@ thistest:
 	@JWT_SECRET=okdevmode go test -run "$2" --race --cover
 
 test-core:
-	@JWT_SECRET=okdevmode go test --race --cover ./
+	@go test --race --cover
 
 test-pg:
-	cd database/postgresql && go test --race --cover
+	@cd database/postgresql && go test --race --cover
 
 test-mdb:
-	cd database/mongo && go test --race --cover 
+	@cd database/mongo && go test --race --cover 
 
 test-intl:
 	@JWT_SECRET=okdevmode go test --race --cover ./internal

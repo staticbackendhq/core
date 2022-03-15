@@ -108,3 +108,46 @@ func TestSudoSendSMS(t *testing.T) {
 	}
 
 }
+
+func TestHtmlToPDF(t *testing.T) {
+	data := ConvertParam{
+		ToPDF: true,
+		URL:   "https://staticbackend.com",
+	}
+
+	resp := dbReq(t, extexec.htmlToX, "POST", "/extras/htmltox", data)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log(string(b))
+		t.Errorf("expected status 200 got %s", resp.Status)
+	}
+
+}
+
+func TestHtmlToPNG(t *testing.T) {
+	data := ConvertParam{
+		ToPDF:    false,
+		URL:      "https://staticbackend.com",
+		FullPage: true,
+	}
+
+	resp := dbReq(t, extexec.htmlToX, "POST", "/extras/htmltox", data)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log(string(b))
+		t.Errorf("expected status 200 got %s", resp.Status)
+	}
+
+}

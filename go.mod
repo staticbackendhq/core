@@ -4,6 +4,8 @@ go 1.16
 
 require (
 	github.com/aws/aws-sdk-go v1.27.2
+	github.com/chromedp/cdproto v0.0.0-20211126220118-81fa0469ad77
+	github.com/chromedp/chromedp v0.7.6
 	github.com/dop251/goja v0.0.0-20210804101310-32956a348b49
 	github.com/gbrlsnchs/jwt/v3 v3.0.0-rc.1
 	github.com/go-co-op/gocron v1.6.2

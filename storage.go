@@ -45,8 +45,8 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileKey := fmt.Sprintf("%s/%s/%s%s",
-		auth.AccountID,
 		config.Name,
+		auth.AccountID,
 		name,
 		ext,
 	)
