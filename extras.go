@@ -142,16 +142,16 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/* trying to make GH action pass
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+	/*opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("disable-gpu", true),
 	)*/
 
 	// make sure it can timeout
-	cctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
+	//cctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
 
-	//HACK: chromedp.NewExecAllocator(cctx, opts...)
-	ctx, cancel := chromedp.NewContext(cctx)
+	//HACK:
+	//ctx, cancel := chromedp.NewContext(cctx)
+	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 
 	var buf []byte

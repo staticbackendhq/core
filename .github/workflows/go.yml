@@ -15,9 +15,7 @@ jobs:
 
     - name: Install dependencies for chromedp
       run: sudo apt-get install -y libnspr4 libnss3 libexpat1 libfontconfig1 libuuid1
-    
-    - name: Trying to have chromedp work
-      run: sudo apt-get install -y chromium-browser
+
     
     - name: Start containers (PostgreSQL, MongoDB, Redis)
       run: docker-compose -f "docker-compose-unittest.yml" up -d
