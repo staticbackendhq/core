@@ -30,6 +30,7 @@ func RequireAuth(datastore internal.Persister, volatile internal.PubSuber) Middl
 						Email:     "",
 						Role:      0,
 						Token:     "pub",
+						Plan:      internal.PlanIdea,
 					}
 
 					ctx := context.WithValue(r.Context(), ContextAuth, a)
@@ -40,7 +41,7 @@ func RequireAuth(datastore internal.Persister, volatile internal.PubSuber) Middl
 
 				http.Error(w, "missing authorization HTTP header", http.StatusUnauthorized)
 				return
-			} else if strings.HasPrefix(key, "Bearer ") == false {
+			} else if !strings.HasPrefix(key, "Bearer ") {
 				http.Error(w,
 					fmt.Sprintf("invalid authorization HTTP header, should be: Bearer your-token, but we got %s", key),
 					http.StatusBadRequest,
@@ -93,12 +94,18 @@ func ValidateAuthKey(datastore internal.Persister, volatile internal.PubSuber, c
 		return a, fmt.Errorf("error retrieving your token: %s", err.Error())
 	}
 
+	cus, err := datastore.FindAccount(token.AccountID)
+	if err != nil {
+		return a, fmt.Errorf("error retrieving your customer account: %v", err)
+	}
+
 	a = internal.Auth{
 		AccountID: token.AccountID,
 		UserID:    token.ID,
 		Email:     token.Email,
 		Role:      token.Role,
 		Token:     token.Token,
+		Plan:      cus.Plan,
 	}
 	if err := volatile.SetTyped(pl.Token, a); err != nil {
 		return a, err

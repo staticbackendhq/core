@@ -16,7 +16,7 @@ require (
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/lib/pq v1.10.4
 	github.com/spf13/afero v1.8.1
-	github.com/stripe/stripe-go/v71 v71.44.0
+	github.com/stripe/stripe-go/v72 v72.94.0
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.7.0
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa

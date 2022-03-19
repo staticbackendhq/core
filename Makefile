@@ -10,6 +10,7 @@ start: build
 deploy: build
 	scp cmd/staticbackend sb-poc:/home/dstpierre/sb
 	scp -qr ./templates/* sb-poc:/home/dstpierre/templates/
+	scp -qr ./sql/* sb-poc:/home/dstpierre/sql/
 
 alltest:
 	@JWT_SECRET=okdevmode go test --race --cover ./...
@@ -31,6 +32,9 @@ test-intl:
 
 test-extra:
 	@JWT_SECRET=okdevmode go test --race --cover ./extra
+
+stripe-dev:
+	stripe listen -p sb --forward-to http://localhost:8099/stripe
 
 docker: build
 	docker build . -t staticbackend:latest

@@ -13,6 +13,7 @@ type LocalCustomer struct {
 	Email          string             `bson:"email" json:"email"`
 	StripeID       string             `bson:"stripeId" json:"stripeId"`
 	SubscriptionID string             `bson:"subId" json:"subId"`
+	Plan           int                `bson:"plan" json:"plan"`
 	IsActive       bool               `bson:"active" json:"-"`
 	Created        time.Time          `bson:"created" json:"created"`
 }
@@ -22,6 +23,7 @@ func toLocalCustomer(c internal.Customer) LocalCustomer {
 		Email:          c.Email,
 		StripeID:       c.StripeID,
 		SubscriptionID: c.SubscriptionID,
+		Plan:           c.Plan,
 		IsActive:       c.IsActive,
 		Created:        c.Created,
 	}
@@ -33,6 +35,7 @@ func fromLocalCustomer(c LocalCustomer) internal.Customer {
 		Email:          c.Email,
 		StripeID:       c.StripeID,
 		SubscriptionID: c.SubscriptionID,
+		Plan:           c.Plan,
 		IsActive:       c.IsActive,
 		Created:        c.Created,
 	}
@@ -206,7 +209,7 @@ func (mg *Mongo) IncrementMonthlyEmailSent(baseID string) error {
 	return nil
 }
 
-func (mg *Mongo) ActivateCustomer(customerID string) error {
+func (mg *Mongo) ActivateCustomer(customerID string, active bool) error {
 	db := mg.Client.Database("sbsys")
 
 	oid, err := primitive.ObjectIDFromHex(customerID)
@@ -215,7 +218,7 @@ func (mg *Mongo) ActivateCustomer(customerID string) error {
 	}
 
 	filter := bson.M{FieldID: oid}
-	update := bson.M{"$set": bson.M{"active": true}}
+	update := bson.M{"$set": bson.M{"active": active}}
 
 	res := db.Collection("accounts").FindOneAndUpdate(mg.Ctx, filter, update)
 	if err := res.Err(); err != nil {
@@ -225,6 +228,24 @@ func (mg *Mongo) ActivateCustomer(customerID string) error {
 	filter = bson.M{FieldAccountID: oid}
 	res = db.Collection("bases").FindOneAndUpdate(mg.Ctx, filter, update)
 	return res.Err()
+}
+
+func (mg *Mongo) ChangeCustomerPlan(customerID string, plan int) error {
+	db := mg.Client.Database("sbsys")
+
+	oid, err := primitive.ObjectIDFromHex(customerID)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{FieldID: oid}
+	update := bson.M{"$set": bson.M{"plan": plan}}
+
+	res := db.Collection("accounts").FindOneAndUpdate(mg.Ctx, filter, update)
+	if err := res.Err(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (mg *Mongo) NewID() string {

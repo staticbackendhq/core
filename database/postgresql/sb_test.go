@@ -3,6 +3,8 @@ package postgresql
 import (
 	"fmt"
 	"testing"
+
+	"github.com/staticbackendhq/core/internal"
 )
 
 func TestFindAccount(t *testing.T) {
@@ -76,7 +78,7 @@ func TestGetCustomerByStripeID(t *testing.T) {
 }
 
 func TestActivateCustomer(t *testing.T) {
-	if err := datastore.ActivateCustomer(dbTest.CustomerID); err != nil {
+	if err := datastore.ActivateCustomer(dbTest.CustomerID, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -85,6 +87,19 @@ func TestActivateCustomer(t *testing.T) {
 		t.Fatal(err)
 	} else if !cus.IsActive {
 		t.Errorf("expected cus to be active")
+	}
+}
+
+func TestChangeCustomerPlan(t *testing.T) {
+	if err := datastore.ChangeCustomerPlan(dbTest.CustomerID, internal.PlanTraction); err != nil {
+		t.Fatal(err)
+	}
+
+	cus, err := datastore.FindAccount(dbTest.CustomerID)
+	if err != nil {
+		t.Fatal(err)
+	} else if cus.Plan != internal.PlanTraction {
+		t.Errorf("expected cus plan to be %d got %d", internal.PlanTraction, cus.Plan)
 	}
 }
 

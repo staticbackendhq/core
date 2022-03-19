@@ -24,7 +24,7 @@ import (
 	"github.com/staticbackendhq/core/realtime"
 	"github.com/staticbackendhq/core/storage"
 
-	"github.com/stripe/stripe-go/v71"
+	"github.com/stripe/stripe-go/v72"
 	mongodrv "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
