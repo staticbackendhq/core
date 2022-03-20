@@ -54,6 +54,10 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	if err := migrate(dbConn); err != nil {
+		log.Fatal(err)
+	}
+
 	if err := datastore.DeleteCustomer(confDBName, adminEmail); err != nil {
 		log.Fatal(err)
 	}
