@@ -7,6 +7,7 @@ const (
 
 type Persister interface {
 	Ping() error
+	CreateIndex(dbName, col, field string) error
 
 	// customer / app related
 	CreateCustomer(Customer) (Customer, error)
@@ -18,7 +19,8 @@ type Persister interface {
 	ListDatabases() ([]BaseConfig, error)
 	IncrementMonthlyEmailSent(baseID string) error
 	GetCustomerByStripeID(stripeID string) (cus Customer, err error)
-	ActivateCustomer(customerID string) error
+	ActivateCustomer(customerID string, active bool) error
+	ChangeCustomerPlan(customerID string, plan int) error
 	NewID() string
 	DeleteCustomer(dbName, email string) error
 

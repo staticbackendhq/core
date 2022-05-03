@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/sms"
 )
 
 func TestUploadAndResizeImage(t *testing.T) {
@@ -72,4 +73,81 @@ func TestUploadAndResizeImage(t *testing.T) {
 
 		t.Errorf("expected status < 299 got %s, %s", resp.Result().Status, string(body))
 	}
+}
+
+func TestSudoSendSMS(t *testing.T) {
+	// get Twilio's AccountSID and AuthToken from env var
+	// if not present, we skip this test
+	aID, twiToken := os.Getenv("TWILIO_ACCOUNTSID"), os.Getenv("TWILIO_AUTHTOKEN")
+	if len(aID) == 0 || len(twiToken) == 0 {
+		t.Skip("missing Twilio AccountSID and/or AuthToken")
+	}
+
+	to := os.Getenv("MY_CELL")
+	from := os.Getenv("TWILIO_NUMBER")
+
+	data := sms.SMSData{
+		AccountSID: aID,
+		AuthToken:  twiToken,
+		ToNumber:   to,
+		FromNumber: from,
+		Body:       "from unit test of StaticBackend",
+	}
+
+	resp := dbReq(t, extexec.sudoSendSMS, "POST", "/extra/sms", data, true)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log(string(b))
+		t.Errorf("expected status 200 got %s", resp.Status)
+	}
+
+}
+
+func TestHtmlToPDF(t *testing.T) {
+	data := ConvertParam{
+		ToPDF: true,
+		URL:   "https://staticbackend.com",
+	}
+
+	resp := dbReq(t, extexec.htmlToX, "POST", "/extras/htmltox", data)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log(string(b))
+		t.Errorf("expected status 200 got %s", resp.Status)
+	}
+
+}
+
+func TestHtmlToPNG(t *testing.T) {
+	data := ConvertParam{
+		ToPDF:    false,
+		URL:      "https://staticbackend.com",
+		FullPage: true,
+	}
+
+	resp := dbReq(t, extexec.htmlToX, "POST", "/extras/htmltox", data)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log(string(b))
+		t.Errorf("expected status 200 got %s", resp.Status)
+	}
+
 }

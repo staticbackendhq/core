@@ -302,6 +302,29 @@ func (database *Database) listCollections(w http.ResponseWriter, r *http.Request
 	respond(w, http.StatusOK, names)
 }
 
+func (database *Database) index(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not implemented", http.StatusNotImplemented)
+		return
+	}
+
+	col := r.URL.Query().Get("col")
+	field := r.URL.Query().Get("field")
+
+	if err := datastore.CreateIndex(conf.Name, col, field); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
+
 func getPagination(u *url.URL) (page int64, size int64) {
 	var err error
 

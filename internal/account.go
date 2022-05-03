@@ -16,6 +16,7 @@ type Auth struct {
 	Email     string
 	Role      int
 	Token     string
+	Plan      int
 }
 
 func (auth Auth) ReconstructToken() string {
@@ -56,11 +57,19 @@ type Login struct {
 	Password string `json:"password"`
 }
 
+const (
+	PlanIdea = iota
+	PleanLaunch
+	PlanTraction
+	PlanGrowth
+)
+
 type Customer struct {
 	ID               string    `bson:"_id" json:"id"`
 	Email            string    `bson:"email" json:"email"`
 	StripeID         string    `bson:"stripeId" json:"stripeId"`
 	SubscriptionID   string    `bson:"subId" json:"subId"`
+	Plan             int       `json:"plan"`
 	IsActive         bool      `bson:"active" json:"-"`
 	MonthlyEmailSent int       `bson:"mes" json:"-"`
 	Created          time.Time `bson:"created" json:"created"`

@@ -10,6 +10,7 @@ start: build
 deploy: build
 	scp cmd/staticbackend sb-poc:/home/dstpierre/sb
 	scp -qr ./templates/* sb-poc:/home/dstpierre/templates/
+	scp -qr ./sql/* sb-poc:/home/dstpierre/sql/
 
 alltest:
 	@JWT_SECRET=okdevmode go test --race --cover ./...
@@ -18,13 +19,13 @@ thistest:
 	@JWT_SECRET=okdevmode go test -run "$2" --race --cover
 
 test-core:
-	@JWT_SECRET=okdevmode go test --race --cover ./
+	@go test --race --cover
 
 test-pg:
-	@JWT_SECRET=okdevmode go test --race --cover ./database/postgresql
+	@cd database/postgresql && go test --race --cover
 
 test-mdb:
-	@JWT_SECRET=okdevmode go test --race --cover ./database/mongo
+	@cd database/mongo && go test --race --cover 
 
 test-mem:
 	@JWT_SECRET=okdevmode go test --race --cover ./database/memory
@@ -34,6 +35,9 @@ test-intl:
 
 test-extra:
 	@JWT_SECRET=okdevmode go test --race --cover ./extra
+
+stripe-dev:
+	stripe listen -p sb --forward-to http://localhost:8099/stripe
 
 docker: build
 	docker build . -t staticbackend:latest

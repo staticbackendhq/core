@@ -24,7 +24,7 @@ import (
 	"github.com/staticbackendhq/core/realtime"
 	"github.com/staticbackendhq/core/storage"
 
-	"github.com/stripe/stripe-go/v71"
+	"github.com/stripe/stripe-go/v72"
 	mongodrv "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -143,6 +143,7 @@ func Start(dbHost, port string) {
 	http.Handle("/inc/", middleware.Chain(http.HandlerFunc(database.increase), stdAuth...))
 	http.Handle("/sudoquery/", middleware.Chain(http.HandlerFunc(database.query), stdRoot...))
 	http.Handle("/sudolistall/", middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...))
+	http.Handle("/sudo/index", middleware.Chain(http.HandlerFunc(database.index), stdRoot...))
 	http.Handle("/sudo/", middleware.Chain(http.HandlerFunc(database.dbreq), stdRoot...))
 	http.Handle("/newid", middleware.Chain(http.HandlerFunc(database.newID), stdAuth...))
 
@@ -200,7 +201,9 @@ func Start(dbHost, port string) {
 
 	// extras routes
 	ex := &extras{}
-	http.Handle("/extra/resizeimg", middleware.Chain(http.HandlerFunc(ex.resizeImage), stdRoot...))
+	http.Handle("/extra/resizeimg", middleware.Chain(http.HandlerFunc(ex.resizeImage), stdAuth...))
+	http.Handle("/extra/sms", middleware.Chain(http.HandlerFunc(ex.sudoSendSMS), stdRoot...))
+	http.Handle("/extra/htmltox", middleware.Chain(http.HandlerFunc(ex.htmlToX), stdAuth...))
 
 	// ui routes
 	webUI := ui{}

@@ -14,12 +14,13 @@ func (pg *PostgreSQL) CreateCustomer(customer internal.Customer) (c internal.Cus
 	c = customer
 
 	err = pg.DB.QueryRow(`
-	INSERT INTO sb.customers(email, stripe_id, sub_id, is_active, created)
-	VALUES($1, $2, $3, $4, $5)
+	INSERT INTO sb.customers(email, stripe_id, sub_id, plan, is_active, created)
+	VALUES($1, $2, $3, $4, $5, $6)
 	RETURNING id;
 	`, customer.Email,
 		customer.StripeID,
 		customer.SubscriptionID,
+		customer.Plan,
 		customer.IsActive,
 		customer.Created,
 	).Scan(&id)
@@ -225,21 +226,28 @@ func (pg *PostgreSQL) GetCustomerByStripeID(stripeID string) (cus internal.Custo
 	return
 }
 
-func (pg *PostgreSQL) ActivateCustomer(customerID string) error {
+func (pg *PostgreSQL) ActivateCustomer(customerID string, active bool) error {
 	tx, err := pg.DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	if _, err := tx.Exec(`UPDATE sb.customers SET is_active = true WHERE id = $1;`, customerID); err != nil {
+	if _, err := tx.Exec(`UPDATE sb.customers SET is_active = $2 WHERE id = $1;`, customerID, active); err != nil {
 		return err
 	}
 
-	if _, err := tx.Exec(`UPDATE sb.apps SET is_active = true WHERE customer_id = $1;`, customerID); err != nil {
+	if _, err := tx.Exec(`UPDATE sb.apps SET is_active = $2 WHERE customer_id = $1;`, customerID, active); err != nil {
 		return err
 	}
 
 	return tx.Commit()
+}
+
+func (pg *PostgreSQL) ChangeCustomerPlan(customerID string, plan int) error {
+	if _, err := pg.DB.Exec(`UPDATE sb.customers SET plan = $2 WHERE id = $1`, customerID, plan); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (pg *PostgreSQL) NewID() string {
@@ -273,6 +281,7 @@ func scanCustomer(rows Scanner, c *internal.Customer) error {
 		&c.SubscriptionID,
 		&c.IsActive,
 		&c.Created,
+		&c.Plan,
 	)
 }
 
@@ -286,4 +295,21 @@ func scanBase(rows Scanner, b *internal.BaseConfig) error {
 		&b.MonthlySentEmail,
 		&b.Created,
 	)
+}
+
+func (pg *PostgreSQL) GetAllDatabaseSizes() error {
+	/*qry := `
+		SELECT
+			schema_name,
+			pg_size_pretty(sum(table_size)::bigint),
+		FROM (
+			SELECT pg_catalog.pg_namespace.nspname as schema_name,
+				pg_relation_size(pg_catalog.pg_class.oid) as table_size
+			FROM pg_catalog.pg_class
+			JOIN pg_catalog.pg_namespace ON relnamespace = pg_catalog.pg_namespace.oid
+		) t
+		GROUP BY schema_name
+		ORDER BY schema_name
+	`*/
+	return nil
 }

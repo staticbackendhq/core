@@ -13,10 +13,10 @@ import (
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 
-	"github.com/stripe/stripe-go/v71"
-	"github.com/stripe/stripe-go/v71/billingportal/session"
-	"github.com/stripe/stripe-go/v71/customer"
-	"github.com/stripe/stripe-go/v71/sub"
+	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/billingportal/session"
+	"github.com/stripe/stripe-go/v72/customer"
+	"github.com/stripe/stripe-go/v72/sub"
 )
 
 var (
@@ -43,6 +43,11 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		email = strings.ToLower(r.Form.Get("email"))
 	} else {
 		email = strings.ToLower(r.URL.Query().Get("email"))
+
+		// the marketing website uses a query string ?ui=true
+		if len(r.URL.Query().Get("ui")) > 0 {
+			fromCLI = false
+		}
 	}
 	// TODO: cheap email validation
 	if len(email) < 4 || strings.Index(email, "@") == -1 || strings.Index(email, ".") == -1 {
@@ -80,10 +85,10 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 			Customer: stripe.String(cus.ID),
 			Items: []*stripe.SubscriptionItemsParams{
 				{
-					Price: stripe.String(os.Getenv("STRIPE_PRICEID")),
+					Price: stripe.String(os.Getenv("STRIPE_PRICEID_IDEA")),
 				},
 			},
-			TrialPeriodDays: stripe.Int64(14),
+			TrialPeriodDays: stripe.Int64(60),
 		}
 		newSub, err := sub.New(subParams)
 		if err != nil {
@@ -100,6 +105,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Email:          email,
 		StripeID:       stripeCustomerID,
 		SubscriptionID: subID,
+		Plan:           internal.PlanIdea,
 		IsActive:       active,
 		Created:        time.Now(),
 	}
@@ -176,7 +182,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>Hey there,</p>
 	<p>Thanks for creating your account.</p>
 	<p>Your SB-PUBLIC-KEY is required on all your API requests:</p>
-	<p>SB-PUBLUC-KEY: <strong>%s</strong></p>
+	<p>SB-PUBLIC-KEY: <strong>%s</strong></p>
 	<p>We've created an admin user for your new database:</p>
 	<p>email: %s<br />
 	password: %s</p>
@@ -261,6 +267,9 @@ func randStringRunes(n int) string {
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
+
+	// due to PostgreSQL schema requiring letter start.
+	b[0] = letterRunes[0]
 
 	return string(b)
 }
