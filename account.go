@@ -43,6 +43,11 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		email = strings.ToLower(r.Form.Get("email"))
 	} else {
 		email = strings.ToLower(r.URL.Query().Get("email"))
+
+		// the marketing website uses a query string ?ui=true
+		if len(r.URL.Query().Get("ui")) > 0 {
+			fromCLI = false
+		}
 	}
 	// TODO: cheap email validation
 	if len(email) < 4 || strings.Index(email, "@") == -1 || strings.Index(email, ".") == -1 {
