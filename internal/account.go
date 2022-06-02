@@ -37,8 +37,9 @@ var (
 )
 
 type Account struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID      string    `json:"id"`
+	Email   string    `json:"email"`
+	Created time.Time `json:"created"`
 }
 
 type Token struct {

@@ -2,41 +2,41 @@ package memory
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
+	"sort"
 
-	"github.com/boltdb/bolt"
 	"github.com/google/uuid"
 	"github.com/staticbackendhq/core/internal"
 )
 
-const (
+/*const (
 	FieldID        = "id"
 	FieldAccountID = "accountId"
 	FieldOwnerID   = "ownerId"
-)
+)*/
 
 type Memory struct {
-	DB              *bolt.DB
+	DB              map[string]map[string][]byte
 	PublishDocument internal.PublishDocumentEvent
 }
 
-func New(db *bolt.DB, pubdoc internal.PublishDocumentEvent) internal.Persister {
-	err := db.Update(func(tx *bolt.Tx) error {
-		if _, err := tx.CreateBucketIfNotExists([]byte("sb_customers")); err != nil {
-			return err
-		}
-		if _, err := tx.CreateBucketIfNotExists([]byte("sb_apps")); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+func New(pubdoc internal.PublishDocumentEvent) internal.Persister {
+	db := make(map[string]map[string][]byte)
+
+	if err := initDB(db); err != nil {
 		log.Fatal(err)
 	}
 
 	return &Memory{DB: db, PublishDocument: pubdoc}
+}
+
+func initDB(db map[string]map[string][]byte) error {
+	db["sb_customers"] = make(map[string][]byte)
+	db["sb_apps"] = make(map[string][]byte)
+	return nil
 }
 
 func (m *Memory) NewID() string {
@@ -47,7 +47,93 @@ func (m *Memory) Ping() error {
 	return nil
 }
 
-func (m *Memory) create(dbName, col, id string, v interface{}) error {
+func (m *Memory) CreateIndex(dbName, col, field string) error {
+	return nil
+}
+
+func mustEnc(v any) []byte {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
+		log.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func mustDec(b []byte, v any) error {
+	return gob.NewDecoder(bytes.NewReader(b)).Decode(v)
+}
+
+func create[T any](m *Memory, dbName, col, id string, v T) error {
+	key := fmt.Sprintf("%s_%s", dbName, col)
+
+	repo, ok := m.DB[key]
+	if !ok {
+		repo = make(map[string][]byte)
+	}
+
+	repo[id] = mustEnc(v)
+
+	m.DB[key] = repo
+	return nil
+}
+
+func getByID[T any](m *Memory, dbName, col, id string, v T) error {
+	key := fmt.Sprintf("%s_%s", dbName, col)
+
+	repo, ok := m.DB[key]
+	if !ok {
+		return errors.New("collection not found")
+	}
+
+	b, ok := repo[id]
+	if !ok {
+		return errors.New("document not found")
+	} else if err := mustDec(b, v); err != nil {
+		return err
+	}
+	return nil
+}
+
+func all[T any](m *Memory, dbName, col string) (list []T, err error) {
+	key := fmt.Sprintf("%s_%s", dbName, col)
+
+	repo, ok := m.DB[key]
+	if !ok {
+		return nil, errors.New("collection not found")
+	}
+
+	for _, v := range repo {
+		var li T
+		if err = mustDec(v, &li); err != nil {
+			return
+		}
+
+		list = append(list, li)
+	}
+
+	return
+}
+
+func filter[T any](list []T, fn func(x T) bool) []T {
+	var results []T
+	for _, item := range list {
+		if fn(item) {
+			results = append(results, item)
+		}
+	}
+
+	return results
+}
+
+func sortSlice[T any](list []T, fn func(a, b T) bool) []T {
+	sort.Slice(list, func(i, j int) bool {
+		return fn(list[i], list[j])
+	})
+	return list
+}
+
+/*
+func create_bolt[T any](m *Memory, dbName, col, id string, v T) error {
 	bucketName := fmt.Sprintf("%s_%s", dbName, col)
 
 	data, err := json.Marshal(v)
@@ -65,7 +151,7 @@ func (m *Memory) create(dbName, col, id string, v interface{}) error {
 	})
 }
 
-func (m *Memory) getByID(dbName, col, id string, v interface{}) error {
+func getByID_bolt[T any](m *Memory, dbName, col, id string, v T) error {
 	bucketName := fmt.Sprintf("%s_%s", dbName, col)
 
 	var data []byte
@@ -80,7 +166,7 @@ func (m *Memory) getByID(dbName, col, id string, v interface{}) error {
 				return nil
 			}
 		}
-		return fmt.Errorf("cannot find id: %d in bucket: %s", id, bucketName)
+		return fmt.Errorf("cannot find id: %s in bucket: %s", id, bucketName)
 	})
 	if err != nil {
 		return err
@@ -89,56 +175,24 @@ func (m *Memory) getByID(dbName, col, id string, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-func (m *Memory) all(dbName, col string) ([]map[string]interface{}, error) {
+func all_bolt[T any](m *Memory, dbName, col string) (list []T, err error) {
 	bucketName := fmt.Sprintf("%s_%s", dbName, col)
-	var list []map[string]interface{}
-	err := m.DB.View(func(tx *bolt.Tx) error {
+	err = m.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var m map[string]interface{}
+			var m T
 			if err := json.Unmarshal(v, m); err != nil {
 				return err
 			}
 
 			list = append(list, m)
 		}
-		return fmt.Errorf("cannot find id: %d in bucket: %s", id, bucketName)
+		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
 
-	return list, nil
+	return
 }
-
-type FilterParam struct {
-	Field string
-	Op    string
-	Value interface{}
-}
-
-func (m *Memory) filter(list []map[string]interface{}, param FilterParam) ([]map[string]interface{}, error) {
-	var results []map[string]interface{}
-	var match bool
-	for _, item := range list {
-		v := item[param.Field]
-
-		switch param.Op {
-		case "=":
-			match = param.Value == v
-		case "!=":
-			match = param.Value != v
-		default:
-			match = false
-		}
-
-		if match {
-			results = append(results, item)
-		}
-	}
-
-	return results, nil
-}
+*/

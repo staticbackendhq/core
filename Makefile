@@ -28,7 +28,7 @@ test-mdb:
 	@cd database/mongo && go test --race --cover 
 
 test-mem:
-	@JWT_SECRET=okdevmode go test --race --cover ./database/memory
+	@go test --race --cover ./database/memory
 
 test-intl:
 	@JWT_SECRET=okdevmode go test --race --cover ./internal

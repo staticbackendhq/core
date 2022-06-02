@@ -3,6 +3,7 @@ package internal
 const (
 	DataStorePostgreSQL = "postgresql"
 	DataStoreMongoDB    = "mongo"
+	DataStoreMemory     = "memory"
 )
 
 type Persister interface {
