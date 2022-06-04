@@ -2,20 +2,33 @@ package memory
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/staticbackendhq/core/internal"
 )
 
 func (m *Memory) AddFile(dbName string, f internal.File) (id string, err error) {
-	err = errors.New("not implemented")
+	id = m.NewID()
+	f.ID = id
+	err = create[internal.File](m, dbName, "sb_files", id, f)
 	return
 }
 
 func (m *Memory) GetFileByID(dbName, fileID string) (f internal.File, err error) {
-	err = errors.New("not implemented")
+	err = getByID[*internal.File](m, dbName, "sb_files", fileID, &f)
 	return
 }
 
 func (m *Memory) DeleteFile(dbName, fileID string) error {
-	return errors.New("not implemented")
+	key := fmt.Sprintf("%s_sb_files", dbName)
+
+	files, ok := m.DB[key]
+	if !ok {
+		return errors.New("no files available for delete")
+	}
+
+	delete(files, fileID)
+
+	m.DB[key] = files
+	return nil
 }

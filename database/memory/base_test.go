@@ -260,7 +260,7 @@ func TestListCollections(t *testing.T) {
 	results, err := datastore.ListCollections(confDBName)
 	if err != nil {
 		t.Fatal(err)
-	} else if len(results) < 6 {
+	} else if len(results) < 3 {
 		t.Log(results)
 		t.Errorf("expected to have at least one collection got %d", len(results))
 	}

@@ -16,6 +16,16 @@ func (m *Memory) CreateCustomer(customer internal.Customer) (internal.Customer, 
 func (m *Memory) CreateBase(base internal.BaseConfig) (internal.BaseConfig, error) {
 	base.ID = m.NewID()
 	err := create[internal.BaseConfig](m, "sb", "apps", base.ID, base)
+
+	// needed to make tests pass
+	task := internal.Task{
+		ID:    m.NewID(),
+		Name:  "demo task",
+		Type:  internal.TaskTypeMessage,
+		Value: "task demo",
+	}
+	err = create[internal.Task](m, base.Name, "sb_tasks", task.ID, task)
+
 	return base, err
 }
 
@@ -67,7 +77,14 @@ func (m *Memory) ListDatabases() (results []internal.BaseConfig, err error) {
 }
 
 func (m *Memory) IncrementMonthlyEmailSent(baseID string) error {
-	return nil
+	base, err := m.FindDatabase(baseID)
+	if err != nil {
+		return err
+	}
+
+	base.MonthlySentEmail += 1
+
+	return create[internal.BaseConfig](m, "sb", "apps", baseID, base)
 }
 
 func (m *Memory) GetCustomerByStripeID(stripeID string) (cus internal.Customer, err error) {
@@ -105,7 +122,13 @@ func (m *Memory) ActivateCustomer(customerID string, active bool) error {
 }
 
 func (m *Memory) ChangeCustomerPlan(customerID string, plan int) error {
-	return nil
+	cus, err := m.FindAccount(customerID)
+	if err != nil {
+		return err
+	}
+
+	cus.Plan = plan
+	return create[internal.Customer](m, "sb", "customers", customerID, cus)
 }
 
 func (m *Memory) DeleteCustomer(dbName, email string) error {

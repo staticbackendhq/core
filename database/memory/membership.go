@@ -21,6 +21,7 @@ func (m *Memory) CreateUserAccount(dbName, email string) (id string, err error) 
 
 func (m *Memory) CreateUserToken(dbName string, tok internal.Token) (id string, err error) {
 	id = m.NewID()
+	tok.ID = id
 
 	err = create[internal.Token](m, dbName, "sb_tokens", id, tok)
 	return

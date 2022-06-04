@@ -65,7 +65,7 @@ func (m *Memory) FindTokenByEmail(dbName, email string) (tok internal.Token, err
 }
 
 func (m *Memory) UserEmailExists(dbName, email string) (exists bool, err error) {
-	if _, err := m.FindTokenByEmail(dbName, email); err != nil {
+	if _, err := m.FindTokenByEmail(dbName, email); err == nil {
 		return true, nil
 	}
 	return

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/staticbackendhq/core/internal"
@@ -17,6 +18,12 @@ import (
 	FieldAccountID = "accountId"
 	FieldOwnerID   = "ownerId"
 )*/
+
+func init() {
+	gob.Register(map[string]any{})
+	gob.Register([]any{})
+	gob.Register(time.Time{})
+}
 
 type Memory struct {
 	DB              map[string]map[string][]byte

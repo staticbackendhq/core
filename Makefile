@@ -28,6 +28,7 @@ test-mdb:
 	@cd database/mongo && go test --race --cover 
 
 test-mem:
+	@rm -rf database/memory/mem.db
 	@go test --race --cover ./database/memory
 
 test-intl:
