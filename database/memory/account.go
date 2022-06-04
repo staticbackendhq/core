@@ -8,7 +8,7 @@ import (
 )
 
 func (m *Memory) FindToken(dbName, tokenID, token string) (tok internal.Token, err error) {
-	if err = getByID[*internal.Token](m, dbName, "sb_tokens", tokenID, &tok); err != nil {
+	if err = getByID(m, dbName, "sb_tokens", tokenID, &tok); err != nil {
 		return
 	} else if tok.Token != token {
 		err = fmt.Errorf("token does not match")
@@ -32,7 +32,7 @@ func (m *Memory) GetRootForBase(dbName string) (tok internal.Token, err error) {
 		return
 	}
 
-	rootTokens := filter[internal.Token](tokens, func(t internal.Token) bool {
+	rootTokens := filter(tokens, func(t internal.Token) bool {
 		return t.Role == 100
 	})
 
@@ -51,7 +51,7 @@ func (m *Memory) FindTokenByEmail(dbName, email string) (tok internal.Token, err
 		return
 	}
 
-	matches := filter[internal.Token](tokens, func(t internal.Token) bool {
+	matches := filter(tokens, func(t internal.Token) bool {
 		return strings.EqualFold(t.Email, email)
 	})
 
@@ -77,11 +77,11 @@ func (m *Memory) GetFirstTokenFromAccountID(dbName, accountID string) (tok inter
 		return
 	}
 
-	matches := filter[internal.Token](tokens, func(t internal.Token) bool {
+	matches := filter(tokens, func(t internal.Token) bool {
 		return t.AccountID == accountID
 	})
 
-	matches = sortSlice[internal.Token](matches, func(a, b internal.Token) bool {
+	matches = sortSlice(matches, func(a, b internal.Token) bool {
 		return a.Created.Before(b.Created)
 	})
 

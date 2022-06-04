@@ -11,7 +11,7 @@ func (m *Memory) AddFormSubmission(dbName, form string, doc map[string]any) erro
 	doc["sb_form"] = form
 	doc[FieldCreated] = time.Now()
 
-	return create[map[string]any](m, dbName, "sb_forms", id, doc)
+	return create(m, dbName, "sb_forms", id, doc)
 }
 
 func (m *Memory) ListFormSubmissions(dbName, name string) (docs []map[string]any, err error) {
@@ -21,7 +21,7 @@ func (m *Memory) ListFormSubmissions(dbName, name string) (docs []map[string]any
 	}
 
 	if len(name) > 0 {
-		docs = filter[map[string]any](docs, func(f map[string]any) bool {
+		docs = filter(docs, func(f map[string]any) bool {
 			return f["sb_form"] == name
 		})
 	}

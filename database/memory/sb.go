@@ -9,13 +9,15 @@ import (
 
 func (m *Memory) CreateCustomer(customer internal.Customer) (internal.Customer, error) {
 	customer.ID = m.NewID()
-	err := create[internal.Customer](m, "sb", "customers", customer.ID, customer)
+	err := create(m, "sb", "customers", customer.ID, customer)
 	return customer, err
 }
 
 func (m *Memory) CreateBase(base internal.BaseConfig) (internal.BaseConfig, error) {
 	base.ID = m.NewID()
-	err := create[internal.BaseConfig](m, "sb", "apps", base.ID, base)
+	if err := create(m, "sb", "apps", base.ID, base); err != nil {
+		return base, err
+	}
 
 	// needed to make tests pass
 	task := internal.Task{
@@ -24,8 +26,7 @@ func (m *Memory) CreateBase(base internal.BaseConfig) (internal.BaseConfig, erro
 		Type:  internal.TaskTypeMessage,
 		Value: "task demo",
 	}
-	err = create[internal.Task](m, base.Name, "sb_tasks", task.ID, task)
-
+	err := create(m, base.Name, "sb_tasks", task.ID, task)
 	return base, err
 }
 
@@ -48,12 +49,12 @@ func (m *Memory) EmailExists(email string) (exists bool, err error) {
 }
 
 func (m *Memory) FindAccount(customerID string) (cus internal.Customer, err error) {
-	err = getByID[*internal.Customer](m, "sb", "customers", customerID, &cus)
+	err = getByID(m, "sb", "customers", customerID, &cus)
 	return
 }
 
 func (m *Memory) FindDatabase(baseID string) (base internal.BaseConfig, err error) {
-	err = getByID[*internal.BaseConfig](m, "sb", "apps", baseID, &base)
+	err = getByID(m, "sb", "apps", baseID, &base)
 	return
 }
 
@@ -84,7 +85,7 @@ func (m *Memory) IncrementMonthlyEmailSent(baseID string) error {
 
 	base.MonthlySentEmail += 1
 
-	return create[internal.BaseConfig](m, "sb", "apps", baseID, base)
+	return create(m, "sb", "apps", baseID, base)
 }
 
 func (m *Memory) GetCustomerByStripeID(stripeID string) (cus internal.Customer, err error) {
@@ -108,13 +109,13 @@ func (m *Memory) GetCustomerByStripeID(stripeID string) (cus internal.Customer, 
 
 func (m *Memory) ActivateCustomer(customerID string, active bool) error {
 	var cus internal.Customer
-	if err := getByID[*internal.Customer](m, "sb", "customers", customerID, &cus); err != nil {
+	if err := getByID(m, "sb", "customers", customerID, &cus); err != nil {
 		return err
 	}
 
 	cus.IsActive = active
 
-	if err := create[internal.Customer](m, "sb", "customers", customerID, cus); err != nil {
+	if err := create(m, "sb", "customers", customerID, cus); err != nil {
 		return err
 	}
 
@@ -128,7 +129,7 @@ func (m *Memory) ChangeCustomerPlan(customerID string, plan int) error {
 	}
 
 	cus.Plan = plan
-	return create[internal.Customer](m, "sb", "customers", customerID, cus)
+	return create(m, "sb", "customers", customerID, cus)
 }
 
 func (m *Memory) DeleteCustomer(dbName, email string) error {

@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/staticbackendhq/core/internal"
@@ -21,7 +20,7 @@ func TestFindDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	} else if b.Name != dbTest.Name {
-		fmt.Errorf("expected name to be %s got %s", dbTest.Name, b.Name)
+		t.Errorf("expected name to be %s got %s", dbTest.Name, b.Name)
 	}
 }
 

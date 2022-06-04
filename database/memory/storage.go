@@ -10,12 +10,12 @@ import (
 func (m *Memory) AddFile(dbName string, f internal.File) (id string, err error) {
 	id = m.NewID()
 	f.ID = id
-	err = create[internal.File](m, dbName, "sb_files", id, f)
+	err = create(m, dbName, "sb_files", id, f)
 	return
 }
 
 func (m *Memory) GetFileByID(dbName, fileID string) (f internal.File, err error) {
-	err = getByID[*internal.File](m, dbName, "sb_files", fileID, &f)
+	err = getByID(m, dbName, "sb_files", fileID, &f)
 	return
 }
 

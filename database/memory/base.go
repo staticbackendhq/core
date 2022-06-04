@@ -24,7 +24,7 @@ func (m *Memory) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 	doc[FieldOwnerID] = auth.UserID
 	doc[FieldCreated] = time.Now()
 
-	if err := create[map[string]any](m, dbName, col, id, doc); err != nil {
+	if err := create(m, dbName, col, id, doc); err != nil {
 		return nil, err
 	}
 	return doc, nil
@@ -54,7 +54,7 @@ func (m *Memory) ListDocuments(auth internal.Auth, dbName, col string, params in
 	list = secureRead(auth, col, list)
 
 	if params.SortDescending {
-		list = sortSlice[map[string]any](list, func(a, b map[string]any) bool {
+		list = sortSlice(list, func(a, b map[string]any) bool {
 			return fmt.Sprintf("%v", a[FieldCreated]) > fmt.Sprintf("%v", b[FieldCreated])
 		})
 	}
@@ -136,7 +136,7 @@ func (m *Memory) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 }
 
 func (m *Memory) GetDocumentByID(auth internal.Auth, dbName, col, id string) (doc map[string]interface{}, err error) {
-	err = getByID[*map[string]any](m, dbName, col, id, &doc)
+	err = getByID(m, dbName, col, id, &doc)
 
 	list := secureRead(auth, col, []map[string]any{doc})
 	if len(list) == 0 {
@@ -164,7 +164,7 @@ func (m *Memory) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 		exists[k] = v
 	}
 
-	err = create[map[string]any](m, dbName, col, id, exists)
+	err = create(m, dbName, col, id, exists)
 	return
 }
 
@@ -190,7 +190,7 @@ func (m *Memory) IncrementValue(auth internal.Auth, dbName, col, id, field strin
 
 	doc[field] = i
 
-	return create[map[string]any](m, dbName, col, id, doc)
+	return create(m, dbName, col, id, doc)
 }
 
 func (m *Memory) DeleteDocument(auth internal.Auth, dbName, col, id string) (n int64, err error) {

@@ -12,19 +12,19 @@ func (m *Memory) ParseQuery(clauses [][]interface{}) (filter map[string]any, err
 
 	for i, clause := range clauses {
 		if len(clause) != 3 {
-			err = fmt.Errorf("The %d query clause did not contains the required 3 parameters (field, operator, value)", i+1)
+			err = fmt.Errorf("the %d query clause did not contains the required 3 parameters (field, operator, value)", i+1)
 			return
 		}
 
 		field, ok := clause[0].(string)
 		if !ok {
-			err = fmt.Errorf("The %d query clause's field parameter must be a string: %v", i+1, clause[0])
+			err = fmt.Errorf("the %d query clause's field parameter must be a string: %v", i+1, clause[0])
 			return
 		}
 
 		op, ok := clause[1].(string)
 		if !ok {
-			err = fmt.Errorf("The %d query clause's operator must be a string: %v", i+1, clause[1])
+			err = fmt.Errorf("the %d query clause's operator must be a string: %v", i+1, clause[1])
 			return
 		}
 
@@ -46,7 +46,7 @@ func (m *Memory) ParseQuery(clauses [][]interface{}) (filter map[string]any, err
 		case "!in", "nin":
 			filter[field] = clause[2]
 		default:
-			err = fmt.Errorf("The %d query clause's operator: %s is not supported at the moment.", i+1, op)
+			err = fmt.Errorf("the %d query clause's operator: %s is not supported at the moment", i+1, op)
 		}
 	}
 

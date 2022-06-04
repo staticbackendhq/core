@@ -14,13 +14,13 @@ func (m *Memory) AddFunction(dbName string, data internal.ExecData) (id string, 
 	data.ID = id
 	data.LastUpdated = time.Now()
 
-	err = create[internal.ExecData](m, dbName, "sb_functions", id, data)
+	err = create(m, dbName, "sb_functions", id, data)
 	return
 }
 
 func (m *Memory) UpdateFunction(dbName, id, code, trigger string) error {
 	var data internal.ExecData
-	if err := getByID[*internal.ExecData](m, dbName, "sb_functions", id, &data); err != nil {
+	if err := getByID(m, dbName, "sb_functions", id, &data); err != nil {
 		return err
 	}
 
@@ -28,7 +28,7 @@ func (m *Memory) UpdateFunction(dbName, id, code, trigger string) error {
 	data.Code = code
 	data.Version += 1
 
-	return create[internal.ExecData](m, dbName, "sb_functions", id, data)
+	return create(m, dbName, "sb_functions", id, data)
 }
 
 func (m *Memory) GetFunctionForExecution(dbName, name string) (data internal.ExecData, err error) {
@@ -37,7 +37,7 @@ func (m *Memory) GetFunctionForExecution(dbName, name string) (data internal.Exe
 		return
 	}
 
-	list = filter[internal.ExecData](list, func(data internal.ExecData) bool {
+	list = filter(list, func(data internal.ExecData) bool {
 		return data.FunctionName == name
 	})
 
@@ -51,7 +51,7 @@ func (m *Memory) GetFunctionForExecution(dbName, name string) (data internal.Exe
 }
 
 func (m *Memory) GetFunctionByID(dbName, id string) (data internal.ExecData, err error) {
-	err = getByID[*internal.ExecData](m, dbName, "sb_functions", id, &data)
+	err = getByID(m, dbName, "sb_functions", id, &data)
 	return
 }
 
@@ -71,7 +71,7 @@ func (m *Memory) ListFunctionsByTrigger(dbName, trigger string) (list []internal
 		return
 	}
 
-	list = filter[internal.ExecData](list, func(data internal.ExecData) bool {
+	list = filter(list, func(data internal.ExecData) bool {
 		return data.TriggerTopic == trigger
 	})
 

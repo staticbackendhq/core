@@ -55,7 +55,7 @@ func newTask(title string, done bool) map[string]interface{} {
 	return enc(Task{
 		Title:   title,
 		Done:    done,
-		Todos:   []Todo{Todo{Title: "sub", Done: done}, Todo{Title: "sub2", Done: done}},
+		Todos:   []Todo{{Title: "sub", Done: done}, {Title: "sub2", Done: done}},
 		Created: time.Now(),
 	})
 }
