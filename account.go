@@ -32,6 +32,7 @@ type accounts struct {
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	var email string
 	fromCLI := true
+	memoryMode := false
 
 	// the CLI do a GET for the account initialization, we can then
 	// base the rest of the flow on the fact that the web UI POST data
@@ -43,6 +44,10 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		email = strings.ToLower(r.Form.Get("email"))
 	} else {
 		email = strings.ToLower(r.URL.Query().Get("email"))
+
+		if AppEnv != AppEnvProd {
+			memoryMode = r.URL.Query().Get("mem") == "1"
+		}
 
 		// the marketing website uses a query string ?ui=true
 		if len(r.URL.Query().Get("ui")) > 0 {
@@ -102,6 +107,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	// create the account
 
 	cust := internal.Customer{
+		ID:             "cust-local-dev", // easier for CLI/memory flow
 		Email:          email,
 		StripeID:       stripeCustomerID,
 		SubscriptionID: subID,
@@ -119,6 +125,9 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	// make sure the DB name is unique
 	retry := 10
 	dbName := randStringRunes(12)
+	if memoryMode {
+		dbName = "dev-memory-pk"
+	}
 	for {
 		exists, err = datastore.DatabaseExists(dbName)
 		if err != nil {
@@ -133,6 +142,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	base := internal.BaseConfig{
+		ID:            dbName, // easier for CLI/memory flow
 		CustomerID:    cust.ID,
 		Name:          dbName,
 		IsActive:      active,
@@ -148,6 +158,9 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	// we create an admin user
 	// we make sure to switch DB
 	pw := randStringRunes(6)
+	if memoryMode {
+		pw = "devpw1234"
+	}
 
 	if _, _, err := a.membership.createAccountAndUser(dbName, email, pw, 100); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -206,11 +219,34 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		TextBody: emailFuncs.StripHTML(body),
 	}
 
-	err = emailer.Send(ed)
-	if err != nil {
-		log.Println("error sending email", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if memoryMode {
+		fmt.Printf(`
+Start sending requests with the following credentials:
+
+
+Public key:		%s
+
+
+Admin user:
+	Email:		%s
+	Password:	%s
+
+
+Root token:		%s
+
+
+Refer to the documentation at https://staticbackend.com/docs\n
+
+`,
+			bc.ID, email, pw, rootToken,
+		)
+	} else {
+		err = emailer.Send(ed)
+		if err != nil {
+			log.Println("error sending email", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if fromCLI {

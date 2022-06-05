@@ -13,7 +13,7 @@ deploy: build
 	scp -qr ./sql/* sb-poc:/home/dstpierre/sql/
 
 alltest:
-	@JWT_SECRET=okdevmode go test --race --cover ./...
+	@go test --race --cover ./...
 
 thistest:
 	@JWT_SECRET=okdevmode go test -run "$2" --race --cover

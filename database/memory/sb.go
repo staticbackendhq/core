@@ -8,13 +8,11 @@ import (
 )
 
 func (m *Memory) CreateCustomer(customer internal.Customer) (internal.Customer, error) {
-	customer.ID = m.NewID()
 	err := create(m, "sb", "customers", customer.ID, customer)
 	return customer, err
 }
 
 func (m *Memory) CreateBase(base internal.BaseConfig) (internal.BaseConfig, error) {
-	base.ID = m.NewID()
 	if err := create(m, "sb", "apps", base.ID, base); err != nil {
 		return base, err
 	}

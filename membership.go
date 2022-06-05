@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 
@@ -19,7 +18,7 @@ import (
 )
 
 type membership struct {
-	volatile *cache.Cache
+	volatile internal.Volatilizer
 }
 
 func (m *membership) emailExists(w http.ResponseWriter, r *http.Request) {

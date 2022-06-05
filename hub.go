@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/internal"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -33,10 +32,10 @@ type Hub struct {
 	unregister chan *Socket
 
 	// Cache used for keys and pub/sub (Redis)
-	volatile *cache.Cache
+	volatile internal.Volatilizer
 }
 
-func newHub(c *cache.Cache) *Hub {
+func newHub(c internal.Volatilizer) *Hub {
 	return &Hub{
 		broadcast:  make(chan internal.Command),
 		register:   make(chan *Socket),

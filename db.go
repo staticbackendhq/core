@@ -10,12 +10,10 @@ import (
 
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
-
-	"github.com/staticbackendhq/core/cache"
 )
 
 type Database struct {
-	cache *cache.Cache
+	cache internal.Volatilizer
 }
 
 func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {

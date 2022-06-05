@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database/memory"
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
@@ -40,7 +41,7 @@ const (
 
 var (
 	datastore internal.Persister
-	volatile  *cache.Cache
+	volatile  internal.Volatilizer
 	emailer   internal.Mailer
 	storer    internal.Storer
 	AppEnv    = os.Getenv("APP_ENV")
@@ -252,10 +253,17 @@ func Start(dbHost, port string) {
 }
 
 func initServices(dbHost string) {
-	volatile = cache.NewCache()
+
+	if strings.EqualFold(dbHost, "mem") {
+		volatile = cache.NewDevCache()
+	} else {
+		volatile = cache.NewCache()
+	}
 
 	persister := os.Getenv("DATA_STORE")
-	if strings.EqualFold(persister, "mongo") {
+	if strings.EqualFold(dbHost, "mem") {
+		datastore = memory.New(volatile.PublishDocument)
+	} else if strings.EqualFold(persister, "mongo") {
 		cl, err := openMongoDatabase(dbHost)
 		if err != nil {
 			log.Fatal(err)
