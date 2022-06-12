@@ -1,17 +1,16 @@
 package main
 
 import (
-	"os"
-
 	backend "github.com/staticbackendhq/core"
+	"github.com/staticbackendhq/core/config"
 )
 
 func main() {
-	dbHost := os.Getenv("DATABASE_URL")
-	port := os.Getenv("PORT")
-	if len(port) == 0 {
-		port = "8099"
+	c := config.LoadConfig()
+
+	if len(c.Port) == 0 {
+		c.Port = "8099"
 	}
 
-	backend.Start(dbHost, port)
+	backend.Start(c)
 }

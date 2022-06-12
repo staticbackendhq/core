@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/sms"
 )
@@ -78,13 +79,13 @@ func TestUploadAndResizeImage(t *testing.T) {
 func TestSudoSendSMS(t *testing.T) {
 	// get Twilio's AccountSID and AuthToken from env var
 	// if not present, we skip this test
-	aID, twiToken := os.Getenv("TWILIO_ACCOUNTSID"), os.Getenv("TWILIO_AUTHTOKEN")
+	aID, twiToken := config.Current.TwilioAccountID, config.Current.TwilioAuthToken
 	if len(aID) == 0 || len(twiToken) == 0 {
 		t.Skip("missing Twilio AccountSID and/or AuthToken")
 	}
 
-	to := os.Getenv("MY_CELL")
-	from := os.Getenv("TWILIO_NUMBER")
+	to := config.Current.TwilioTestCellNumber
+	from := config.Current.TwilioNumber
 
 	data := sms.SMSData{
 		AccountSID: aID,

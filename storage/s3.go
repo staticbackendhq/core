@@ -2,8 +2,8 @@ package storage
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -23,7 +23,7 @@ func (S3) Save(data internal.UploadFileData) (string, error) {
 	obj := &s3.PutObjectInput{}
 	obj.Body = data.File
 	obj.ACL = aws.String(s3.ObjectCannedACLPublicRead)
-	obj.Bucket = aws.String(os.Getenv("AWS_S3_BUCKET"))
+	obj.Bucket = aws.String(config.Current.AWSS3Bucket)
 	obj.Key = aws.String(data.FileKey)
 
 	if _, err := svc.PutObject(obj); err != nil {
@@ -32,7 +32,7 @@ func (S3) Save(data internal.UploadFileData) (string, error) {
 
 	url := fmt.Sprintf(
 		"%s/%s",
-		os.Getenv("AWS_CDN_URL"),
+		config.Current.AWSCDNURL,
 		data.FileKey,
 	)
 
@@ -47,7 +47,7 @@ func (S3) Delete(fileKey string) error {
 
 	svc := s3.New(sess)
 	obj := &s3.DeleteObjectInput{
-		Bucket: aws.String(os.Getenv("AWS_S3_BUCKET")),
+		Bucket: aws.String(config.Current.AWSS3Bucket),
 		Key:    aws.String(fileKey),
 	}
 	if _, err := svc.DeleteObject(obj); err != nil {

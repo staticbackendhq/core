@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
@@ -39,11 +40,13 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	config.Current = config.LoadConfig()
+
 	volatile = cache.NewCache()
 
 	storer = storage.Local{}
 
-	if strings.EqualFold(os.Getenv("DATA_STORE"), "mongo") {
+	if strings.EqualFold(config.Current.DataStore, "mongo") {
 		cl, err := openMongoDatabase("mongodb://localhost:27017")
 		if err != nil {
 			log.Fatal(err)
@@ -61,7 +64,7 @@ func TestMain(m *testing.M) {
 
 	database = &Database{cache: volatile}
 
-	mp := os.Getenv("MAIL_PROVIDER")
+	mp := config.Current.MailProvider
 	if strings.EqualFold(mp, internal.MailProviderSES) {
 		emailer = email.AWSSES{}
 	} else {

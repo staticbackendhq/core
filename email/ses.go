@@ -2,9 +2,9 @@ package email
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -26,7 +26,7 @@ func (AWSSES) Send(data internal.SendMailData) error {
 	charset := "UTF-8"
 
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(os.Getenv("AWS_REGION"))},
+		Region: aws.String(config.Current.AWSRegion)},
 	)
 	if err != nil {
 		return err

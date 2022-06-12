@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/database/memory"
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
@@ -44,21 +45,23 @@ var (
 	volatile  internal.Volatilizer
 	emailer   internal.Mailer
 	storer    internal.Storer
-	AppEnv    = os.Getenv("APP_ENV")
+	AppEnv    = config.Current.AppEnv
 )
 
 // Start starts the web server and all dependencies services
-func Start(dbHost, port string) {
-	stripe.Key = os.Getenv("STRIPE_KEY")
+func Start(c config.AppConfig) {
+	config.Current = c
+
+	stripe.Key = config.Current.StripeKey
 
 	if err := loadTemplates(); err != nil {
 		// if we're running from the CLI, no need to load templates
-		if len(os.Getenv("SB_FROM_CLI")) == 0 {
+		if len(config.Current.FromCLI) == 0 {
 			log.Fatal("error loading templates: ", err)
 		}
 	}
 
-	initServices(dbHost)
+	initServices(c.DatabaseURL)
 
 	// websockets
 	hub := newHub(volatile)
@@ -109,6 +112,10 @@ func Start(dbHost, port string) {
 
 	database := &Database{
 		cache: volatile,
+	}
+
+	stdPub := []middleware.Middleware{
+		middleware.Cors(),
 	}
 
 	pubWithDB := []middleware.Middleware{
@@ -162,7 +169,7 @@ func Start(dbHost, port string) {
 
 	// account
 	acct := &accounts{membership: m}
-	http.HandleFunc("/account/init", acct.create)
+	http.Handle("/account/init", middleware.Chain(http.HandlerFunc(acct.create), stdPub...))
 	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
 	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))
 
@@ -235,7 +242,7 @@ func Start(dbHost, port string) {
 	}()
 
 	httpsvr := &http.Server{
-		Addr: ":" + port,
+		Addr: ":" + c.Port,
 	}
 
 	g, gCtx := errgroup.WithContext(ctx)
@@ -260,7 +267,7 @@ func initServices(dbHost string) {
 		volatile = cache.NewCache()
 	}
 
-	persister := os.Getenv("DATA_STORE")
+	persister := config.Current.DataStore
 	if strings.EqualFold(dbHost, "mem") {
 		datastore = memory.New(volatile.PublishDocument)
 	} else if strings.EqualFold(persister, "mongo") {
@@ -278,14 +285,14 @@ func initServices(dbHost string) {
 		datastore = postgresql.New(cl, volatile.PublishDocument, "./sql/")
 	}
 
-	mp := os.Getenv("MAIL_PROVIDER")
+	mp := config.Current.MailProvider
 	if strings.EqualFold(mp, internal.MailProviderSES) {
 		emailer = email.AWSSES{}
 	} else {
 		emailer = email.Dev{}
 	}
 
-	sp := os.Getenv("STORAGE_PROVIDER")
+	sp := config.Current.StorageProvider
 	if strings.EqualFold(sp, internal.StorageProviderS3) {
 		storer = storage.S3{}
 	} else {

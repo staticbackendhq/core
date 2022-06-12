@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/staticbackendhq/core/config"
 )
 
 type BaseConfig struct {
@@ -85,7 +86,7 @@ func (msg Command) IsDBEvent() bool {
 }
 
 func CleanCollectionName(col string) string {
-	if strings.EqualFold(os.Getenv("KEEP_PERM_COL_NAME"), "yes") {
+	if strings.EqualFold(config.Current.KeepPermissionInName, "yes") {
 		return col
 	}
 

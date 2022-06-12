@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/webhook"
@@ -28,7 +29,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
+	endpointSecret := config.Current.StripeWebhookSecret
 
 	// Verify webhook signature and extract the event.
 	// See https://stripe.com/docs/webhooks/signatures for more information.
@@ -137,13 +138,13 @@ func (wh *stripeWebhook) handlePaymentMethodAttached(pm stripe.PaymentMethod) {
 
 func (wh *stripeWebhook) priceToLevel(priceID string) int {
 	switch priceID {
-	case os.Getenv("STRIPE_PRICEID_IDEA"):
+	case config.Current.StripePriceIDIdea:
 		return internal.PlanIdea
-	case os.Getenv("STRIPE_PRICEID_LAUNCH"):
+	case config.Current.StripePriceIDLaunch:
 		return internal.PleanLaunch
-	case os.Getenv("STRIPE_PRICEID_TRACTION"):
+	case config.Current.StripePriceIDTraction:
 		return internal.PlanTraction
-	case os.Getenv("STRIPE_PRICEID_GROWTH"):
+	case config.Current.StripePriceIDGrowth:
 		return internal.PlanGrowth
 	default:
 		return internal.PlanIdea

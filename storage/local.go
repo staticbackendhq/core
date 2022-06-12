@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 )
 
@@ -27,7 +28,7 @@ func (Local) Save(data internal.UploadFileData) (string, error) {
 		return "", err
 	}
 
-	url := fmt.Sprintf("%s/tmp/%s", os.Getenv("LOCAL_STORAGE_URL"), data.FileKey)
+	url := fmt.Sprintf("%s/tmp/%s", config.Current.LocalStorageURL, data.FileKey)
 	return url, nil
 }
 

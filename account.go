@@ -5,10 +5,10 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/staticbackendhq/core/config"
 	emailFuncs "github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	FromEmail   = os.Getenv("FROM_EMAIL")
-	FromName    = os.Getenv("FROM_NAME")
+	FromEmail   = config.Current.FromEmail
+	FromName    = config.Current.FromName
 	letterRunes = []rune("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2345679")
 )
 
@@ -72,7 +72,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	stripeCustomerID, subID := "", ""
 	active := true
 
-	if AppEnv == AppEnvProd && len(os.Getenv("STRIPE_KEY")) > 0 {
+	if AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
 		active = false
 
 		cusParams := &stripe.CustomerParams{
@@ -90,7 +90,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 			Customer: stripe.String(cus.ID),
 			Items: []*stripe.SubscriptionItemsParams{
 				{
-					Price: stripe.String(os.Getenv("STRIPE_PRICEID_IDEA")),
+					Price: stripe.String(config.Current.StripePriceIDIdea),
 				},
 			},
 			TrialPeriodDays: stripe.Int64(60),
@@ -168,7 +168,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	signUpURL := "no need to sign up in dev mode"
-	if AppEnv == AppEnvProd && len(os.Getenv("STRIPE_KEY")) > 0 {
+	if AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
 		params := &stripe.BillingPortalSessionParams{
 			Customer:  stripe.String(stripeCustomerID),
 			ReturnURL: stripe.String("https://staticbackend.com/stripe"),

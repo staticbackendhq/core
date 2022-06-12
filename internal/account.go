@@ -59,7 +59,8 @@ type Login struct {
 }
 
 const (
-	PlanIdea = iota
+	PlanFree = iota
+	PlanIdea
 	PleanLaunch
 	PlanTraction
 	PlanGrowth

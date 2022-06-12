@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 
 	"github.com/go-redis/redis/v8"
@@ -23,15 +23,15 @@ func NewCache() *Cache {
 	var err error
 	var opt *redis.Options
 
-	if uri := os.Getenv("REDIS_URL"); len(uri) > 0 {
+	if uri := config.Current.RedisURL; len(uri) > 0 {
 		opt, err = redis.ParseURL(uri)
 		if err != nil {
 			log.Fatal("invalid REDIS_URL value: ", err)
 		}
 	} else {
 		opt = &redis.Options{
-			Addr:     os.Getenv("REDIS_HOST"),
-			Password: os.Getenv("REDIS_PASSWORD"),
+			Addr:     config.Current.RedisHost,
+			Password: config.Current.RedisPassword,
 			DB:       0, // use default DB
 		}
 	}
