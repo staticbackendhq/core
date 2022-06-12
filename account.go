@@ -20,8 +20,6 @@ import (
 )
 
 var (
-	FromEmail   = config.Current.FromEmail
-	FromName    = config.Current.FromName
 	letterRunes = []rune("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2345679")
 )
 
@@ -210,8 +208,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	`, bc.ID, email, pw, rootToken)
 
 	ed := internal.SendMailData{
-		From:     FromEmail,
-		FromName: FromName,
+		From:     config.Current.FromEmail,
+		FromName: config.Current.FromName,
 		To:       email,
 		ToName:   "",
 		Subject:  "Your StaticBackend account",
