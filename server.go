@@ -45,7 +45,6 @@ var (
 	volatile  internal.Volatilizer
 	emailer   internal.Mailer
 	storer    internal.Storer
-	AppEnv    = config.Current.AppEnv
 )
 
 // Start starts the web server and all dependencies services
