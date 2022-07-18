@@ -13,7 +13,7 @@ import (
 
 type BaseConfig struct {
 	ID               string    `json:"id"`
-	CustomerID       string    `json:"-"`
+	CustomerID       string    `json:"customerId"`
 	Name             string    `json:"name"`
 	AllowedDomain    []string  `json:"whitelist"`
 	IsActive         bool      `json:"-"`

@@ -77,6 +77,71 @@ func (ui) auth(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ui/db", http.StatusSeeOther)
 }
 
+func (ui) logins(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	cus, err := datastore.FindAccount(conf.CustomerID)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	logins, err := cus.GetExternalLogins()
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	render(w, r, "logins.html", logins, nil)
+}
+
+func (ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	cus, err := datastore.FindAccount(conf.CustomerID)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	r.ParseForm()
+	provider := r.Form.Get("provider")
+	apikey := r.Form.Get("apikey")
+	secret := r.Form.Get("apisecret")
+
+	logins, err := cus.GetExternalLogins()
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	keys, ok := logins[provider]
+	if !ok {
+		keys = internal.OAuthConfig{}
+	}
+
+	keys.ConsumerKey = apikey
+	keys.ConsumerSecret = secret
+
+	logins[provider] = keys
+
+	if err := datastore.EnableExternalLogin(cus.ID, logins); err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	flash := &Flash{Type: "success", Message: "OAuth provider successfully added"}
+	render(w, r, "logins.html", logins, flash)
+}
+
 func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, false)
 	if err != nil {
@@ -102,7 +167,8 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(names) == 0 {
-		render(w, r, "db_cols.html", names, nil)
+		render(w, r, "db_cols.html", data, nil)
+		return
 	}
 
 	col := names[0]
@@ -143,17 +209,19 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var list internal.PagedResult
-	if len(filter) == 0 {
-		list, err = datastore.ListDocuments(auth, conf.Name, col, params)
-		if err != nil {
-			renderErr(w, r, err)
-			return
-		}
-	} else {
-		list, err = datastore.QueryDocuments(auth, conf.Name, col, filter, params)
-		if err != nil {
-			renderErr(w, r, err)
-			return
+	if !strings.HasPrefix(col, "sb_") {
+		if len(filter) == 0 {
+			list, err = datastore.ListDocuments(auth, conf.Name, col, params)
+			if err != nil {
+				renderErr(w, r, err)
+				return
+			}
+		} else {
+			list, err = datastore.QueryDocuments(auth, conf.Name, col, filter, params)
+			if err != nil {
+				renderErr(w, r, err)
+				return
+			}
 		}
 	}
 

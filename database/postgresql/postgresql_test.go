@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/spf13/afero"
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 )
 
@@ -35,6 +36,8 @@ func fakePubDocEvent(channel, typ string, v interface{}) {
 }
 
 func TestMain(m *testing.M) {
+	config.Current = config.LoadConfig()
+
 	migrationPath = "./sql/"
 	appFS = afero.NewMemMapFs()
 
@@ -51,6 +54,12 @@ func TestMain(m *testing.M) {
 	datastore = &PostgreSQL{DB: dbConn, PublishDocument: fakePubDocEvent}
 
 	if err := datastore.Ping(); err != nil {
+		log.Fatal(err)
+	}
+
+	// delete "sb" schema if exists
+	_, err = dbConn.Exec("DROP SCHEMA IF EXISTS sb CASCADE;")
+	if err != nil {
 		log.Fatal(err)
 	}
 

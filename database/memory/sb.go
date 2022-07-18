@@ -130,6 +130,21 @@ func (m *Memory) ChangeCustomerPlan(customerID string, plan int) error {
 	return create(m, "sb", "customers", customerID, cus)
 }
 
+func (m *Memory) EnableExternalLogin(customerID string, config map[string]internal.OAuthConfig) error {
+	b, err := internal.EncryptExternalLogins(config)
+	if err != nil {
+		return err
+	}
+
+	cus, err := m.FindAccount(customerID)
+	if err != nil {
+		return err
+	}
+
+	cus.ExternalLogins = b
+	return create(m, "sb", "customers", customerID, cus)
+}
+
 func (m *Memory) DeleteCustomer(dbName, email string) error {
 	return nil
 }

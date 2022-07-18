@@ -250,6 +250,18 @@ func (pg *PostgreSQL) ChangeCustomerPlan(customerID string, plan int) error {
 	return nil
 }
 
+func (pg *PostgreSQL) EnableExternalLogin(customerID string, config map[string]internal.OAuthConfig) error {
+	b, err := internal.EncryptExternalLogins(config)
+	if err != nil {
+		return err
+	}
+
+	if _, err := pg.DB.Exec(`UPDATE sb.customers SET external_logins = $2 WHERE id = $1`, customerID, b); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (pg *PostgreSQL) NewID() string {
 	var id string
 	if err := pg.DB.QueryRow(`SELECT uuid_generate_v4 ()`).Scan(&id); err != nil {
@@ -282,6 +294,7 @@ func scanCustomer(rows Scanner, c *internal.Customer) error {
 		&c.IsActive,
 		&c.Created,
 		&c.Plan,
+		&c.ExternalLogins,
 	)
 }
 

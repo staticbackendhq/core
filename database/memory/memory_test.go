@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 )
 
@@ -30,6 +31,8 @@ func fakePubDocEvent(channel, typ string, v interface{}) {
 }
 
 func TestMain(m *testing.M) {
+	config.Current = config.LoadConfig()
+
 	db := make(map[string]map[string][]byte)
 	if err := initDB(db); err != nil {
 		log.Fatal(err)

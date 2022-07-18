@@ -142,6 +142,11 @@ func Start(c config.AppConfig) {
 	http.Handle("/password/reset", middleware.Chain(http.HandlerFunc(m.resetPassword), pubWithDB...))
 	//http.Handle("/setrole", chain(http.HandlerFunc(setRole), withDB))
 
+	// oauth handlers
+	el := &ExternalLogins{}
+	http.Handle("/oauth/login", middleware.Chain(el.login(), pubWithDB...))
+	http.Handle("/oauth/callback/", middleware.Chain(el.callback(), pubWithDB...))
+
 	http.Handle("/sudogettoken/", middleware.Chain(http.HandlerFunc(m.sudoGetTokenFromAccountID), stdRoot...))
 
 	// database routes
@@ -215,6 +220,8 @@ func Start(c config.AppConfig) {
 	// ui routes
 	webUI := ui{}
 	http.HandleFunc("/ui/login", webUI.auth)
+	http.Handle("/ui/logins", middleware.Chain(http.HandlerFunc(webUI.logins), stdRoot...))
+	http.Handle("/ui/enable-login", middleware.Chain(http.HandlerFunc(webUI.enableExternalLogin), stdRoot...))
 	http.Handle("/ui/db", middleware.Chain(http.HandlerFunc(webUI.dbCols), stdRoot...))
 	http.Handle("/ui/db/save", middleware.Chain(http.HandlerFunc(webUI.dbSave), stdRoot...))
 	http.Handle("/ui/db/del/", middleware.Chain(http.HandlerFunc(webUI.dbDel), stdRoot...))

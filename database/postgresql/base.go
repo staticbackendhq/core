@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
@@ -293,7 +294,7 @@ func (pg *PostgreSQL) DeleteDocument(auth internal.Auth, dbName, col, id string)
 func (pg *PostgreSQL) ListCollections(dbName string) (results []string, err error) {
 	qry := fmt.Sprintf(`
 		SELECT table_name FROM information_schema.tables WHERE table_schema='%s'
-	`, dbName)
+	`, strings.ToLower(dbName))
 
 	rows, err := pg.DB.Query(qry)
 	if err != nil {

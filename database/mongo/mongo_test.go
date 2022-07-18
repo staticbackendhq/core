@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -33,6 +34,8 @@ func fakePubDocEvent(channel, typ string, v interface{}) {
 }
 
 func TestMain(m *testing.M) {
+	config.Current = config.LoadConfig()
+
 	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 	cl, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {

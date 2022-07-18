@@ -113,3 +113,24 @@ func TestNewID(t *testing.T) {
 		t.Errorf("expected id to be different got 1: %s 2: %s", id1, id2)
 	}
 }
+
+func TestEnableExternalLogins(t *testing.T) {
+	m := make(map[string]internal.OAuthConfig)
+	m["twitter"] = internal.OAuthConfig{ConsumerKey: "key", ConsumerSecret: "secret"}
+
+	if err := datastore.EnableExternalLogin(dbTest.CustomerID, m); err != nil {
+		t.Fatal(err)
+	}
+
+	cus, err := datastore.FindAccount(dbTest.CustomerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decrypted, err := cus.GetExternalLogins()
+	if err != nil {
+		t.Fatal(err)
+	} else if decrypted["twitter"] != m["twitter"] {
+		t.Errorf("expected 'key' and 'secret' got %v", decrypted["twitter"])
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -95,6 +96,7 @@ func renderErr(w http.ResponseWriter, r *http.Request, err error) {
 	if err != nil {
 		//TODO: log this
 		log.Println("err in ui", err)
+		debug.PrintStack()
 	}
 	render(w, r, "err.html", nil, nil)
 }

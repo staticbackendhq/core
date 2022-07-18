@@ -14,6 +14,7 @@ type LocalCustomer struct {
 	StripeID       string             `bson:"stripeId" json:"stripeId"`
 	SubscriptionID string             `bson:"subId" json:"subId"`
 	Plan           int                `bson:"plan" json:"plan"`
+	ExternalLogins []byte             `bson:"et" json:"-"`
 	IsActive       bool               `bson:"active" json:"-"`
 	Created        time.Time          `bson:"created" json:"created"`
 }
@@ -24,6 +25,7 @@ func toLocalCustomer(c internal.Customer) LocalCustomer {
 		StripeID:       c.StripeID,
 		SubscriptionID: c.SubscriptionID,
 		Plan:           c.Plan,
+		ExternalLogins: c.ExternalLogins,
 		IsActive:       c.IsActive,
 		Created:        c.Created,
 	}
@@ -36,6 +38,7 @@ func fromLocalCustomer(c LocalCustomer) internal.Customer {
 		StripeID:       c.StripeID,
 		SubscriptionID: c.SubscriptionID,
 		Plan:           c.Plan,
+		ExternalLogins: c.ExternalLogins,
 		IsActive:       c.IsActive,
 		Created:        c.Created,
 	}
@@ -240,6 +243,29 @@ func (mg *Mongo) ChangeCustomerPlan(customerID string, plan int) error {
 
 	filter := bson.M{FieldID: oid}
 	update := bson.M{"$set": bson.M{"plan": plan}}
+
+	res := db.Collection("accounts").FindOneAndUpdate(mg.Ctx, filter, update)
+	if err := res.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (mg *Mongo) EnableExternalLogin(customerID string, config map[string]internal.OAuthConfig) error {
+	b, err := internal.EncryptExternalLogins(config)
+	if err != nil {
+		return err
+	}
+
+	db := mg.Client.Database("sbsys")
+
+	oid, err := primitive.ObjectIDFromHex(customerID)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{FieldID: oid}
+	update := bson.M{"$set": bson.M{"et": b}}
 
 	res := db.Collection("accounts").FindOneAndUpdate(mg.Ctx, filter, update)
 	if err := res.Err(); err != nil {
