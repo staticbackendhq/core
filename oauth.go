@@ -1,7 +1,7 @@
 package staticbackend
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,11 +9,16 @@ import (
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 
-	"golang.org/x/oauth2"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/providers/facebook"
+	"github.com/markbates/goth/providers/google"
+	"github.com/markbates/goth/providers/twitter"
 )
 
 const (
-	OAuthProviderTwitter = "twitter"
+	OAuthProviderTwitter  = "twitter"
+	OAuthProviderFacebook = "facebook"
+	OAuthProviderGoogle   = "google"
 )
 
 type ExternalLogins struct {
@@ -54,16 +59,31 @@ func (el *ExternalLogins) login() http.Handler {
 			return
 		}
 
-		oauthConf, err := el.getOauthConfByProvider(provider, reqID, info)
+		p, err := el.getProvider(conf.ID, provider, reqID, info)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			uri := oauthConf.AuthCodeURL(reqID)
-			fmt.Println("DEBUG: redirecting to twitter: ", uri)
-			http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
+			sess, err := p.BeginAuth(reqID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			url, err := sess.GetAuthURL()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if err := volatile.SetTyped(reqID+"_session", sess.Marshal()); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 		})
 
 		next.ServeHTTP(w, r)
@@ -72,8 +92,8 @@ func (el *ExternalLogins) login() http.Handler {
 
 func (el *ExternalLogins) callback() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		provider := getURLPart(r.URL.Path, 3)
-		reqID := getURLPart(r.URL.Path, 4)
+		provider := r.URL.Query().Get("provider")
+		reqID := r.URL.Query().Get("reqid")
 
 		var conf internal.BaseConfig
 		if err := volatile.GetTyped("oauth_"+reqID, &conf); err != nil {
@@ -94,22 +114,62 @@ func (el *ExternalLogins) callback() http.Handler {
 			return
 		}
 
-		oauthConf, err := el.getOauthConfByProvider(provider, reqID, info)
+		p, err := el.getProvider(conf.ID, provider, reqID, info)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			code := r.URL.Query().Get("code")
+		var value string
+		if err := volatile.GetTyped(reqID+"_session", &value); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-			token, err := oauthConf.Exchange(context.Background(), code)
+		sess, err := p.UnmarshalSession(value)
+		if err := volatile.GetTyped(reqID+"_session", &value); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			params := r.URL.Query()
+			if params.Encode() == "" && r.Method == "POST" {
+				r.ParseForm()
+				params = r.Form
+			}
+
+			// get new token and retry fetch
+			_, err = sess.Authorize(p, params)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			fmt.Println(token)
+			//TODO: should we store this in cache?
+
+			user, err := p.FetchUser(sess)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			sessionToken, err := el.registerOrLogin(conf.Name, provider, user.Email, user.AccessToken)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if err := volatile.Set("token_"+reqID, sessionToken); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// TODO: Could be nice to pass as much properties from the goth.User (user variable)
+			// via either an event or a cache value that the caller receives or
+			// request to grab for instance user's name, avatar etc.
+
+			render(w, r, "oauth.html", nil, nil)
 		})
 
 		next.ServeHTTP(w, r)
@@ -177,21 +237,28 @@ func (el *ExternalLogins) signUp(dbName, provider, email, accessToken string) (s
 	return
 }
 
-func (el *ExternalLogins) getOauthConfByProvider(provider, reqID string, info internal.OAuthConfig) (c *oauth2.Config, err error) {
-	callbackURL := fmt.Sprintf("http://127.0.0.1/oauth/%s/%s", provider, reqID)
+func (el *ExternalLogins) getProvider(dbID, provider, reqID string, info internal.OAuthConfig) (p goth.Provider, err error) {
+	callbackURL := fmt.Sprintf(
+		"http://localhost:8099/oauth/callback?provider=%s&reqid=%s&sbpk=%s",
+		provider,
+		reqID,
+		dbID,
+	)
 
 	if provider == OAuthProviderTwitter {
-		c = &oauth2.Config{
-			ClientID:     info.ConsumerKey,
-			ClientSecret: info.ConsumerSecret,
-			Endpoint: oauth2.Endpoint{
-				AuthURL:  "https://api.twitter.com/oauth/request_token",
-				TokenURL: "https://api.twitter.com/oauth/access_token",
-			},
-			RedirectURL: callbackURL,
-		}
-	} else {
-		err = fmt.Errorf("cannot find keys for provider %s", provider)
+		return twitter.New(info.ConsumerKey, info.ConsumerSecret, callbackURL), nil
+	} else if provider == OAuthProviderFacebook {
+		return facebook.New(info.ConsumerKey, info.ConsumerSecret, callbackURL), nil
+	} else if provider == OAuthProviderGoogle {
+		return google.New(info.ConsumerKey, info.ConsumerSecret, callbackURL), nil
 	}
-	return
+	return twitter.New("", "", ""), errors.New("invalid auth provider")
+}
+
+func (*ExternalLogins) getState(r *http.Request) string {
+	params := r.URL.Query()
+	if params.Encode() == "" && r.Method == http.MethodPost {
+		return r.FormValue("state")
+	}
+	return params.Get("state")
 }
