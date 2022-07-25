@@ -1,4 +1,5 @@
 APP_ENV=dev
+APP_SECRET=a-very-long-key-should-be-32long
 DATABASE_URL=mongodb://localhost:27017
 DATA_STORE=mongo
 JWT_SECRET=changeMe
