@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -46,6 +47,10 @@ var (
 	emailer   internal.Mailer
 	storer    internal.Storer
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 // Start starts the web server and all dependencies services
 func Start(c config.AppConfig) {
