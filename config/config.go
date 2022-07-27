@@ -12,6 +12,8 @@ type AppConfig struct {
 	AppEnv string
 	// AppSecre used for encryption/decryption
 	AppSecret string
+	// AppURL is the full URL of the backend (important for social logins callbacks)
+	AppURL string
 	// FromCLI if we're running in the CLI
 	FromCLI string
 
@@ -77,6 +79,7 @@ func LoadConfig() AppConfig {
 		Port:                  os.Getenv("PORT"),
 		AppEnv:                os.Getenv("APP_ENV"),
 		AppSecret:             os.Getenv("APP_SECRET"),
+		AppURL:                os.Getenv("APP_URL"),
 		FromCLI:               os.Getenv("SB_FROM_CLI"),
 		DataStore:             os.Getenv("DATA_STORE"),
 		DatabaseURL:           os.Getenv("DATABASE_URL"),

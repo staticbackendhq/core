@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 
@@ -23,6 +24,15 @@ const (
 
 type ExternalLogins struct {
 	membership *membership
+}
+
+type ExternalUser struct {
+	Token     string `json:"token"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	FirstName string `json:"first"`
+	LastName  string `json:"last"`
+	AvatarURL string `json:"avatarUrl"`
 }
 
 func (el *ExternalLogins) login() http.Handler {
@@ -146,28 +156,32 @@ func (el *ExternalLogins) callback() http.Handler {
 				return
 			}
 
-			//TODO: should we store this in cache?
-
 			user, err := p.FetchUser(sess)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			sessionToken, err := el.registerOrLogin(conf.Name, provider, user.Email, user.AccessToken)
+			accessTokens := fmt.Sprintf("%s|%s", user.AccessToken, user.AccessTokenSecret)
+			sessionToken, err := el.registerOrLogin(conf.Name, provider, user.Email, accessTokens)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			if err := volatile.Set("token_"+reqID, sessionToken); err != nil {
+			extuser := ExternalUser{
+				Token:     sessionToken,
+				Email:     user.Email,
+				Name:      user.Name,
+				FirstName: user.FirstName,
+				LastName:  user.LastName,
+				AvatarURL: user.AvatarURL,
+			}
+
+			if err := volatile.SetTyped("extuser_"+reqID, extuser); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
-			// TODO: Could be nice to pass as much properties from the goth.User (user variable)
-			// via either an event or a cache value that the caller receives or
-			// request to grab for instance user's name, avatar etc.
 
 			render(w, r, "oauth.html", nil, nil)
 		})
@@ -176,21 +190,16 @@ func (el *ExternalLogins) callback() http.Handler {
 	})
 }
 
-func (el *ExternalLogins) twitter(dbName, provider, reqID string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sessionToken, err := el.registerOrLogin(dbName, provider, "todo", "todo")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+func (*ExternalLogins) getUser(w http.ResponseWriter, r *http.Request) {
+	reqID := r.URL.Query().Get("reqid")
 
-		if err := volatile.Set("token_"+reqID, sessionToken); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	var extuser ExternalUser
+	if err := volatile.GetTyped("extuser_"+reqID, &extuser); err != nil {
+		respond(w, http.StatusNotFound, err)
+		return
+	}
 
-		render(w, r, "oauth.html", nil, nil)
-	})
+	respond(w, http.StatusOK, extuser)
 }
 
 func (el *ExternalLogins) registerOrLogin(dbName, provider, email, accessToken string) (sessionToken string, err error) {
@@ -239,7 +248,8 @@ func (el *ExternalLogins) signUp(dbName, provider, email, accessToken string) (s
 
 func (el *ExternalLogins) getProvider(dbID, provider, reqID string, info internal.OAuthConfig) (p goth.Provider, err error) {
 	callbackURL := fmt.Sprintf(
-		"http://localhost:8099/oauth/callback?provider=%s&reqid=%s&sbpk=%s",
+		"%s/oauth/callback?provider=%s&reqid=%s&sbpk=%s",
+		config.Current.AppURL,
 		provider,
 		reqID,
 		dbID,

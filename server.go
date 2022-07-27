@@ -146,6 +146,7 @@ func Start(c config.AppConfig) {
 	el := &ExternalLogins{}
 	http.Handle("/oauth/login", middleware.Chain(el.login(), pubWithDB...))
 	http.Handle("/oauth/callback/", middleware.Chain(el.callback(), pubWithDB...))
+	http.Handle("/oauth/get-user", middleware.Chain(http.HandlerFunc(el.getUser), pubWithDB...))
 
 	http.Handle("/sudogettoken/", middleware.Chain(http.HandlerFunc(m.sudoGetTokenFromAccountID), stdRoot...))
 
