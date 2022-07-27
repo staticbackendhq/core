@@ -160,10 +160,20 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		Query          string
 	})
 
-	names, err := datastore.ListCollections(conf.Name)
+	allNames, err := datastore.ListCollections(conf.Name)
 	if err != nil {
 		renderErr(w, r, err)
 		return
+	}
+
+	// we remove the "system" collection
+	var names []string
+	for _, name := range allNames {
+		if strings.HasPrefix(name, "sb_") {
+			continue
+		}
+
+		names = append(names, name)
 	}
 
 	if len(names) == 0 {
