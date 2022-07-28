@@ -17,7 +17,7 @@ user management, database, file storage, forms, real-time experiences via
 channel/topic-based communication, and server-side functions for web and mobile 
 applications.
 
-You can think of it as a lightweight Firebase replacement you may self-host. No 
+You can think of it as a lightweight Firebase replacement you may self-host. Less 
 vendor lock-in, and your data stays in your control.
 
 ### Table of content
@@ -30,8 +30,7 @@ vendor lock-in, and your data stays in your control.
 * [Examples](#examples)
 * [Deploying in production](#deploying-in-production)
 * [Feedback & contributing](#feedback--contributing)
-* [Open source, sponsors, paid SaaS](#open-source-sponsors-paid-saas)
-* [Spread the words](#spread-the-words)
+* [help](#help)
 
 
 ## What can you build
@@ -43,6 +42,8 @@ a good fit.
 
 I'm personally using it to build SaaS:
 
+Abandoned projects:
+
 * [Vivid - Automatic video clips for podcasts](https://vivid.fm)
 * [Tangara - one page checkout for creators](https://tangara.io)
 
@@ -50,7 +51,7 @@ It can be used from client-side and/or server-side.
 
 ## How it works / dev workflow
 
-The main idea is that StaticBackend is your backend API for your frontend apps. 
+The main idea is that StaticBackend is your backend API for your applications. 
 A performant free and open-source self-hosted Firebase alternative.
 
 _Note that it can also be used from your backend code as well._
@@ -195,13 +196,13 @@ Please help us improve if you have any feedback.
 
 * [Introduction and authentication](https://staticbackend.com/docs/)
 * [User management](https://staticbackend.com/docs/users/)
+* [Social logins (beta)](https://staticbackend.com/docs/social-logins/)
 * [Database](https://staticbackend.com/docs/database/)
 * [Real-time communication](https://staticbackend.com/docs/websocket/)
 * [File storage](https://staticbackend.com/docs/storage/)
 * [Server-side functions](https://staticbackend.com/docs/functions/)
 * [Send emails](https://staticbackend.com/docs/sendmail/)
 * [Caching](https://staticbackend.com/docs/cache/)
-* 
 * [Forms](https://staticbackend.com/docs/forms/)
 * [Root token](https://staticbackend.com/docs/root-token/)
 
@@ -251,27 +252,14 @@ Here are videos made specifically for people wanting to contribute:
 
 * [Intro, setup, running tests, project structure](https://youtu.be/uTj7UEbg0p4)
 
+Check the [contributing file](CONTRIBUTING.md) for details.
 
-## Open source, sponsors, paid SaaS
 
-You may read here 
-[why we've decided to open source StaticBackend](https://staticbackend.com/blog/open-source-backend-as-a-service/).
+## Help
 
-Hopefully we can start getting sponsorship so the open source version development 
-and future is secure.
+If you're looking to help the project, here are some ways:
 
-We're also offering paid subscription for a 
-[fully managed](https://staticbackend.com/blog/open-source-backend-as-a-service/) 
-version of SB.
-
-## Spread the words
-
-It would means the world to us if you could help us spread the words about 
-StaticBackend. A tweet, a blog post, any visibility is helpful and I (Dominic) 
-personally thanks you for this.
-
-I've failed at getting any kind of traction with StaticBackend on its closed 
-source form. I think developer tools like this need to be open source.
-
-I believe in the product, it solves a pain I have for so long, but I'm hoping 
-others will also get value out of it and will be excited about the project.
+* Use it and share your experiences.
+* Sponsor the development via GitHub sponsors.
+* Spread the words, a tweet, a blog post, any mention is helpful.
+* Join the Discord server.
