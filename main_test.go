@@ -36,6 +36,7 @@ var (
 	userToken  string
 	rootToken  string
 
+	mship    *membership
 	database *Database
 )
 
@@ -63,6 +64,8 @@ func TestMain(m *testing.M) {
 	}
 
 	database = &Database{cache: volatile}
+
+	mship = &membership{volatile: volatile}
 
 	mp := config.Current.MailProvider
 	if strings.EqualFold(mp, internal.MailProviderSES) {
@@ -118,8 +121,7 @@ func deleteAndSetupTestAccount() {
 
 	pubKey = base.ID
 
-	m := &membership{volatile: volatile}
-	token, dbToken, err := m.createAccountAndUser(dbName, admEmail, password, 100)
+	token, dbToken, err := mship.createAccountAndUser(dbName, admEmail, password, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -128,7 +130,7 @@ func deleteAndSetupTestAccount() {
 
 	rootToken = fmt.Sprintf("%s|%s|%s", dbToken.ID, dbToken.AccountID, dbToken.Token)
 
-	token, _, err = m.createUser(dbName, dbToken.AccountID, userEmail, userPassword, 0)
+	token, _, err = mship.createUser(dbName, dbToken.AccountID, userEmail, userPassword, 0)
 	if err != nil {
 		log.Fatal(err)
 	}

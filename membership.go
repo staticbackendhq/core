@@ -401,3 +401,13 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 
 	respond(w, http.StatusOK, string(jwtBytes))
 }
+
+func (m *membership) me(w http.ResponseWriter, r *http.Request) {
+	_, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	respond(w, http.StatusOK, auth)
+}

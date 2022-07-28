@@ -18,12 +18,12 @@ import (
 
 // Auth represents an authenticated user.
 type Auth struct {
-	AccountID string
-	UserID    string
-	Email     string
-	Role      int
-	Token     string
-	Plan      int
+	AccountID string `json:"accountId"`
+	UserID    string `json:"userId"`
+	Email     string `json:"email"`
+	Role      int    `json:"role"`
+	Token     string `json:"-"`
+	Plan      int    `json:"-"`
 }
 
 func (auth Auth) ReconstructToken() string {
