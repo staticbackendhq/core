@@ -247,6 +247,8 @@ Refer to the documentation at https://staticbackend.com/docs\n
 		}
 	}
 
+	fmt.Println("DEBUG: ", signUpURL)
+
 	if fromCLI {
 		respond(w, http.StatusOK, signUpURL)
 		return
@@ -277,10 +279,19 @@ func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cus, err := datastore.FindAccount(conf.CustomerID)
+	url, err := getStripePortalURL(conf.CustomerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	respond(w, http.StatusOK, url)
+}
+
+func getStripePortalURL(customerID string) (string, error) {
+	cus, err := datastore.FindAccount(customerID)
+	if err != nil {
+		return "", err
 	}
 
 	params := &stripe.BillingPortalSessionParams{
@@ -289,11 +300,10 @@ func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 	}
 	s, err := session.New(params)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return "", err
 	}
 
-	respond(w, http.StatusOK, s.URL)
+	return s.URL, nil
 }
 
 func randStringRunes(n int) string {

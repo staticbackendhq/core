@@ -2,12 +2,15 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/staticbackendhq/core/internal"
 )
 
-func WithDB(datastore internal.Persister, volatile internal.PubSuber) Middleware {
+type BillingPortalGetter func(customerID string) (string, error)
+
+func WithDB(datastore internal.Persister, volatile internal.PubSuber, g BillingPortalGetter) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("SB-PUBLIC-KEY")
@@ -42,7 +45,18 @@ func WithDB(datastore internal.Persister, volatile internal.PubSuber) Middleware
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				} else if !conf.IsActive {
-					http.Error(w, "your account is not inactive. Please contact us support@staticbackend.com", http.StatusUnauthorized)
+					url, err := g(conf.CustomerID)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+
+					msg := fmt.Sprintf(
+						"your account is inactive.\n\nActive here: %s\n\nContact us here: support@staticbackend.com",
+						url,
+					)
+
+					http.Error(w, msg, http.StatusUnauthorized)
 					return
 				}
 

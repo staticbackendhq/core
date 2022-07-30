@@ -124,17 +124,17 @@ func Start(c config.AppConfig) {
 
 	pubWithDB := []middleware.Middleware{
 		middleware.Cors(),
-		middleware.WithDB(datastore, volatile),
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
 	}
 
 	stdAuth := []middleware.Middleware{
 		middleware.Cors(),
-		middleware.WithDB(datastore, volatile),
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireAuth(datastore, volatile),
 	}
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile),
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireRoot(datastore),
 	}
 

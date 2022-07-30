@@ -58,7 +58,7 @@ func TestUploadAndResizeImage(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", adminToken))
 
 	stdAuth := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile),
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireAuth(datastore, volatile),
 	}
 

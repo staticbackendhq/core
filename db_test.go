@@ -62,12 +62,12 @@ func dbReq(t *testing.T, hf func(http.ResponseWriter, *http.Request), method, pa
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tok))
 
 	stdAuth := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile),
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireAuth(datastore, volatile),
 	}
 	if params[0] {
 		stdAuth = []middleware.Middleware{
-			middleware.WithDB(datastore, volatile),
+			middleware.WithDB(datastore, volatile, getStripePortalURL),
 			middleware.RequireRoot(datastore),
 		}
 	}
@@ -152,7 +152,7 @@ func TestDBListCollections(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile),
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireRoot(datastore),
 	}
 	h := middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...)
@@ -233,7 +233,7 @@ func TestDBCreateIndex(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile),
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireRoot(datastore),
 	}
 	h := middleware.Chain(http.HandlerFunc(database.index), stdRoot...)
