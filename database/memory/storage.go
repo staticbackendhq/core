@@ -32,3 +32,16 @@ func (m *Memory) DeleteFile(dbName, fileID string) error {
 	m.DB[key] = files
 	return nil
 }
+
+func (m *Memory) ListAllFiles(dbName, accountID string) (results []internal.File, err error) {
+	files, err := all[internal.File](m, dbName, "sb_files")
+	if err != nil {
+		return
+	}
+
+	results = filter(files, func(x internal.File) bool {
+		return x.AccountID == accountID
+	})
+
+	return
+}
