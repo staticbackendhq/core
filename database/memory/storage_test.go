@@ -16,9 +16,29 @@ func TestFileStorage(t *testing.T) {
 		Uploaded:  time.Now(),
 	}
 
+	f1 := internal.File{
+		AccountID: adminAccount.ID,
+		Key:       "key1",
+		URL:       "https://test1",
+		Size:      123456,
+		Uploaded:  time.Now(),
+	}
+
 	id, err := datastore.AddFile(confDBName, f)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	_, err = datastore.AddFile(confDBName, f1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	list, err := datastore.ListAllFiles(confDBName, f.AccountID)
+	if err != nil {
+		t.Fatal(err)
+	} else if len(list) > 2 || len(list) < 2 {
+		t.Errorf("expected list length to be 2 got %d", len(list))
 	}
 
 	f2, err := datastore.GetFileByID(confDBName, id)
