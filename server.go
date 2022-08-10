@@ -224,6 +224,14 @@ func Start(c config.AppConfig) {
 	http.Handle("/extra/sms", middleware.Chain(http.HandlerFunc(ex.sudoSendSMS), stdRoot...))
 	http.Handle("/extra/htmltox", middleware.Chain(http.HandlerFunc(ex.htmlToX), stdAuth...))
 
+	// local storage file serving
+	// only available in dev mode since it's serving /tmp
+	// where the local storage provider serve files
+	if config.Current.AppEnv == AppEnvDev {
+		fs := http.FileServer(http.Dir(os.TempDir()))
+		http.Handle("/localfs/", http.StripPrefix("/localfs/", fs))
+	}
+
 	// ui routes
 	webUI := ui{}
 	http.HandleFunc("/ui/login", webUI.auth)

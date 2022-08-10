@@ -20,7 +20,7 @@ alltest:
 	@go test --race --cover ./...
 
 thistest:
-	@JWT_SECRET=okdevmode go test -run "$2" --race --cover
+	go test -run $(TESTNAME) --cover ./...
 
 test-core:
 	@go test --race --cover

@@ -21,4 +21,6 @@ func TestLocalSave(t *testing.T) {
 	} else if !strings.Contains(url, "/unit/test/file.txt") {
 		fmt.Errorf("expected ~/tmp/unit/test/file.txt got %s", url)
 	}
+
+	fmt.Println(url)
 }
