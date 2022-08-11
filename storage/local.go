@@ -28,7 +28,7 @@ func (Local) Save(data internal.UploadFileData) (string, error) {
 		return "", err
 	}
 
-	url := fmt.Sprintf("%s/tmp/%s", config.Current.LocalStorageURL, data.FileKey)
+	url := fmt.Sprintf("%s/localfs/%s", config.Current.LocalStorageURL, data.FileKey)
 	return url, nil
 }
 

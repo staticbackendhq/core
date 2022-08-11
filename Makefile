@@ -2,7 +2,11 @@ include .env
 export $(shell sed 's/=.*//' .env)
 
 build:
-	@cd cmd && rm -rf staticbackend && go build -o staticbackend
+	@cd cmd && rm -rf staticbackend && go build \
+	-ldflags "-X github.com/staticbackendhq/core/config.BuildTime=$(shell date +'%Y-%m-%d.%H:%M:%S') \
+	-X github.com/staticbackendhq/core/config.CommitHash=$(shell git log --pretty=format:'%h' -n 1) \
+	-X github.com/staticbackendhq/core/config.Version=$(shell git describe --tags)" \
+	-o staticbackend
 
 start: build
 	@./cmd/staticbackend
@@ -16,7 +20,7 @@ alltest:
 	@go test --race --cover ./...
 
 thistest:
-	@JWT_SECRET=okdevmode go test -run "$2" --race --cover
+	go test -run $(TESTNAME) --cover ./...
 
 test-core:
 	@go test --race --cover
