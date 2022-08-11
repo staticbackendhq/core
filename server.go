@@ -248,6 +248,8 @@ func Start(c config.AppConfig) {
 	http.Handle("/ui/fn", middleware.Chain(http.HandlerFunc(webUI.fnList), stdRoot...))
 	http.Handle("/ui/forms", middleware.Chain(http.HandlerFunc(webUI.forms), stdRoot...))
 	http.Handle("/ui/forms/del/", middleware.Chain(http.HandlerFunc(webUI.formDel), stdRoot...))
+	http.Handle("/ui/fs", middleware.Chain(http.HandlerFunc(webUI.fsList), stdRoot...))
+	http.Handle("/ui/fs/del/", middleware.Chain(http.HandlerFunc(webUI.fsDel), stdRoot...))
 	http.HandleFunc("/", webUI.login)
 
 	// graceful shutdown
