@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -122,6 +123,25 @@ func customFuncs() template.FuncMap {
 				}
 			}
 			return fmt.Sprintf("%v", v)
+		},
+		"convertFileSize": func(size int64) string {
+			const unit = 1000
+			if size < unit {
+				return fmt.Sprintf("%d B", size)
+			}
+			div, exp := int64(unit), 0
+			for n := size / unit; n >= unit; n /= unit {
+				div *= unit
+				exp++
+			}
+
+			return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
+		},
+		"convertFileType": func(key string) string {
+			return filepath.Ext(key)[1:]
+		},
+		"convertFileUploadedDate": func(uploaded time.Time) string {
+			return uploaded.Format("January 02, 2006 at 15:04")
 		},
 	}
 }
