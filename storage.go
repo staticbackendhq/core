@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
@@ -37,11 +39,10 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 	ext := filepath.Ext(h.Filename)
 
-	//TODO: Remove all but a-zA-Z/ from name
-
 	name := r.Form.Get("name")
 	if len(name) == 0 {
-		name = randStringRunes(32)
+		// if no forced name is used, let's use the original name
+		name = cleanUpFileName(h.Filename)
 	}
 
 	fileKey := fmt.Sprintf("%s/%s/%s%s",
@@ -109,4 +110,14 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusOK, true)
+}
+
+// cleanUpFileName removes file extention and anything but a-zA-Z-_
+func cleanUpFileName(s string) string {
+	s = strings.TrimSuffix(s, filepath.Ext(s))
+
+	exp := regexp.MustCompile(`[^a-zA-Z\-_]`)
+
+	return exp.ReplaceAllString(s, "")
+
 }
