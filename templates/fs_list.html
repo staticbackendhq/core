@@ -1,0 +1,46 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+	<div class="container p-6">
+    <br>
+		<h2 class="title is-2">
+			Files
+		</h2>
+		<table class="table is-striped" style="width:100%;">
+		<thead>
+			<tr>
+        <th style="width:40%;">Name</th>
+				<th style="width:10%; text-align:center;">Size</th>
+				<th style="width:10%; text-align:center;">Type</th>
+				<th style="width:20%; text-align:center;">Uploaded</th>
+        <th style="text-align:center;">Preview</th>
+        <th style="text-align:center;">Delete</th>
+			</tr>
+		</thead>
+		<tbody>
+		  {{range .Data}}      
+      {{$fileType := convertFileType .Key}}
+      <tr style="height:100px;">        
+        <td>{{ parseFilename .Key }}</td>
+				<td style="text-align:center;">{{ convertFileSize .Size }}</td>
+				<td style="text-align:center;">{{ convertFileType .Key }}</td>
+        <td style="text-align:center;">{{ convertFileUploadedDate .Uploaded}}</td>
+        <td style="text-align:center;">TODO</td>
+        <td style="text-align:center;">
+          <a 
+						href="/ui/fs/del/{{ .ID }}" 
+						class="delete" 
+						onclick="return confirm('Are you sure you want to delete this file?\n\nThis is irreversible.')">
+					</a>
+        </td>
+      </tr>
+			{{end}}
+		</tbody>
+		</table>
+	</div>
+
+</body>
+
+{{template "foot"}}
+
