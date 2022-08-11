@@ -143,5 +143,12 @@ func customFuncs() template.FuncMap {
 		"convertFileUploadedDate": func(uploaded time.Time) string {
 			return uploaded.Format("January 02, 2006 at 15:04")
 		},
+		"parseFilename": func(key string) string {
+			splitedKey := strings.Split(key, "/")
+
+			filename := splitedKey[len(splitedKey)-1]
+
+			return strings.Split(filename, ".")[0]
+		},
 	}
 }
