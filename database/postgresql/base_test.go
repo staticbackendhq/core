@@ -208,6 +208,46 @@ func TestUpdateDocument(t *testing.T) {
 	}
 }
 
+func TestUpdateDocuments(t *testing.T) {
+	task1 := newTask("should be completed", false)
+	task2 := newTask("should be completed", false)
+
+	var many []interface{}
+	many = append(many, task1)
+	many = append(many, task2)
+
+	if err := datastore.BulkCreateDocument(adminAuth, confDBName, colName, many); err != nil {
+		t.Fatal(err)
+	}
+	var clauses [][]interface{}
+	clauses = append(clauses, []interface{}{"title", "=", "should be completed"})
+
+	filters, err := datastore.ParseQuery(clauses)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updateFields := map[string]any{"done": true}
+	n, err := datastore.UpdateDocuments(adminAuth, confDBName, colName, filters, updateFields)
+	if err != nil {
+		t.Errorf("The documents are not updated because of an error\nExpected err = nil\nActual err: %s", err.Error())
+	}
+	if n != int64(len(many)) {
+		t.Errorf("The incorrect number of documents are updated\nExpected: %v\nActual: %v", len(many), n)
+	}
+
+	docs, err := datastore.QueryDocuments(adminAuth, confDBName, colName, filters, internal.ListParams{Page: 1, Size: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range docs.Results {
+		got := dec(v)
+		if !got.Done {
+			t.Errorf("The '%s' task is not updated; It should be completed (done=true)", got.Title)
+		}
+	}
+}
+
 func TestIncrementValue(t *testing.T) {
 	task1 := newTask("incr", false)
 	m, err := datastore.CreateDocument(adminAuth, confDBName, colName, task1)

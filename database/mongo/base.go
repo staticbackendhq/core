@@ -330,10 +330,7 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 		return nil, err
 	}
 
-	delete(doc, "id")
-	delete(doc, FieldID)
-	delete(doc, FieldAccountID)
-	delete(doc, FieldOwnerID)
+	removeNotEditableFields(doc)
 
 	filter := bson.M{FieldID: oid}
 
@@ -364,6 +361,31 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 	mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
 
 	return result, nil
+}
+
+func (mg *Mongo) UpdateDocuments(auth internal.Auth, dbName, col string, filters map[string]interface{}, updateFields map[string]interface{}) (n int64, err error) {
+	db := mg.Client.Database(dbName)
+
+	acctID, userID, err := parseObjectID(auth)
+	if err != nil {
+		return 0, err
+	}
+
+	secureWrite(acctID, userID, auth.Role, col, filters)
+	removeNotEditableFields(updateFields)
+
+	newProps := bson.M{}
+	for k, v := range updateFields {
+		newProps[k] = v
+	}
+
+	update := bson.M{"$set": newProps}
+
+	res, err := db.Collection(internal.CleanCollectionName(col)).UpdateMany(mg.Ctx, filters, update)
+	if err != nil {
+		return 0, err
+	}
+	return res.ModifiedCount, err
 }
 
 func (mg *Mongo) IncrementValue(auth internal.Auth, dbName, col, id, field string, n int) error {
@@ -475,5 +497,12 @@ func cleanMap(m map[string]interface{}) {
 
 	m[FieldAccountID] = oid.Hex()
 
+	delete(m, FieldOwnerID)
+}
+
+func removeNotEditableFields(m map[string]any) {
+	delete(m, "id")
+	delete(m, FieldID)
+	delete(m, FieldAccountID)
 	delete(m, FieldOwnerID)
 }
