@@ -150,5 +150,22 @@ func customFuncs() template.FuncMap {
 
 			return strings.Split(filename, ".")[0]
 		},
+		"getElementByFileExt": func(fileType string) string {
+			imgTypes := "jpg png gif jpeg svg icon webp raw"
+			videoTypes := "avi mp4 mkv mov wmv flv avchd"
+			audioTypes := "mp3 ogg aac oga flac pcm wav aiff"
+
+			fileType = strings.ToLower(fileType)
+
+			if strings.Contains(imgTypes, fileType) {
+				return "image"
+			} else if strings.Contains(videoTypes, fileType) {
+				return "video"
+			} else if strings.Contains(audioTypes, fileType) {
+				return "audio"
+			}
+
+			return ""
+		},
 	}
 }

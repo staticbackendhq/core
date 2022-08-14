@@ -10,7 +10,7 @@
 		<table class="table is-striped" style="width:100%;">
 		<thead>
 			<tr>
-        <th style="width:40%;">Name</th>
+        <th style="width:30%;">Name</th>
 				<th style="width:10%; text-align:center;">Size</th>
 				<th style="width:10%; text-align:center;">Type</th>
 				<th style="width:20%; text-align:center;">Uploaded</th>
@@ -20,13 +20,35 @@
 		</thead>
 		<tbody>
 		  {{range .Data}}      
-      {{$fileType := convertFileType .Key}}
-      <tr style="height:100px;">        
+      {{$fileType := convertFileType .Key}} 
+      {{$elementType := getElementByFileExt $fileType}}
+      
+      {{ if or (eq $elementType "") (eq $elementType "audio")}}
+        <tr style="height:100px;">        
+      {{ else }}
+        <tr style="height:200px;">
+      {{ end }}
         <td>{{ parseFilename .Key }}</td>
 				<td style="text-align:center;">{{ convertFileSize .Size }}</td>
-				<td style="text-align:center;">{{ convertFileType .Key }}</td>
+				<td style="text-align:center;">{{ $fileType }}</td>
         <td style="text-align:center;">{{ convertFileUploadedDate .Uploaded}}</td>
-        <td style="text-align:center;">TODO</td>
+        <td style="text-align:center;">          
+          {{ if eq $elementType  "image" }}
+            <a href="{{ .URL }}">
+              <img src="{{ .URL }}" alt="uploaded image" style="height:200px;">
+            </a> 
+          {{ else if eq $elementType "video" }}
+            <video  controls style="height:200px;">
+              <source src="{{ .URL }}">
+            </video>
+          {{ else if eq $elementType "audio" }}
+            <audio src="{{ .URL }}" controls></audio>
+          {{ else }}
+            <a href="{{ .URL }}">
+              Can't preview!
+            </a> 
+          {{ end }}           
+        </td>
         <td style="text-align:center;">
           <a 
 						href="/ui/fs/del/{{ .ID }}" 
