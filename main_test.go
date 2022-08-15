@@ -65,7 +65,7 @@ func TestMain(m *testing.M) {
 
 	database = &Database{cache: volatile}
 
-	mship = &membership{volatile: volatile}
+	mship = &membership{}
 
 	mp := config.Current.MailProvider
 	if strings.EqualFold(mp, internal.MailProviderSES) {
