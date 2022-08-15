@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -122,6 +123,49 @@ func customFuncs() template.FuncMap {
 				}
 			}
 			return fmt.Sprintf("%v", v)
+		},
+		"convertFileSize": func(size int64) string {
+			const unit = 1000
+			if size < unit {
+				return fmt.Sprintf("%d B", size)
+			}
+			div, exp := int64(unit), 0
+			for n := size / unit; n >= unit; n /= unit {
+				div *= unit
+				exp++
+			}
+
+			return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
+		},
+		"convertFileType": func(key string) string {
+			return filepath.Ext(key)[1:]
+		},
+		"convertFileUploadedDate": func(uploaded time.Time) string {
+			return uploaded.Format("January 02, 2006 at 15:04")
+		},
+		"parseFilename": func(key string) string {
+			splitedKey := strings.Split(key, "/")
+
+			filename := splitedKey[len(splitedKey)-1]
+
+			return strings.Split(filename, ".")[0]
+		},
+		"getElementByFileExt": func(fileType string) string {
+			imgTypes := "jpg png gif jpeg svg icon webp raw"
+			videoTypes := "avi mp4 mkv mov wmv flv avchd"
+			audioTypes := "mp3 ogg aac oga flac pcm wav aiff"
+
+			fileType = strings.ToLower(fileType)
+
+			if strings.Contains(imgTypes, fileType) {
+				return "image"
+			} else if strings.Contains(videoTypes, fileType) {
+				return "video"
+			} else if strings.Contains(audioTypes, fileType) {
+				return "audio"
+			}
+
+			return ""
 		},
 	}
 }

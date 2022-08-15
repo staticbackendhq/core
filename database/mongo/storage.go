@@ -108,3 +108,38 @@ func (mg *Mongo) DeleteFile(dbName, fileID string) error {
 	}
 	return nil
 }
+
+func (mg *Mongo) ListAllFiles(dbName, accountID string) ([]internal.File, error) {
+	db := mg.Client.Database(dbName)
+
+	aid, err := primitive.ObjectIDFromHex(accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := bson.M{FieldAccountID: aid}
+
+	sr, err := db.Collection("sb_files").Find(mg.Ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	defer sr.Close(mg.Ctx)
+
+	var results []internal.File
+
+	for sr.Next(mg.Ctx) {
+		var f LocalFile
+		if err = sr.Decode(&f); err != nil {
+			return nil, err
+		}
+
+		results = append(results, fromLocalFile(f))
+	}
+
+	if err := sr.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}

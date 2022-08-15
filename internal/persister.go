@@ -77,4 +77,5 @@ type Persister interface {
 	AddFile(dbName string, f File) (id string, err error)
 	GetFileByID(dbName, fileID string) (f File, err error)
 	DeleteFile(dbName, fileID string) error
+	ListAllFiles(dbName, accountID string) ([]File, error)
 }

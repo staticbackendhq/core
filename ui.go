@@ -515,3 +515,36 @@ func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/ui/fn", http.StatusSeeOther)
 }
+
+func (x *ui) fsList(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	results, err := datastore.ListAllFiles(conf.Name, auth.AccountID)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	render(w, r, "fs_list.html", results, nil)
+}
+
+func (x *ui) fsDel(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	fileID := getURLPart(r.URL.Path, 4)
+
+	if err := datastore.DeleteFile(conf.Name, fileID); err != nil {
+		renderErr(w, r, err)
+		return
+	}
+
+	http.Redirect(w, r, "/ui/fs", http.StatusSeeOther)
+}

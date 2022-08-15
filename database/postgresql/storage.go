@@ -50,6 +50,34 @@ func (pg *PostgreSQL) DeleteFile(dbName, fileID string) error {
 	return nil
 }
 
+func (pg *PostgreSQL) ListAllFiles(dbName, accountID string) (results []internal.File, err error) {
+	qry := fmt.Sprintf(`
+		SELECT * 
+		FROM %s.sb_files
+		WHERE account_id = $1
+	`, dbName)
+
+	rows, err := pg.DB.Query(qry, accountID)
+	if err != nil {
+		return
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var f internal.File
+		if err = scanFile(rows, &f); err != nil {
+			return
+		}
+
+		results = append(results, f)
+	}
+
+	err = rows.Err()
+
+	return
+}
+
 func scanFile(rows Scanner, f *internal.File) error {
 	return rows.Scan(
 		&f.ID,
