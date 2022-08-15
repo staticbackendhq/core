@@ -138,7 +138,7 @@ func Start(c config.AppConfig) {
 		middleware.RequireRoot(datastore),
 	}
 
-	m := &membership{volatile: volatile}
+	m := &membership{}
 
 	http.Handle("/login", middleware.Chain(http.HandlerFunc(m.login), pubWithDB...))
 	http.Handle("/register", middleware.Chain(http.HandlerFunc(m.register), pubWithDB...))
@@ -151,7 +151,7 @@ func Start(c config.AppConfig) {
 	// oauth handlers
 	el := &ExternalLogins{}
 	http.Handle("/oauth/login", middleware.Chain(el.login(), pubWithDB...))
-	http.Handle("/oauth/callback/", middleware.Chain(el.callback(), pubWithDB...))
+	http.Handle("/oauth/callback/", middleware.Chain(el.callback(), stdPub...))
 	http.Handle("/oauth/get-user", middleware.Chain(http.HandlerFunc(el.getUser), pubWithDB...))
 
 	http.Handle("/sudogettoken/", middleware.Chain(http.HandlerFunc(m.sudoGetTokenFromAccountID), stdRoot...))

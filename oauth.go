@@ -76,7 +76,7 @@ func (el *ExternalLogins) login() http.Handler {
 		}
 
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			sess, err := p.BeginAuth(reqID)
+			sess, err := p.BeginAuth(el.toState(provider, reqID, conf.ID))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -102,12 +102,14 @@ func (el *ExternalLogins) login() http.Handler {
 
 func (el *ExternalLogins) callback() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		provider := r.URL.Query().Get("provider")
-		reqID := r.URL.Query().Get("reqid")
+		provider, reqID, baseID := el.fromState(el.getState(r))
 
 		var conf internal.BaseConfig
 		if err := volatile.GetTyped("oauth_"+reqID, &conf); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		} else if conf.ID != baseID {
+			http.Error(w, "invalid request", http.StatusBadRequest)
 			return
 		}
 
@@ -237,7 +239,7 @@ func (el *ExternalLogins) signIn(dbName, email string) (sessionToken string, err
 func (el *ExternalLogins) signUp(dbName, provider, email, accessToken string) (sessionToken string, err error) {
 	pw := fmt.Sprintf("%s:%s", provider, accessToken)
 
-	b, _, err := el.membership.createAccountAndUser(dbName, email, pw, 100)
+	b, _, err := el.membership.createAccountAndUser(dbName, email, pw, 0)
 	if err != nil {
 		return
 	}
@@ -248,11 +250,8 @@ func (el *ExternalLogins) signUp(dbName, provider, email, accessToken string) (s
 
 func (el *ExternalLogins) getProvider(dbID, provider, reqID string, info internal.OAuthConfig) (p goth.Provider, err error) {
 	callbackURL := fmt.Sprintf(
-		"%s/oauth/callback?provider=%s&reqid=%s&sbpk=%s",
+		"%s/oauth/callback",
 		config.Current.AppURL,
-		provider,
-		reqID,
-		dbID,
 	)
 
 	if provider == OAuthProviderTwitter {
@@ -271,4 +270,20 @@ func (*ExternalLogins) getState(r *http.Request) string {
 		return r.FormValue("state")
 	}
 	return params.Get("state")
+}
+
+func (*ExternalLogins) toState(provider, reqID, baseID string) string {
+	return fmt.Sprintf("%s_%s_%s", provider, reqID, baseID)
+}
+
+func (*ExternalLogins) fromState(state string) (provider, reqID, baseID string) {
+	parts := strings.Split(state, "_")
+	if len(parts) != 3 {
+		return
+	}
+
+	provider = parts[0]
+	reqID = parts[1]
+	baseID = parts[2]
+	return
 }

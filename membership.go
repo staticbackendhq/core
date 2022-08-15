@@ -18,7 +18,7 @@ import (
 )
 
 type membership struct {
-	volatile internal.Volatilizer
+	//volatile internal.Volatilizer
 }
 
 func (m *membership) emailExists(w http.ResponseWriter, r *http.Request) {
@@ -83,11 +83,11 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 
 	//TODO: find a good way to find all occurences of those two
 	// and make them easily callable via a shared function
-	if err := m.volatile.SetTyped(token, auth); err != nil {
+	if err := volatile.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := m.volatile.SetTyped("base:"+token, conf); err != nil {
+	if err := volatile.SetTyped("base:"+token, conf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -151,11 +151,11 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 		Token:     tok.Token,
 	}
 
-	if err := m.volatile.SetTyped(token, auth); err != nil {
+	if err := volatile.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := m.volatile.SetTyped("base:"+token, conf); err != nil {
+	if err := volatile.SetTyped("base:"+token, conf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -212,7 +212,7 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 		Role:      role,
 		Token:     tok.Token,
 	}
-	if err := m.volatile.SetTyped(token, auth); err != nil {
+	if err := volatile.SetTyped(token, auth); err != nil {
 		return nil, tok, err
 	}
 
@@ -394,7 +394,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 		Role:      tok.Role,
 		Token:     tok.Token,
 	}
-	if err := m.volatile.SetTyped(token, auth); err != nil {
+	if err := volatile.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
