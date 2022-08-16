@@ -49,6 +49,7 @@ type Persister interface {
 	QueryDocuments(auth Auth, dbName, col string, filter map[string]interface{}, params ListParams) (PagedResult, error)
 	GetDocumentByID(auth Auth, dbName, col, id string) (map[string]interface{}, error)
 	UpdateDocument(auth Auth, dbName, col, id string, doc map[string]interface{}) (map[string]interface{}, error)
+	UpdateDocuments(auth Auth, dbName, col string, filters map[string]interface{}, updateFields map[string]interface{}) (int64, error)
 	IncrementValue(auth Auth, dbName, col, id, field string, n int) error
 	DeleteDocument(auth Auth, dbName, col, id string) (int64, error)
 	ListCollections(dbName string) ([]string, error)

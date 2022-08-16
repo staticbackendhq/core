@@ -132,6 +132,46 @@ func filter[T any](list []T, fn func(x T) bool) []T {
 	return results
 }
 
+func filterByClauses(list []map[string]any, filter map[string]any) (filtered []map[string]any) {
+	for _, doc := range list {
+		matches := 0
+		for k, v := range filter {
+			op, field := extractOperatorAndValue(k)
+			switch op {
+			case "=":
+				if equal(doc[field], v) {
+					matches++
+				}
+			case "!=":
+				if notEqual(doc[field], v) {
+					matches++
+				}
+			case ">":
+				if greater(doc[field], v) {
+					matches++
+				}
+			case "<":
+				if lower(doc[field], v) {
+					matches++
+				}
+			case ">=":
+				if greaterThanEqual(doc[field], v) {
+					matches++
+				}
+			case "<=":
+				if lowerThanEqual(doc[field], v) {
+					matches++
+				}
+			}
+		}
+
+		if matches == len(filter) {
+			filtered = append(filtered, doc)
+		}
+	}
+	return
+}
+
 func sortSlice[T any](list []T, fn func(a, b T) bool) []T {
 	sort.Slice(list, func(i, j int) bool {
 		return fn(list[i], list[j])

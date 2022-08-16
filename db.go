@@ -24,7 +24,11 @@ func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 			database.add(w, r)
 		}
 	} else if r.Method == http.MethodPut {
-		database.update(w, r)
+		if len(r.URL.Query().Get("bulk")) > 0 {
+			database.bulkUpdate(w, r)
+		} else {
+			database.update(w, r)
+		}
 	} else if r.Method == http.MethodDelete {
 		database.del(w, r)
 	} else if r.Method == http.MethodGet {
@@ -227,6 +231,42 @@ func (database *Database) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusOK, result)
+}
+
+func (database *Database) bulkUpdate(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var col string
+
+	_, r.URL.Path = ShiftPath(r.URL.Path)
+	col, r.URL.Path = ShiftPath(r.URL.Path)
+
+	var v struct {
+		UpdateFields map[string]any  `json:"update"`
+		Clauses      [][]interface{} `json:"clauses"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	filter, err := datastore.ParseQuery(v.Clauses)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	count, err := datastore.UpdateDocuments(auth, conf.Name, col, filter, v.UpdateFields)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, count)
 }
 
 func (database *Database) increase(w http.ResponseWriter, r *http.Request) {
