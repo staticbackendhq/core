@@ -53,8 +53,8 @@ func applyFilter(where string, filters map[string]interface{}) string {
 }
 
 func secureRead(auth internal.Auth, col string) string {
-	if strings.HasPrefix(col, "pub_") && auth.Role < 100 {
-		return "WHERE 1=1 "
+	if strings.HasPrefix(col, "pub_") || auth.Role == 100 {
+		return "WHERE $1=$1 AND $2=$2 "
 	}
 
 	switch internal.ReadPermission(col) {
@@ -69,8 +69,8 @@ func secureRead(auth internal.Auth, col string) string {
 }
 
 func secureWrite(auth internal.Auth, col string) string {
-	if strings.HasPrefix(col, "pub_") && auth.Role < 100 {
-		return "WHERE 1=1 "
+	if strings.HasPrefix(col, "pub_") || auth.Role == 100 {
+		return "WHERE $1=$1 AND $2=$2 "
 	}
 
 	switch internal.WritePermission(col) {
