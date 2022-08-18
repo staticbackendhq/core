@@ -140,6 +140,7 @@ func Start(c config.AppConfig) {
 
 	m := &membership{}
 
+	http.Handle("/login/magic", middleware.Chain(http.HandlerFunc(m.magicLink), pubWithDB...))
 	http.Handle("/login", middleware.Chain(http.HandlerFunc(m.login), pubWithDB...))
 	http.Handle("/register", middleware.Chain(http.HandlerFunc(m.register), pubWithDB...))
 	http.Handle("/email", middleware.Chain(http.HandlerFunc(m.emailExists), pubWithDB...))

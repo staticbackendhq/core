@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 
@@ -64,30 +66,8 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
-
-	// get their JWT
-	jwtBytes, err := m.getJWT(token)
+	jwtBytes, err := m.getAuthToken(tok, conf)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	auth := internal.Auth{
-		AccountID: tok.AccountID,
-		UserID:    tok.ID,
-		Email:     tok.Email,
-		Role:      tok.Role,
-		Token:     tok.Token,
-	}
-
-	//TODO: find a good way to find all occurences of those two
-	// and make them easily callable via a shared function
-	if err := volatile.SetTyped(token, auth); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err := volatile.SetTyped("base:"+token, conf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -161,6 +141,35 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusOK, token)
+}
+
+func (m *membership) getAuthToken(tok internal.Token, conf internal.BaseConfig) (jwtBytes []byte, err error) {
+	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
+
+	// get their JWT
+	jwtBytes, err = m.getJWT(token)
+	if err != nil {
+		return
+	}
+
+	auth := internal.Auth{
+		AccountID: tok.AccountID,
+		UserID:    tok.ID,
+		Email:     tok.Email,
+		Role:      tok.Role,
+		Token:     tok.Token,
+	}
+
+	//TODO: find a good way to find all occurences of those two
+	// and make them easily callable via a shared function
+	if err = volatile.SetTyped(token, auth); err != nil {
+		return
+	}
+	if err = volatile.SetTyped("base:"+token, conf); err != nil {
+		return
+	}
+
+	return
 }
 
 func (m *membership) createAccountAndUser(dbName, email, password string, role int) ([]byte, internal.Token, error) {
@@ -410,4 +419,103 @@ func (m *membership) me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, http.StatusOK, auth)
+}
+
+func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		// we use GET to validate magic link code
+		email := r.URL.Query().Get("email")
+		code := r.URL.Query().Get("code")
+
+		val, err := volatile.Get("ml-" + email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		parts := strings.Split(val, " ")
+		if len(parts) != 2 {
+			http.Error(w, "invalid data", http.StatusBadRequest)
+			return
+		}
+
+		// if the code isn't what was set we make sure they're not trying to
+		// "brute force" random code.
+		if parts[0] != code {
+			if len(parts[1]) >= 10 {
+				http.Error(w, "maximum retry reched", http.StatusTooManyRequests)
+				return
+			}
+
+			if err := volatile.Set("ml-"+email, val+"a"); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			respond(w, http.StatusBadRequest, false)
+			return
+		}
+
+		// they got the right code, return a session token
+
+		tok, err := datastore.FindTokenByEmail(conf.Name, email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		jwtBytes, err := m.getAuthToken(tok, conf)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		respond(w, http.StatusOK, string(jwtBytes))
+		return
+	}
+
+	data := new(struct {
+		FromEmail string `json:"fromEmail"`
+		FromName  string `json:"fromName"`
+		Email     string `json:"email"`
+		Subject   string `json:"subject"`
+		Body      string `json:"body"`
+		MagicLink string `json:"link"`
+	})
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	code := rand.Intn(987654) + 123456
+	// to accomodate unit test, we hard code a magic link code in dev mode
+	if config.Current.AppEnv == AppEnvDev {
+		code = 666333
+	}
+	data.MagicLink += fmt.Sprintf("?code=%d&email=%s", code, data.Email)
+
+	if err := volatile.Set("ml-"+data.Email, fmt.Sprintf("%d a", code)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	mail := internal.SendMailData{
+		From:     data.FromEmail,
+		FromName: data.FromName,
+		To:       data.Email,
+		Subject:  data.Subject,
+		HTMLBody: strings.Replace(data.Body, "[link]", data.MagicLink, -1),
+	}
+	if err := emailer.Send(mail); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
 }
