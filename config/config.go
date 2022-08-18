@@ -72,6 +72,12 @@ type AppConfig struct {
 
 	// KeepPermissionInName if "yes" will keep the repo permission in repo name
 	KeepPermissionInName string
+
+	// LogConsoleLevel could be use to specify the minimum log level is wanted
+	LogConsoleLevel string
+
+	// LogFilename if set, write logs to console and this file.
+	LogFilename string
 }
 
 func LoadConfig() AppConfig {
@@ -105,5 +111,7 @@ func LoadConfig() AppConfig {
 		AWSCDNURL:             os.Getenv("AWS_CDN_URL"),
 		AWSS3Bucket:           os.Getenv("AWS_S3_BUCKET"),
 		KeepPermissionInName:  os.Getenv("KEEP_PERM_COL_NAME"),
+		LogConsoleLevel:       os.Getenv("LOG_CONSOLE_LEVEL"),
+		LogFilename:           os.Getenv("LOG_FILENAME"),
 	}
 }
