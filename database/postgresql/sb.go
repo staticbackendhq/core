@@ -2,7 +2,6 @@ package postgresql
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/lib/pq"
@@ -265,8 +264,7 @@ func (pg *PostgreSQL) EnableExternalLogin(customerID string, config map[string]i
 func (pg *PostgreSQL) NewID() string {
 	var id string
 	if err := pg.DB.QueryRow(`SELECT uuid_generate_v4 ()`).Scan(&id); err != nil {
-		//TODO: do something with this error
-		log.Println("error in postgresql.NewID: ", err)
+		pg.log.Error().Err(err).Msg("error in postgresql.NewID")
 		return ""
 	}
 	return id

@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 
@@ -69,8 +68,8 @@ func (mg *Mongo) ensureIndex(dbName, col string) {
 
 	cur, err := dbCol.Indexes().List(mg.Ctx)
 	if err != nil {
-		//TODO: report this error
-		log.Println("error getting col indexes: ", err)
+		mg.log.Warn().Err(err).Msg("error getting col indexes")
+
 		return
 	}
 
@@ -78,15 +77,14 @@ func (mg *Mongo) ensureIndex(dbName, col string) {
 	for cur.Next(mg.Ctx) {
 		var v bson.M
 		if err := cur.Decode(&v); err != nil {
-			//TODO: report this error
-			log.Println("cannot cast to IndexModel: ", err)
+			mg.log.Warn().Err(err).Msg("cannot cast to IndexModel")
 			return
 		}
 
 		keys, ok := v["key"].(bson.M)
 		if !ok {
-			//TODO: report this error
-			log.Println("unable to cast IndexModel Key to map")
+			mg.log.Warn().Msg("unable to cast IndexModel Key to map")
+
 			return
 		}
 
@@ -111,8 +109,7 @@ func (mg *Mongo) ensureIndex(dbName, col string) {
 	}
 
 	if err := mg.CreateIndex(dbName, col, FieldAccountID); err != nil {
-		//TODO: report this error
-		log.Println("error creating accountId idx: ", err)
+		mg.log.Warn().Err(err).Msg("error creating accountId idx")
 	}
 }
 

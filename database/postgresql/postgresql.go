@@ -8,11 +8,13 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 )
 
 type PostgreSQL struct {
 	DB              *sql.DB
 	PublishDocument internal.PublishDocumentEvent
+	log             *logger.Logger
 }
 
 var (
@@ -20,7 +22,7 @@ var (
 	appFS         = afero.NewOsFs()
 )
 
-func New(db *sql.DB, pubdoc internal.PublishDocumentEvent, migPath string) internal.Persister {
+func New(db *sql.DB, pubdoc internal.PublishDocumentEvent, migPath string, log *logger.Logger) internal.Persister {
 	migrationPath = migPath
 
 	// run migrations
@@ -31,7 +33,7 @@ func New(db *sql.DB, pubdoc internal.PublishDocumentEvent, migPath string) inter
 		os.Exit(1)
 	}
 
-	return &PostgreSQL{DB: db, PublishDocument: pubdoc}
+	return &PostgreSQL{DB: db, PublishDocument: pubdoc, log: log}
 }
 
 func (pg *PostgreSQL) Ping() error {

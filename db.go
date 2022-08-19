@@ -2,18 +2,19 @@ package staticbackend
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 )
 
 type Database struct {
 	cache internal.Volatilizer
+	log   *logger.Logger
 }
 
 func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +153,8 @@ func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 	var clauses [][]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&clauses); err != nil {
-		fmt.Println("error parsing body", err)
+		database.log.Error().Err(err).Msg("error parsing body")
+
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -176,7 +178,7 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		fmt.Println("error extracting conf and auth", err)
+		database.log.Error().Err(err).Msg("error extracting conf and auth")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

@@ -130,8 +130,7 @@ func (pg *PostgreSQL) ListDocuments(auth internal.Auth, dbName, col string, para
 
 	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
-		fmt.Println("error in select")
-		fmt.Println(qry)
+		pg.log.Error().Err(err).Msg("error in select")
 		return
 	}
 	defer rows.Close()

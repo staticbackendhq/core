@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -14,13 +15,15 @@ type Mongo struct {
 	Client          *mongo.Client
 	Ctx             context.Context
 	PublishDocument internal.PublishDocumentEvent
+	log             *logger.Logger
 }
 
-func New(client *mongo.Client, pubdoc internal.PublishDocumentEvent) internal.Persister {
+func New(client *mongo.Client, pubdoc internal.PublishDocumentEvent, log *logger.Logger) internal.Persister {
 	return &Mongo{
 		Client:          client,
 		Ctx:             context.Background(),
 		PublishDocument: pubdoc,
+		log:             log,
 	}
 }
 
