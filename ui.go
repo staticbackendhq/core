@@ -9,13 +9,16 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 )
 
-type ui struct{}
+type ui struct {
+	log *logger.Logger
+}
 
 func (ui) login(w http.ResponseWriter, r *http.Request) {
-	render(w, r, "login.html", nil, nil)
+	render(w, r, "login.html", nil, nil, nil)
 }
 
 func (ui) createApp(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +42,7 @@ func (ui) createApp(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (ui) auth(w http.ResponseWriter, r *http.Request) {
+func (x ui) auth(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	pk := r.Form.Get("pk")
@@ -47,12 +50,12 @@ func (ui) auth(w http.ResponseWriter, r *http.Request) {
 
 	conf, err := datastore.FindDatabase(pk)
 	if err != nil {
-		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "This app does not exists"})
+		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "This app does not exists"}, x.log)
 		return
 	}
 
 	if _, err := middleware.ValidateRootToken(datastore, conf.Name, token); err != nil {
-		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "invalid public key / token"})
+		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "invalid public key / token"}, x.log)
 		return
 	}
 
@@ -77,38 +80,38 @@ func (ui) auth(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ui/db", http.StatusSeeOther)
 }
 
-func (ui) logins(w http.ResponseWriter, r *http.Request) {
+func (x ui) logins(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	cus, err := datastore.FindAccount(conf.CustomerID)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	logins, err := cus.GetExternalLogins()
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
-	render(w, r, "logins.html", logins, nil)
+	render(w, r, "logins.html", logins, nil, x.log)
 }
 
-func (ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
+func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	cus, err := datastore.FindAccount(conf.CustomerID)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -119,7 +122,7 @@ func (ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 
 	logins, err := cus.GetExternalLogins()
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -134,18 +137,18 @@ func (ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 	logins[provider] = keys
 
 	if err := datastore.EnableExternalLogin(cus.ID, logins); err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	flash := &Flash{Type: "success", Message: "OAuth provider successfully added"}
-	render(w, r, "logins.html", logins, flash)
+	render(w, r, "logins.html", logins, flash, x.log)
 }
 
 func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -162,7 +165,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 	allNames, err := datastore.ListCollections(conf.Name)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -177,7 +180,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(names) == 0 {
-		render(w, r, "db_cols.html", data, nil)
+		render(w, r, "db_cols.html", data, nil, x.log)
 		return
 	}
 
@@ -206,13 +209,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 			var clauses [][]interface{}
 			if err := json.Unmarshal([]byte(query), &clauses); err != nil {
-				renderErr(w, r, err)
+				renderErr(w, r, err, x.log)
 				return
 			}
 
 			filter, err = datastore.ParseQuery(clauses)
 			if err != nil {
-				renderErr(w, r, err)
+				renderErr(w, r, err, x.log)
 				return
 			}
 		}
@@ -223,13 +226,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		if len(filter) == 0 {
 			list, err = datastore.ListDocuments(auth, conf.Name, col, params)
 			if err != nil {
-				renderErr(w, r, err)
+				renderErr(w, r, err, x.log)
 				return
 			}
 		} else {
 			list, err = datastore.QueryDocuments(auth, conf.Name, col, filter, params)
 			if err != nil {
-				renderErr(w, r, err)
+				renderErr(w, r, err, x.log)
 				return
 			}
 		}
@@ -248,13 +251,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		data.SortDescending = "0"
 	}
 
-	render(w, r, "db_cols.html", data, nil)
+	render(w, r, "db_cols.html", data, nil, x.log)
 }
 
 func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -263,7 +266,7 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 
 	doc, err := datastore.GetDocumentByID(auth, conf.Name, col, id)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -280,7 +283,7 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 	data.Columns = x.readColumnNames(docs)
 	data.Doc = doc
 
-	render(w, r, "db_doc.html", data, nil)
+	render(w, r, "db_doc.html", data, nil, x.log)
 }
 
 func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
@@ -288,7 +291,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -303,7 +306,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 	if typ == "int" {
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			renderErr(w, r, err)
+			renderErr(w, r, err, x.log)
 			return
 		}
 
@@ -311,7 +314,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 	} else if typ == "float" {
 		f, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			renderErr(w, r, err)
+			renderErr(w, r, err, x.log)
 			return
 		}
 
@@ -323,7 +326,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := datastore.UpdateDocument(auth, conf.Name, col, id, update); err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -334,7 +337,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -342,7 +345,7 @@ func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 	id := getURLPart(r.URL.Path, 4)
 
 	if _, err := datastore.DeleteDocument(auth, conf.Name, col, id); err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -376,7 +379,7 @@ func (ui) readColumnNames(docs []map[string]interface{}) []string {
 func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -384,13 +387,13 @@ func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 
 	forms, err := datastore.GetForms(conf.Name)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	entries, err := datastore.ListFormSubmissions(conf.Name, formName)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -404,20 +407,20 @@ func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 	data.Forms = forms
 	data.Entries = entries
 
-	render(w, r, "forms.html", data, nil)
+	render(w, r, "forms.html", data, nil, x.log)
 }
 
 func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	id := getURLPart(r.URL.Path, 4)
 
 	if _, err := datastore.DeleteDocument(auth, conf.Name, "sb_forms", id); err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -427,28 +430,28 @@ func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
 func (x ui) fnList(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	results, err := datastore.ListFunctions(conf.Name)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
-	render(w, r, "fn_list.html", results, nil)
+	render(w, r, "fn_list.html", results, nil, x.log)
 }
 
 func (x *ui) fnNew(w http.ResponseWriter, r *http.Request) {
 	fn := internal.ExecData{}
-	render(w, r, "fn_edit.html", fn, nil)
+	render(w, r, "fn_edit.html", fn, nil, x.log)
 }
 
 func (x *ui) fnEdit(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -456,17 +459,17 @@ func (x *ui) fnEdit(w http.ResponseWriter, r *http.Request) {
 
 	fn, err := datastore.GetFunctionByID(conf.Name, id)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
-	render(w, r, "fn_edit.html", fn, nil)
+	render(w, r, "fn_edit.html", fn, nil, x.log)
 }
 
 func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -485,7 +488,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 		}
 		newID, err := datastore.AddFunction(conf.Name, fn)
 		if err != nil {
-			renderErr(w, r, err)
+			renderErr(w, r, err, x.log)
 			return
 		}
 
@@ -494,7 +497,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := datastore.UpdateFunction(conf.Name, id, code, trigger); err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -504,12 +507,12 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 	name := getURLPart(r.URL.Path, 4)
 	if err := datastore.DeleteFunction(conf.Name, name); err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
@@ -519,30 +522,30 @@ func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 func (x *ui) fsList(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	results, err := datastore.ListAllFiles(conf.Name, auth.AccountID)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
-	render(w, r, "fs_list.html", results, nil)
+	render(w, r, "fs_list.html", results, nil, x.log)
 }
 
 func (x *ui) fsDel(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
 	fileID := getURLPart(r.URL.Path, 4)
 
 	if err := datastore.DeleteFile(conf.Name, fileID); err != nil {
-		renderErr(w, r, err)
+		renderErr(w, r, err, x.log)
 		return
 	}
 
