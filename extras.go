@@ -13,15 +13,18 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/staticbackendhq/core/extra"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/sms"
 )
 
-type extras struct{}
+type extras struct {
+	log *logger.Logger
+}
 
 func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		fmt.Println("cannot parse form")
+		ex.log.Error().Err(err).Msg("cannot parse form")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -76,7 +79,8 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 	)
 
 	resizedBytes := buf.Bytes()
-	fmt.Println("resized bytes: ", len(resizedBytes))
+
+	ex.log.Info().Msgf("resized bytes: %d", len(resizedBytes))
 	upData := internal.UploadFileData{FileKey: fileKey, File: bytes.NewReader(resizedBytes)}
 	url, err := storer.Save(upData)
 	if err != nil {

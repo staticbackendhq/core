@@ -1,11 +1,11 @@
 package staticbackend
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -50,6 +50,8 @@ type Socket struct {
 
 	// unique socket identifier
 	id string
+
+	log *logger.Logger
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -69,7 +71,7 @@ func (c *Socket) readPump() {
 		var msg internal.Command
 		if err := c.conn.ReadJSON(&msg); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				c.log.Error().Err(err).Msg("error")
 			}
 			break
 		}
@@ -109,17 +111,17 @@ func (c *Socket) writePump() {
 }
 
 // serveWs handles websocket requests from the peer.
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func serveWs(log *logger.Logger, hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Error().Err(err)
 		return
 	}
 	id, err := uuid.NewUUID()
 	if err != nil {
-		log.Println(err)
+		log.Error().Err(err)
 	}
-	sck := &Socket{hub: hub, conn: conn, send: make(chan internal.Command), id: id.String()}
+	sck := &Socket{hub: hub, conn: conn, send: make(chan internal.Command), id: id.String(), log: log}
 	sck.hub.register <- sck
 
 	// Allow collection of memory referenced by the caller by doing all work in

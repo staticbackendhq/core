@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -23,6 +22,7 @@ import (
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/realtime"
 	"github.com/staticbackendhq/core/storage"
@@ -53,7 +53,9 @@ func init() {
 }
 
 // Start starts the web server and all dependencies services
-func Start(c config.AppConfig) {
+func Start(c config.AppConfig, log *logger.Logger) {
+	log.Info().Str("Addr", c.AppURL).Msg("server started")
+
 	config.Current = c
 
 	stripe.Key = config.Current.StripeKey
@@ -61,11 +63,11 @@ func Start(c config.AppConfig) {
 	if err := loadTemplates(); err != nil {
 		// if we're running from the CLI, no need to load templates
 		if len(config.Current.FromCLI) == 0 {
-			log.Fatal("error loading templates: ", err)
+			log.Fatal().Err(err).Msg("error loading templates")
 		}
 	}
 
-	initServices(c.DatabaseURL)
+	initServices(c.DatabaseURL, log)
 
 	// websockets
 	hub := newHub(volatile)
@@ -112,10 +114,11 @@ func Start(c config.AppConfig) {
 		}
 
 		return key, nil
-	}, volatile)
+	}, volatile, log)
 
 	database := &Database{
 		cache: volatile,
+		log:   log,
 	}
 
 	stdPub := []middleware.Middleware{
@@ -138,7 +141,7 @@ func Start(c config.AppConfig) {
 		middleware.RequireRoot(datastore),
 	}
 
-	m := &membership{}
+	m := &membership{log: log}
 
 	http.Handle("/login", middleware.Chain(http.HandlerFunc(m.login), pubWithDB...))
 	http.Handle("/register", middleware.Chain(http.HandlerFunc(m.register), pubWithDB...))
@@ -149,7 +152,7 @@ func Start(c config.AppConfig) {
 	http.Handle("/me", middleware.Chain(http.HandlerFunc(m.me), stdAuth...))
 
 	// oauth handlers
-	el := &ExternalLogins{}
+	el := &ExternalLogins{log: log}
 	http.Handle("/oauth/login", middleware.Chain(el.login(), pubWithDB...))
 	http.Handle("/oauth/callback/", middleware.Chain(el.callback(), stdPub...))
 	http.Handle("/oauth/get-user", middleware.Chain(http.HandlerFunc(el.getUser), pubWithDB...))
@@ -179,19 +182,19 @@ func Start(c config.AppConfig) {
 	http.Handle("/sudo/cache", middleware.Chain(http.HandlerFunc(sudoCache), stdRoot...))
 
 	// account
-	acct := &accounts{membership: m}
+	acct := &accounts{membership: m, log: log}
 	http.Handle("/account/init", middleware.Chain(http.HandlerFunc(acct.create), stdPub...))
 	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
 	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))
 
 	// stripe webhooks
-	swh := stripeWebhook{}
+	swh := stripeWebhook{log: log}
 	http.HandleFunc("/stripe", swh.process)
 
 	http.HandleFunc("/ping", ping)
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		serveWs(log, hub, w, r)
 	})
 
 	http.Handle("/sse/connect", middleware.Chain(http.HandlerFunc(b.Accept), pubWithDB...))
@@ -219,7 +222,7 @@ func Start(c config.AppConfig) {
 	http.Handle("/fn", middleware.Chain(http.HandlerFunc(f.list), stdRoot...))
 
 	// extras routes
-	ex := &extras{}
+	ex := &extras{log: log}
 	http.Handle("/extra/resizeimg", middleware.Chain(http.HandlerFunc(ex.resizeImage), stdAuth...))
 	http.Handle("/extra/sms", middleware.Chain(http.HandlerFunc(ex.sudoSendSMS), stdRoot...))
 	http.Handle("/extra/htmltox", middleware.Chain(http.HandlerFunc(ex.htmlToX), stdAuth...))
@@ -233,7 +236,7 @@ func Start(c config.AppConfig) {
 	}
 
 	// ui routes
-	webUI := ui{}
+	webUI := ui{log: log}
 	http.HandleFunc("/ui/login", webUI.auth)
 	http.Handle("/ui/logins", middleware.Chain(http.HandlerFunc(webUI.logins), stdRoot...))
 	http.Handle("/ui/enable-login", middleware.Chain(http.HandlerFunc(webUI.enableExternalLogin), stdRoot...))
@@ -278,16 +281,16 @@ func Start(c config.AppConfig) {
 	})
 
 	if err := g.Wait(); err != nil {
-		fmt.Printf("exit reason: %s \n", err)
+		log.Error().Err(err).Msg("exit reason")
 	}
 }
 
-func initServices(dbHost string) {
+func initServices(dbHost string, log *logger.Logger) {
 
 	if strings.EqualFold(dbHost, "mem") {
 		volatile = cache.NewDevCache()
 	} else {
-		volatile = cache.NewCache()
+		volatile = cache.NewCache(log)
 	}
 
 	persister := config.Current.DataStore
@@ -296,16 +299,16 @@ func initServices(dbHost string) {
 	} else if strings.EqualFold(persister, "mongo") {
 		cl, err := openMongoDatabase(dbHost)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("failed to create connection with mongodb")
 		}
-		datastore = mongo.New(cl, volatile.PublishDocument)
+		datastore = mongo.New(cl, volatile.PublishDocument, log)
 	} else {
 		cl, err := openPGDatabase(dbHost)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("failed to create connection with postgres")
 		}
 
-		datastore = postgresql.New(cl, volatile.PublishDocument, "./sql/")
+		datastore = postgresql.New(cl, volatile.PublishDocument, "./sql/", log)
 	}
 
 	mp := config.Current.MailProvider
@@ -322,7 +325,7 @@ func initServices(dbHost string) {
 		storer = storage.Local{}
 	}
 
-	sub := &function.Subscriber{}
+	sub := &function.Subscriber{Log: log}
 	sub.PubSub = volatile
 	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
 		var exe function.ExecutionEnvironment
@@ -332,19 +335,19 @@ func initServices(dbHost string) {
 		if strings.HasPrefix(token, "__tmp__experimental_public") {
 			pk := strings.Replace(token, "__tmp__experimental_public_", "", -1)
 			pairs := strings.Split(pk, "_")
-			fmt.Println("checking for base in cache: ", pairs[0])
+			log.Info().Msgf("checking for base in cache: %d", pairs[0])
 			if err := volatile.GetTyped(pairs[0], &conf); err != nil {
-				log.Println("cannot find base for public websocket")
+				log.Error().Err(err).Msg("cannot find base for public websocket")
 				return exe, err
 			}
 		} else if err := volatile.GetTyped("base:"+token, &conf); err != nil {
-			log.Println("cannot find base")
+			log.Error().Err(err).Msg("cannot find base")
 			return exe, err
 		}
 
 		var auth internal.Auth
 		if err := volatile.GetTyped(token, &auth); err != nil {
-			log.Println("cannot find auth")
+			log.Error().Err(err).Msg("cannot find auth")
 			return exe, err
 		}
 
@@ -359,6 +362,7 @@ func initServices(dbHost string) {
 	// start system events subscriber
 	go sub.Start()
 }
+
 func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {
 	uri := dbHost
 

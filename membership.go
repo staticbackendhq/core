@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 
 	"golang.org/x/crypto/bcrypt"
@@ -19,6 +19,7 @@ import (
 
 type membership struct {
 	//volatile internal.Volatilizer
+	log *logger.Logger
 }
 
 func (m *membership) emailExists(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +115,7 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		http.Error(w, "invalid StaticBackend key", http.StatusUnauthorized)
-		log.Println("invalid StaticBackend key")
+		m.log.Error().Err(err).Msg("invalid StaticBackend key")
 		return
 	}
 
