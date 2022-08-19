@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 
 	"github.com/dop251/goja"
 )
@@ -22,6 +22,7 @@ type ExecutionEnvironment struct {
 	Data      internal.ExecData
 
 	CurrentRun internal.ExecHistory
+	log        *logger.Logger
 }
 
 type Result struct {
@@ -368,7 +369,6 @@ func (env *ExecutionEnvironment) complete(err error) {
 
 	//TODO: this needs to be regrouped and ran un batch
 	if err := env.DataStore.RanFunction(env.BaseName, env.Data.ID, env.CurrentRun); err != nil {
-		//TODO: do something with those error
-		log.Println("error logging function complete: ", err)
+		env.log.Error().Err(err).Msg("error logging function complete")
 	}
 }

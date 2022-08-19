@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 
 	"github.com/google/uuid"
 )
@@ -32,9 +32,11 @@ type Broker struct {
 	validateAuth       Validator
 
 	pubsub internal.PubSuber
+
+	log *logger.Logger
 }
 
-func NewBroker(v Validator, pubsub internal.PubSuber) *Broker {
+func NewBroker(v Validator, pubsub internal.PubSuber, log *logger.Logger) *Broker {
 	b := &Broker{
 		Broadcast:          make(chan internal.Command, 1),
 		newConnections:     make(chan ConnectionData),
@@ -45,6 +47,7 @@ func NewBroker(v Validator, pubsub internal.PubSuber) *Broker {
 		subscriptions:      make(map[string][]chan bool),
 		validateAuth:       v,
 		pubsub:             pubsub,
+		log:                log,
 	}
 
 	go b.start()
@@ -58,7 +61,7 @@ func (b *Broker) start() {
 		case data := <-b.newConnections:
 			id, err := uuid.NewUUID()
 			if err != nil {
-				log.Println(err)
+				b.log.Error().Err(err)
 			}
 
 			b.clients[data.messages] = id.String()
@@ -87,7 +90,7 @@ func (b *Broker) unsub(c chan internal.Command) {
 
 	id, ok := b.clients[c]
 	if !ok {
-		fmt.Println("cannot find connection id")
+		b.log.Info().Msg("cannot find connection id")
 	}
 
 	subs, ok := b.subscriptions[id]
@@ -139,12 +142,14 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 	for {
 		// write Server Sent Event data
 		msg := <-messages
-		b, err := json.Marshal(msg)
+		bytes, err := json.Marshal(msg)
 		if err != nil {
-			fmt.Println("error converting to JSON", err)
+			b.log.Warn().Err(err).Msg("error converting to JSON")
+
 			continue
 		}
-		fmt.Fprintf(w, "data: %s\n\n", b)
+
+		fmt.Fprintf(w, "data: %s\n\n", bytes)
 
 		// flush immediately.
 		flusher.Flush()
@@ -157,7 +162,7 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 	if msg.SID != internal.SystemID {
 		s, ok := b.ids[msg.SID]
 		if !ok {
-			fmt.Println("cannot find sender socket", msg.SID)
+			b.log.Info().Msgf("cannot find sender socket: %d", msg.SID)
 			return
 		}
 		sender = s

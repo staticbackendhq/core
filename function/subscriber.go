@@ -2,14 +2,15 @@ package function
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 )
 
 type Subscriber struct {
 	PubSub     internal.PubSuber
 	GetExecEnv func(token string) (ExecutionEnvironment, error)
+	Log        *logger.Logger
 }
 
 // Start starts the system event subscription.
@@ -26,7 +27,7 @@ func (sub *Subscriber) Start() {
 		case msg := <-receiver:
 			go sub.process(msg)
 		case <-close:
-			log.Println("system event channel closed?!?")
+			sub.Log.Info().Msg("system event channel closed?!?")
 		}
 	}
 }
@@ -44,8 +45,7 @@ func (sub *Subscriber) process(msg internal.Command) {
 func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 	exe, err := sub.GetExecEnv(msg.Token)
 	if err != nil {
-		log.Println("cannot retrieve base from token", msg.Token)
-		log.Println(err)
+		sub.Log.Error().Err(err).Msgf("cannot retrieve base from token: %s", msg.Token)
 		return
 	}
 
@@ -55,13 +55,13 @@ func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 	if err := sub.PubSub.GetTyped(key, &ids); err != nil {
 		funcs, err := exe.DataStore.ListFunctionsByTrigger(exe.BaseName, msg.Type)
 		if err != nil {
-			log.Println("error getting functions by trigger: ", err)
+			sub.Log.Error().Err(err).Msg("error getting functions by trigger")
 			return
 		}
 
 		for _, fn := range funcs {
 			if err := sub.PubSub.SetTyped("fn_"+fn.ID, fn); err != nil {
-				log.Println("error adding function  to cache: ", err)
+				sub.Log.Error().Err(err).Msg("error adding function  to cache")
 				return
 			}
 
@@ -74,14 +74,14 @@ func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 	for _, id := range ids {
 		var fn internal.ExecData
 		if err := sub.PubSub.GetTyped("fn_"+id, &fn); err != nil {
-			log.Println("error getting function out of cache: ", err)
+			sub.Log.Error().Err(err).Msg("error getting function out of cache")
 			return
 		}
 
 		exe.Data = fn
 		go func(ex ExecutionEnvironment) {
 			if err := ex.Execute(msg); err != nil {
-				log.Printf(`executing "%s" function failed: %v"`, ex.Data.FunctionName, err)
+				sub.Log.Error().Err(err).Msgf(`executing "%s" function failed"`, ex.Data.FunctionName)
 			}
 		}(exe)
 	}

@@ -2,7 +2,6 @@ package staticbackend
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/staticbackendhq/core/config"
 	emailFuncs "github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 
 	"github.com/stripe/stripe-go/v72"
@@ -25,6 +25,7 @@ var (
 
 type accounts struct {
 	membership *membership
+	log        *logger.Logger
 }
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
@@ -241,13 +242,13 @@ Refer to the documentation at https://staticbackend.com/docs\n
 	} else {
 		err = emailer.Send(ed)
 		if err != nil {
-			log.Println("error sending email", err)
+			a.log.Error().Err(err).Msg("error sending email")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
-	fmt.Println("DEBUG: ", signUpURL)
+	a.log.Debug().Msgf("DEBUG: %s", signUpURL)
 
 	if fromCLI {
 		respond(w, http.StatusOK, signUpURL)
@@ -259,7 +260,7 @@ Refer to the documentation at https://staticbackend.com/docs\n
 		return
 	}
 
-	render(w, r, "login.html", nil, &Flash{Type: "sucess", Message: "We've emailed you all the information you need to get started."})
+	render(w, r, "login.html", nil, &Flash{Type: "sucess", Message: "We've emailed you all the information you need to get started."}, a.log)
 }
 
 func (a *accounts) auth(w http.ResponseWriter, r *http.Request) {

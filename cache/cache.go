@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -16,17 +16,18 @@ import (
 type Cache struct {
 	Rdb *redis.Client
 	Ctx context.Context
+	log *logger.Logger
 }
 
 // NewCache returns an initiated Redis client
-func NewCache() *Cache {
+func NewCache(log *logger.Logger) *Cache {
 	var err error
 	var opt *redis.Options
 
 	if uri := config.Current.RedisURL; len(uri) > 0 {
 		opt, err = redis.ParseURL(uri)
 		if err != nil {
-			log.Fatal("invalid REDIS_URL value: ", err)
+			log.Fatal().Err(err).Msg("invalid REDIS_URL value")
 		}
 	} else {
 		opt = &redis.Options{
@@ -40,6 +41,7 @@ func NewCache() *Cache {
 	return &Cache{
 		Rdb: rdb,
 		Ctx: context.Background(),
+		log: log,
 	}
 }
 
@@ -83,7 +85,7 @@ func (c *Cache) Subscribe(send chan internal.Command, token, channel string, clo
 	pubsub := c.Rdb.Subscribe(c.Ctx, channel)
 
 	if _, err := pubsub.Receive(c.Ctx); err != nil {
-		log.Println("error establishing PubSub subscription", err)
+		c.log.Error().Err(err).Msg("error establishing PubSub subscription")
 		return
 	}
 
@@ -94,7 +96,7 @@ func (c *Cache) Subscribe(send chan internal.Command, token, channel string, clo
 		case m := <-ch:
 			var msg internal.Command
 			if err := json.Unmarshal([]byte(m.Payload), &msg); err != nil {
-				log.Println("error parsing JSON message", err)
+				c.log.Error().Err(err).Msg("error parsing JSON message")
 				_ = pubsub.Close()
 				return
 			}
@@ -129,14 +131,14 @@ func (c *Cache) Publish(msg internal.Command) error {
 		sysmsg.IsSystemEvent = true
 		b, err := json.Marshal(sysmsg)
 		if err != nil {
-			log.Println("error marshaling the system msg: ", err)
+			c.log.Error().Err(err).Msg("error marshaling the system msg")
 			return
 		}
 
 		sysctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		defer cancel()
 		if err := c.Rdb.Publish(sysctx, "sbsys", string(b)).Err(); err != nil {
-			log.Println("error publishing to system channel: ", err)
+			c.log.Error().Err(err).Msg("error publishing to system channel")
 		}
 	}(msg)
 
@@ -146,13 +148,13 @@ func (c *Cache) Publish(msg internal.Command) error {
 func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 	subs, err := c.Rdb.PubSubNumSub(c.Ctx, channel).Result()
 	if err != nil {
-		fmt.Println("error getting db subscribers for ", channel)
+		c.log.Error().Err(err).Msgf("error getting db subscribers for ", channel)
 		return
 	}
 
 	count, ok := subs[channel]
 	if !ok {
-		fmt.Println("cannot find channel in subs", channel)
+		c.log.Warn().Msgf("cannot find channel in subs: %d", channel)
 		return
 	} else if count == 0 {
 		return
@@ -160,7 +162,7 @@ func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 
 	b, err := json.Marshal(v)
 	if err != nil {
-		fmt.Println("error publishing db doc: ", err)
+		c.log.Error().Err(err).Msg("error publishing db doc")
 		return
 	}
 
@@ -171,7 +173,7 @@ func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 	}
 
 	if err := c.Publish(msg); err != nil {
-		fmt.Println("unable to publish db doc events:", err)
+		c.log.Error().Err(err).Msg("unable to publish db doc events")
 	}
 }
 
@@ -183,7 +185,8 @@ func (c *Cache) HasPermission(token, repo, payload string) bool {
 
 	docs := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(payload), &docs); err != nil {
-		fmt.Println("error decoding docs for permissions check", err)
+		c.log.Error().Err(err).Msg("error decoding docs for permissions check")
+
 		return false
 	}
 

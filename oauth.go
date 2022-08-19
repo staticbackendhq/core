@@ -8,6 +8,7 @@ import (
 
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 
 	"github.com/markbates/goth"
@@ -24,6 +25,7 @@ const (
 
 type ExternalLogins struct {
 	membership *membership
+	log        *logger.Logger
 }
 
 type ExternalUser struct {
@@ -185,7 +187,7 @@ func (el *ExternalLogins) callback() http.Handler {
 				return
 			}
 
-			render(w, r, "oauth.html", nil, nil)
+			render(w, r, "oauth.html", nil, nil, el.log)
 		})
 
 		next.ServeHTTP(w, r)

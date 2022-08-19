@@ -1,10 +1,10 @@
 package function
 
 import (
-	"log"
 	"time"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 
 	"github.com/go-co-op/gocron"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,12 +15,13 @@ type TaskScheduler struct {
 	Volatile  internal.PubSuber
 	DataStore internal.Persister
 	Scheduler *gocron.Scheduler
+	log       *logger.Logger
 }
 
 func (ts *TaskScheduler) Start() {
 	tasks, err := ts.DataStore.ListTasks()
 	if err != nil {
-		log.Println("error loading tasks: ", err)
+		ts.log.Error().Err(err).Msg("error loading tasks")
 		return
 	}
 
@@ -30,7 +31,7 @@ func (ts *TaskScheduler) Start() {
 	for _, task := range tasks {
 		_, err := ts.Scheduler.Cron(task.Interval).Tag(task.ID).Do(ts.run, task)
 		if err != nil {
-			log.Printf("error scheduling this task: %s -> %v\n", task.ID, err)
+			ts.log.Error().Err(err).Msgf("error scheduling this task: %s", task.ID)
 		}
 	}
 }
@@ -41,7 +42,8 @@ func (ts *TaskScheduler) run(task internal.Task) {
 	if err := ts.Volatile.GetTyped("root:"+task.BaseName, &auth); err != nil {
 		tok, err := ts.DataStore.GetRootForBase(task.BaseName)
 		if err != nil {
-			log.Printf("error finding root token for base %s: %v\n", task.BaseName, err)
+			ts.log.Error().Err(err).Msgf("error finding root token for base %s", task.BaseName)
+
 			return
 		}
 
@@ -54,7 +56,7 @@ func (ts *TaskScheduler) run(task internal.Task) {
 		}
 
 		if err := ts.Volatile.SetTyped("root:"+task.BaseName, auth); err != nil {
-			log.Println("error setting auth inside TaskScheduler.run: ", err)
+			ts.log.Error().Err(err).Msg("error setting auth inside TaskScheduler.run")
 			return
 		}
 	}
@@ -70,7 +72,7 @@ func (ts *TaskScheduler) run(task internal.Task) {
 func (ts *TaskScheduler) execFunction(auth internal.Auth, task internal.Task) {
 	fn, err := ts.DataStore.GetFunctionForExecution(task.BaseName, task.Value)
 	if err != nil {
-		log.Printf("cannot find function %s on task %s", task.Value, task.ID)
+		ts.log.Error().Err(err).Msgf("cannot find function %s on task %s", task.Value)
 		return
 	}
 
@@ -80,10 +82,11 @@ func (ts *TaskScheduler) execFunction(auth internal.Auth, task internal.Task) {
 		DataStore: ts.DataStore,
 		Volatile:  ts.Volatile,
 		Data:      fn,
+		log:       ts.log,
 	}
 
 	if err := exe.Execute(task.Name); err != nil {
-		log.Printf("error executing function %s: %v", task.Value, err)
+		ts.log.Error().Err(err).Msgf("error executing function %s", task.Value)
 	}
 }
 
@@ -92,7 +95,7 @@ func (ts *TaskScheduler) sendMessage(auth internal.Auth, task internal.Task) {
 
 	meta, ok := task.Meta.(internal.MetaMessage)
 	if !ok {
-		log.Println("unable to get meta data for type MetaMessage for task: ", task.ID)
+		ts.log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %d", task.ID)
 		return
 	}
 
@@ -105,6 +108,6 @@ func (ts *TaskScheduler) sendMessage(auth internal.Auth, task internal.Task) {
 	}
 
 	if err := ts.Volatile.Publish(msg); err != nil {
-		log.Println("error publishing message from task", task.ID, err)
+		ts.log.Error().Err(err).Msgf("error publishing message from task: %d", task.ID)
 	}
 }
