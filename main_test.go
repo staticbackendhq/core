@@ -16,6 +16,7 @@ import (
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/storage"
 )
 
@@ -43,7 +44,9 @@ var (
 func TestMain(m *testing.M) {
 	config.Current = config.LoadConfig()
 
-	volatile = cache.NewCache()
+	logz := logger.Get(config.Current)
+
+	volatile = cache.NewCache(logz)
 
 	storer = storage.Local{}
 
@@ -53,19 +56,19 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 
-		datastore = mongo.New(cl, volatile.PublishDocument)
+		datastore = mongo.New(cl, volatile.PublishDocument, logz)
 	} else {
 		dbConn, err := openPGDatabase("user=postgres password=postgres dbname=postgres sslmode=disable")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		datastore = postgresql.New(dbConn, volatile.PublishDocument, "./sql/")
+		datastore = postgresql.New(dbConn, volatile.PublishDocument, "./sql/", logz)
 	}
 
-	database = &Database{cache: volatile}
+	database = &Database{cache: volatile, log: logz}
 
-	mship = &membership{}
+	mship = &membership{log: logz}
 
 	mp := config.Current.MailProvider
 	if strings.EqualFold(mp, internal.MailProviderSES) {
@@ -80,7 +83,7 @@ func TestMain(m *testing.M) {
 	go hub.run()
 
 	ws := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		serveWs(logz, hub, w, r)
 	}))
 	defer ws.Close()
 
