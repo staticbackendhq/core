@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-<<<<<<< HEAD
-=======
-	"log"
+
 	"math/rand"
->>>>>>> main
 	"net/http"
 	"strings"
 	"time"
