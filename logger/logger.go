@@ -23,6 +23,7 @@ var (
 func newFileWriter(filename string) io.Writer {
 	return &lumberjack.Logger{
 		Filename: filename,
+		MaxAge:   22,
 	}
 }
 
