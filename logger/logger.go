@@ -42,7 +42,9 @@ func Get(cfg config.AppConfig) *Logger {
 			}
 
 			zerolog.SetGlobalLevel(level)
-		} else {
+		}
+
+		if cfg.AppEnv == "dev" {
 			zerolog.SetGlobalLevel(zerolog.TraceLevel)
 		}
 
