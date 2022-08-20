@@ -249,6 +249,31 @@ func (pg *PostgreSQL) UpdateDocument(auth internal.Auth, dbName, col, id string,
 	return updated, nil
 }
 
+func (pg *PostgreSQL) UpdateDocuments(auth internal.Auth, dbName, col string, filters map[string]interface{}, updateFields map[string]interface{}) (n int64, err error) {
+	where := secureWrite(auth, col)
+	where = applyFilter(where, filters)
+
+	qry := fmt.Sprintf(`
+		UPDATE %s.%s SET
+			data = data || $3
+		%s
+	`, dbName, internal.CleanCollectionName(col), where)
+
+	b, err := json.Marshal(updateFields)
+	if err != nil {
+		return 0, err
+	}
+	res, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID, b)
+	if err != nil {
+		return 0, err
+	}
+	n, err = res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return
+}
+
 func (pg *PostgreSQL) IncrementValue(auth internal.Auth, dbName, col, id, field string, n int) error {
 	where := secureWrite(auth, col)
 

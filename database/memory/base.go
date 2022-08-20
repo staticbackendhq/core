@@ -82,43 +82,7 @@ func (m *Memory) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 
 	list = secureRead(auth, col, list)
 
-	var filtered []map[string]any
-	for _, doc := range list {
-		matches := 0
-		for k, v := range filter {
-			op, field := extractOperatorAndValue(k)
-			switch op {
-			case "=":
-				if equal(doc[field], v) {
-					matches++
-				}
-			case "!=":
-				if notEqual(doc[field], v) {
-					matches++
-				}
-			case ">":
-				if greater(doc[field], v) {
-					matches++
-				}
-			case "<":
-				if lower(doc[field], v) {
-					matches++
-				}
-			case ">=":
-				if greaterThanEqual(doc[field], v) {
-					matches++
-				}
-			case "<=":
-				if lowerThanEqual(doc[field], v) {
-					matches++
-				}
-			}
-		}
-
-		if matches == len(filter) {
-			filtered = append(filtered, doc)
-		}
-	}
+	filtered := filterByClauses(list, filter)
 
 	start := (params.Page - 1) * params.Size
 	end := start + params.Size - 1
@@ -156,15 +120,35 @@ func (m *Memory) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 		return
 	}
 
-	delete(doc, FieldID)
-	delete(doc, FieldAccountID)
-	delete(doc, FieldOwnerID)
+	removeNotEditableFields(doc)
 
 	for k, v := range doc {
 		exists[k] = v
 	}
 
 	err = create(m, dbName, col, id, exists)
+	return
+}
+
+func (m *Memory) UpdateDocuments(auth internal.Auth, dbName, col string, filter map[string]interface{}, updateFields map[string]interface{}) (n int64, err error) {
+	list, err := all[map[string]any](m, dbName, col)
+
+	if err != nil {
+		return
+	}
+	list = secureRead(auth, col, list)
+
+	removeNotEditableFields(updateFields)
+	filtered := filterByClauses(list, filter)
+
+	for _, v := range filtered {
+		_, err := m.UpdateDocument(auth, dbName, col, v[FieldID].(string), updateFields)
+		if err != nil {
+			return n, err
+		}
+		n++
+	}
+
 	return
 }
 
@@ -237,6 +221,12 @@ func extractOperatorAndValue(s string) (op string, field string) {
 	op = parts[0]
 	field = strings.Join(parts[1:], " ")
 	return
+}
+
+func removeNotEditableFields(m map[string]any) {
+	delete(m, FieldID)
+	delete(m, FieldAccountID)
+	delete(m, FieldOwnerID)
 }
 
 func equal(v any, val any) bool {

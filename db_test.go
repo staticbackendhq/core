@@ -179,6 +179,47 @@ func TestDBListCollections(t *testing.T) {
 	}
 }
 
+func TestDBBulkUpdate(t *testing.T) {
+	tasks := []Task{
+		{
+			Title: "should be updated",
+			Done:  false,
+		},
+		{
+			Title: "should be updated",
+			Done:  false,
+		},
+	}
+
+	resp := dbReq(t, database.bulkAdd, "POST", "/db/tasks/bulk", tasks)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var data = new(struct {
+		UpdateFields map[string]any  `json:"update"`
+		Clauses      [][]interface{} `json:"clauses"`
+	})
+	data.UpdateFields = map[string]any{"done": true}
+	data.Clauses = append(data.Clauses, []interface{}{"title", "=", "should be updated"})
+
+	resp = dbReq(t, database.bulkUpdate, "PUT", "/db/tasks/bulk", data)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var result int
+	if err := parseBody(resp.Body, &result); err != nil {
+		t.Fatal(err)
+	} else if result != 2 {
+		t.Errorf("expected count to be 2 got %d", result)
+	}
+}
+
 func TestDBIncrease(t *testing.T) {
 	task :=
 		Task{
