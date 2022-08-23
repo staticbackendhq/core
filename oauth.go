@@ -199,7 +199,7 @@ func (*ExternalLogins) getUser(w http.ResponseWriter, r *http.Request) {
 
 	var extuser ExternalUser
 	if err := volatile.GetTyped("extuser_"+reqID, &extuser); err != nil {
-		respond(w, http.StatusNotFound, err)
+		respond(w, http.StatusOK, false)
 		return
 	}
 
