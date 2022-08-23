@@ -112,12 +112,16 @@ func (mg *Mongo) DeleteFile(dbName, fileID string) error {
 func (mg *Mongo) ListAllFiles(dbName, accountID string) ([]internal.File, error) {
 	db := mg.Client.Database(dbName)
 
-	aid, err := primitive.ObjectIDFromHex(accountID)
-	if err != nil {
-		return nil, err
-	}
+	var filter bson.M
 
-	filter := bson.M{FieldAccountID: aid}
+	if len(accountID) > 0 {
+		aid, err := primitive.ObjectIDFromHex(accountID)
+		if err != nil {
+			return nil, err
+		}
+
+		filter = bson.M{FieldAccountID: aid}
+	}
 
 	sr, err := db.Collection("sb_files").Find(mg.Ctx, filter)
 	if err != nil {

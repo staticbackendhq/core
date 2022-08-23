@@ -520,13 +520,15 @@ func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (x *ui) fsList(w http.ResponseWriter, r *http.Request) {
-	conf, auth, err := middleware.Extract(r, false)
+	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
 
-	results, err := datastore.ListAllFiles(conf.Name, auth.AccountID)
+	accountID := r.URL.Query().Get("id")
+
+	results, err := datastore.ListAllFiles(conf.Name, accountID)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return

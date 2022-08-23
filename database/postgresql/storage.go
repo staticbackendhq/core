@@ -51,11 +51,19 @@ func (pg *PostgreSQL) DeleteFile(dbName, fileID string) error {
 }
 
 func (pg *PostgreSQL) ListAllFiles(dbName, accountID string) (results []internal.File, err error) {
+	where := "WHERE account_id = $1"
+
+	// if no accountID is specify, the admin UI
+	// display all files uploaded.
+	if len(accountID) == 0 {
+		where = "WHERE $1 = $1"
+	}
+
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_files
-		WHERE account_id = $1
-	`, dbName)
+		%s
+	`, dbName, where)
 
 	rows, err := pg.DB.Query(qry, accountID)
 	if err != nil {
