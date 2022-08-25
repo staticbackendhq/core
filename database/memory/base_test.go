@@ -3,6 +3,7 @@ package memory
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -303,5 +304,35 @@ func TestListCollections(t *testing.T) {
 	} else if len(results) < 3 {
 		t.Log(results)
 		t.Errorf("expected to have at least one collection got %d", len(results))
+	}
+}
+
+func TestListDocumentsWithNonExistingDB(t *testing.T) {
+	lp := internal.ListParams{Page: 1, Size: 25}
+	expected := internal.PagedResult{Page: 1, Size: 25}
+	result, err := datastore.ListDocuments(adminAuth, "random_name", colName, lp)
+	if err != nil {
+		t.Fatal(err)
+	} else if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("expected empty result but got %v", result)
+	}
+}
+
+func TestQueryDocumentsWithNonExistingDB(t *testing.T) {
+	var clauses [][]interface{}
+	clauses = append(clauses, []interface{}{"title", "=", "where1"})
+
+	lp := internal.ListParams{Page: 1, Size: 5}
+
+	filters, err := datastore.ParseQuery(clauses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := internal.PagedResult{Page: 1, Size: 5}
+	result, err := datastore.QueryDocuments(adminAuth, "random_name", colName, filters, lp)
+	if err != nil {
+		t.Fatal(err)
+	} else if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("expected empty result but got %v", result)
 	}
 }

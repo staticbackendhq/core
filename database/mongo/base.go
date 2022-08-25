@@ -164,6 +164,9 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 	if err != nil {
 		return result, err
 	}
+	if count == 0 {
+		return result, nil
+	}
 
 	result.Total = count
 
@@ -232,6 +235,9 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 	count, err := db.Collection(internal.CleanCollectionName(col)).CountDocuments(mg.Ctx, filter)
 	if err != nil {
 		return result, err
+	}
+	if count == 0 {
+		return result, nil
 	}
 
 	result.Total = count
