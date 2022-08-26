@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -119,6 +120,69 @@ func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) {
 			params = append(params, v.Export())
 		}
 		env.CurrentRun.Output = append(env.CurrentRun.Output, fmt.Sprint(params...))
+		return goja.Undefined()
+	})
+	vm.Set("fetch", func(call goja.FunctionCall) goja.Value {
+		url := ""
+		fetchOptions := NewJSFetcthOptionArg()
+		if len(call.Arguments) == 0 {
+			return goja.Undefined()
+		} else if len(call.Arguments) == 1 {
+			url = call.Argument(0).Export().(string)
+		} else {
+			url = call.Argument(0).Export().(string)
+			if err := vm.ExportTo(call.Argument(1), &fetchOptions); err != nil {
+				return vm.ToValue(Result{Content: "the second argument should be an object"})
+			}
+		}
+		if len(url) == 0 {
+			return vm.ToValue(Result{Content: "the url should not be blank"})
+		}
+
+		responseChan := make(chan interface{})
+		go func() {
+			client := http.Client{Timeout: time.Duration(30) * time.Second}
+			var request *http.Request
+			var err error
+			bodyReader := strings.NewReader(fetchOptions.Body)
+			switch fetchOptions.Method {
+			case "GET":
+				request, err = http.NewRequest(http.MethodGet, url, nil)
+			case "POST":
+				request, err = http.NewRequest(http.MethodPost, url, bodyReader)
+			case "PUT":
+				request, err = http.NewRequest(http.MethodPut, url, bodyReader)
+			case "DELETE":
+				request, err = http.NewRequest(http.MethodDelete, url, bodyReader)
+			case "PATCH":
+				request, err = http.NewRequest(http.MethodPatch, url, bodyReader)
+			}
+			if err != nil {
+				responseChan <- err
+			}
+			for headerKey, headerValue := range fetchOptions.Headers {
+				if len(headerKey) > 0 && len(headerValue) > 0 {
+					request.Header.Set(headerKey, headerValue)
+				}
+			}
+			res, err := client.Do(request)
+			if err != nil {
+				responseChan <- err
+			}
+			responseChan <- res
+		}()
+
+		output := <-responseChan
+
+		if err, ok := output.(error); ok {
+			return vm.ToValue(Result{OK: false, Content: fmt.Sprintf("error calling fetch(): %s", err.Error())})
+		} else if response, ok := output.(*http.Response); ok {
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				return vm.ToValue(Result{OK: false, Content: fmt.Sprintf("error calling fetch(): %s", err.Error())})
+			}
+			return vm.ToValue(Result{OK: true, Content: HTTPResponse{Status: response.StatusCode, Body: string(bodyBytes)}})
+		}
 		return goja.Undefined()
 	})
 }
