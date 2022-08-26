@@ -48,6 +48,9 @@ func (m *Memory) BulkCreateDocument(auth internal.Auth, dbName, col string, docs
 func (m *Memory) ListDocuments(auth internal.Auth, dbName, col string, params internal.ListParams) (result internal.PagedResult, err error) {
 	list, err := all[map[string]any](m, dbName, col)
 	if err != nil {
+		if errors.Is(err, collectionNotFoundErr) {
+			return internal.PagedResult{Page: params.Page, Size: params.Size}, nil
+		}
 		return
 	}
 
@@ -77,6 +80,9 @@ func (m *Memory) ListDocuments(auth internal.Auth, dbName, col string, params in
 func (m *Memory) QueryDocuments(auth internal.Auth, dbName, col string, filter map[string]any, params internal.ListParams) (result internal.PagedResult, err error) {
 	list, err := all[map[string]any](m, dbName, col)
 	if err != nil {
+		if errors.Is(err, collectionNotFoundErr) {
+			return internal.PagedResult{Page: params.Page, Size: params.Size}, nil
+		}
 		return
 	}
 
