@@ -1,5 +1,15 @@
 # Changelog for StaticBackend
 
+### Mar 16, 2022 v1.3.0
+
+* Feature: resize image when uploading
+* Feature: convert URL to PDF or PNG
+* Feature: send SMS text messages
+* Added possibility to create database indexes
+* Fixed an issue with Mongo's read permissions for list and query functions
+* Added a new environment variable for Redis: REDIS_URL
+* Fixed an issue with MongoDB server-side functions schema
+
 ### Feb 22, 2022 v1.2.1
 
 * Fixed issue with form submission (thanks c-nv-s)
