@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
@@ -177,6 +178,42 @@ func TestDBListCollections(t *testing.T) {
 	} else if len(names) < 2 {
 		t.Errorf("expected len to be > than 2 got %d", len(names))
 	}
+}
+
+func TestListDocumentsInvalidDB(t *testing.T) {
+	req := httptest.NewRequest("GET", "/db/invalid_db_name", nil)
+	w := httptest.NewRecorder()
+
+	req.Header.Set("SB-PUBLIC-KEY", pubKey)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
+
+	stdRoot := []middleware.Middleware{
+		middleware.WithDB(datastore, volatile, getStripePortalURL),
+		middleware.RequireRoot(datastore),
+	}
+	h := middleware.Chain(http.HandlerFunc(database.list), stdRoot...)
+
+	h.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode > 299 {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Errorf("got error for list documents: %s", string(b))
+	}
+	expected := internal.PagedResult{Page: 1, Size: 25}
+
+	var response internal.PagedResult
+	if err := parseBody(resp.Body, &response); err != nil {
+		t.Fatal(err)
+	} else if !reflect.DeepEqual(expected, response) {
+		t.Errorf("incorrect response is received\nExpected: %#v\nActual: %#v", expected, response)
+	}
+
 }
 
 func TestDBBulkUpdate(t *testing.T) {

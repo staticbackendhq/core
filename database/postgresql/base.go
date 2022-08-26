@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lib/pq"
 	"strings"
 	"time"
 
@@ -118,6 +119,9 @@ func (pg *PostgreSQL) ListDocuments(auth internal.Auth, dbName, col string, para
 	`, dbName, internal.CleanCollectionName(col), where)
 
 	if err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&result.Total); err != nil {
+		if !isTableExists(err) {
+			return result, nil
+		}
 		return
 	}
 
@@ -167,6 +171,9 @@ func (pg *PostgreSQL) QueryDocuments(auth internal.Auth, dbName, col string, fil
 	`, dbName, internal.CleanCollectionName(col), where)
 
 	if err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID).Scan(&result.Total); err != nil {
+		if !isTableExists(err) {
+			return result, nil
+		}
 		return
 	}
 
@@ -347,4 +354,13 @@ func scanDocument(rows Scanner, doc *Document) error {
 		&doc.Data,
 		&doc.Created,
 	)
+}
+
+func isTableExists(err error) bool {
+	if err, ok := err.(*pq.Error); ok {
+		if err.Code.Name() == "undefined_table" {
+			return false
+		}
+	}
+	return true
 }
