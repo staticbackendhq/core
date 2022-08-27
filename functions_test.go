@@ -72,7 +72,71 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			log("query doc id: " + qres.content.results[0].id);
 			return;
 		}
-		
+
+		var getRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d");
+		if (!getRes.ok) {
+			log("ERROR: sending GET request");
+			log(getRes.content);
+			return;
+		}
+
+		var postRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+			method: "POST",
+			headers: {
+				"Content-Type" : "application/json"
+			}, 
+			body: {
+				"test": "test msg"
+			}
+		});
+		if (!postRes.ok) {
+			log("ERROR: sending POST request");
+			log(postRes.content);
+			return;
+		}
+
+		var putRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+			method: "PUT",
+			headers: {
+				"Content-Type" : "application/json"
+			}, 
+			body: {
+				"test": "test msg"
+			}
+		});
+		if (!putRes.ok) {
+			log("ERROR: sending PUT request");
+			log(putRes.content);
+			return;
+		}
+		var patchRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+			method: "PATCH",
+			headers: {
+				"Content-Type" : "application/json"
+			}, 
+			body: {
+				"test": "test msg"
+			}
+		});
+		if (!patchRes.ok) {
+			log("ERROR: sending PATCH request");
+			log(patchRes.content);
+			return;
+		}
+		var delRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+			method: "DELETE",
+			headers: {
+				"Content-Type" : "application/json"
+			}, 
+			body: {
+				"test": "test msg"
+			}
+		});
+		if (!delRes.ok) {
+			log("ERROR: sending DELETE request");
+			log(delRes.content);
+			return;
+		}
 	}`
 	data := internal.ExecData{
 		FunctionName: "unittest",
