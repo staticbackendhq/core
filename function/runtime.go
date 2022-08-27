@@ -181,6 +181,8 @@ func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) {
 			if err != nil {
 				return vm.ToValue(Result{OK: false, Content: fmt.Sprintf("error calling fetch(): %s", err.Error())})
 			}
+			response.Body.Close()
+
 			return vm.ToValue(Result{OK: true, Content: HTTPResponse{Status: response.StatusCode, Body: string(bodyBytes)}})
 		}
 		return goja.Undefined()
