@@ -289,7 +289,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 func initServices(dbHost string, log *logger.Logger) {
 
 	if strings.EqualFold(dbHost, "mem") {
-		volatile = cache.NewDevCache()
+		volatile = cache.NewDevCache(log)
 	} else {
 		volatile = cache.NewCache(log)
 	}

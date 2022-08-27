@@ -148,13 +148,13 @@ func (c *Cache) Publish(msg internal.Command) error {
 func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 	subs, err := c.Rdb.PubSubNumSub(c.Ctx, channel).Result()
 	if err != nil {
-		c.log.Error().Err(err).Msgf("error getting db subscribers for ", channel)
+		c.log.Error().Err(err).Msgf("error getting db subscribers for %s", channel)
 		return
 	}
 
 	count, ok := subs[channel]
 	if !ok {
-		c.log.Warn().Msgf("cannot find channel in subs: %d", channel)
+		c.log.Warn().Msgf("cannot find channel in subs: %s", channel)
 		return
 	} else if count == 0 {
 		return
