@@ -1,7 +1,7 @@
 APP_ENV=dev
 APP_SECRET=a-very-long-key-should-be-32long
-DATABASE_URL=mongodb://localhost:27017
-DATA_STORE=mongo
+DATABASE_URL=user=postgres password=postgres dbname=postgres sslmode=disable
+DATA_STORE=pg
 JWT_SECRET=changeMe
 MAIL_PROVIDER=dev
 STORAGE_PROVIDER=local
