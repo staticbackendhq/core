@@ -16,6 +16,7 @@ jobs:
     - name: Install dependencies for chromedp
       run: sudo apt-get install -y libnspr4 libnss3 libexpat1 libfontconfig1 libuuid1
 
+    
     - name: Start containers (PostgreSQL, MongoDB, Redis)
       run: docker-compose -f "docker-compose-unittest.yml" up -d
 
@@ -23,21 +24,21 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.18
-
-    - name: Setup .env file (PostgreSQL)
+    
+    - name: Setup .env file (mongo)
       run: mv .gh-actions-env .env
 
     - name: Build
       run: make build
 
-    - name: Test (PostgreSQL data store)
-      run: make alltest
-
-    - name: Change DATA_STORE to Mongo
-      run: sed -i 's/DATA_STORE=pg/DATA_STORE=mongo/g' .env
-
-    - name: Change DATABASE_URL to Mongo connection string
-      run: sed -i 's/DATABASE_URL=user=postgres password=postgres dbname=postgres sslmode=disable/DATABASE_URL=mongodb:\/\/localhost:27017/g' .env
-
     - name: Test (Mongo data store)
+      run: make alltest
+    
+    - name: Change DATA_STORE to PostgreSQL
+      run: sed -i 's/DATA_STORE=mongo/DATA_STORE=pg/g' .env
+    
+    - name: Change DATABASE_URL to PG connection string
+      run: sed -i 's/DATABASE_URL=mongodb:\/\/localhost:27017/DATABASE_URL=user=postgres password=postgres dbname=postgres sslmode=disable/g' .env
+
+    - name: Test (PostgreSQL data store)
       run: make alltest
