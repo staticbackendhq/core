@@ -42,11 +42,13 @@ func WithDB(datastore internal.Persister, volatile internal.PubSuber, g BillingP
 				// let's try to see if they are allow to use a database
 				conf, err = datastore.FindDatabase(key)
 				if err != nil {
+					err = fmt.Errorf("error finding database: %w", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				} else if !conf.IsActive {
 					url, err := g(conf.CustomerID)
 					if err != nil {
+						err = fmt.Errorf("error generating billing portal: %w", err)
 						http.Error(w, err.Error(), http.StatusInternalServerError)
 						return
 					}

@@ -55,6 +55,7 @@ func RequireAuth(datastore internal.Persister, volatile internal.PubSuber) Middl
 
 			auth, err := ValidateAuthKey(datastore, volatile, ctx, key)
 			if err != nil {
+				err = fmt.Errorf("error validating auth key: %w", err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}

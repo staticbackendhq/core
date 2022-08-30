@@ -86,7 +86,7 @@ func GetResponseBody(t *testing.T, resp *http.Response) string {
 		t.Fatal("error reading response body: ", err)
 	}
 
-	return string(b)
+	return fmt.Sprintf("HTTP Status:%s Error:%s", resp.Status, string(b))
 }
 
 func TestHasPermission(t *testing.T) {
