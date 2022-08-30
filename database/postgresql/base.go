@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/lib/pq"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
 
 	"github.com/staticbackendhq/core/internal"
 )
@@ -62,6 +63,7 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 	`, dbName, cleancol, dbName, dbName, cleancol, dbName, cleancol)
 
 	if _, err = pg.DB.Exec(qry); err != nil {
+		err = fmt.Errorf("error creating table: %w", err)
 		return
 	}
 
@@ -75,10 +77,14 @@ func (pg *PostgreSQL) CreateDocument(auth internal.Auth, dbName, col string, doc
 
 	b, err := json.Marshal(doc)
 	if err != nil {
+		err = fmt.Errorf("error executing INSERT: %w", err)
 		return
 	}
 
 	err = pg.DB.QueryRow(qry, auth.AccountID, auth.UserID, b, time.Now()).Scan(&id)
+	if err != nil {
+		err = fmt.Errorf("error getting the new row ID: %w", err)
+	}
 
 	inserted[FieldID] = id
 	inserted[FieldAccountID] = auth.AccountID
