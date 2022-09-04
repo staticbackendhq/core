@@ -120,7 +120,7 @@ func ValidateAuthKey(datastore internal.Persister, volatile internal.PubSuber, c
 	return a, nil
 }
 
-func RequireRoot(datastore internal.Persister) Middleware {
+func RequireRoot(datastore internal.Persister, volatile internal.PubSuber) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
@@ -145,6 +145,22 @@ func RequireRoot(datastore internal.Persister) Middleware {
 			}
 
 			key = strings.Replace(key, "Bearer ", "", -1)
+
+			// in dev mode the cache will have a key called:
+			// dev-root-token which hold the dynamically changing root token
+			// which changes each stop/start of the CLI. Using
+			// "safe-to-use-in-dev-root-token" as root token will
+			// get the real root token removing the need to update the root token
+			// in dev mode
+			if key == "safe-to-use-in-dev-root-token" {
+				rt, err := volatile.Get("dev-root-token")
+				if err != nil {
+					http.Error(w, "not in dev mode", http.StatusUnauthorized)
+					return
+				}
+
+				key = rt
+			}
 
 			ctx := r.Context()
 			conf, ok := ctx.Value(ContextBase).(internal.BaseConfig)

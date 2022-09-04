@@ -231,7 +231,8 @@ Admin user:
 	Password:	%s
 
 
-Root token:		%s
+Dev root token:		safe-to-use-in-dev-root-token
+Real root token:		%s
 
 
 Refer to the documentation at https://staticbackend.com/docs\n
@@ -239,6 +240,11 @@ Refer to the documentation at https://staticbackend.com/docs\n
 `,
 			bc.ID, email, pw, rootToken,
 		)
+
+		// cache the root token so caller can always use
+		// "safe-to-use-in-dev-root-token" as root token instead of
+		// the changing one across CLI start/stop
+		volatile.Set("dev-root-token", rootToken)
 	} else {
 		err = emailer.Send(ed)
 		if err != nil {

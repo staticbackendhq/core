@@ -10,9 +10,12 @@
 	
 </p>
 
+p.s. If you'd like to contribute to an active Go project, you've found a nice 
+one in my biased opinion.
+
 # StaticBackend - simple backend for your apps
 
-[StaticBackend](https://staticbackend.com) is a simple backend that handles 
+[StaticBackend](https://staticbackend.com) is a simple backend API that handles 
 user management, database, file storage, forms, real-time experiences via 
 channel/topic-based communication, and server-side functions for web and mobile 
 applications.
@@ -41,6 +44,8 @@ user management, database, file storage, real-time interactions, it should be
 a good fit.
 
 I'm personally using it to build SaaS:
+
+[En Pyjama - an online course platform for kids](https://enpyjama.com)
 
 Abandoned projects:
 
@@ -74,7 +79,7 @@ const bkn = new Backend("your_public-key", "dev");
 let token = "";
 
 login = async () => {
-	const res = await bkn.login("email@test.com", "password");
+	const res = await bkn.register("email@test.com", "password");
 	if (!res.ok) {
 		console.error(res.content);
 		return;
@@ -210,8 +215,7 @@ Please help us improve if you have any feedback.
 
 We [provide a CLI](https://staticbackend.com/getting-started/) for local 
 development if you want to get things started without any infrastructure and 
-for prototyping / testing. Please note the dev server has a very limited 
-functionalities compares to the full self-hosted version.
+for prototyping / testing.
 
 You can use the CLI to manage your database, form submissions, and deploy 
 server-side-functions. We have an alpha Web UI as well to manage your resources.
@@ -262,4 +266,4 @@ If you're looking to help the project, here are some ways:
 * Use it and share your experiences.
 * Sponsor the development via GitHub sponsors.
 * Spread the words, a tweet, a blog post, any mention is helpful.
-* Join the Discord server.
+* Join the [Discord](https://discord.gg/vgh2PTp9ZB) server.

@@ -138,7 +138,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 
 	stdRoot := []middleware.Middleware{
 		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireRoot(datastore),
+		middleware.RequireRoot(datastore, volatile),
 	}
 
 	m := &membership{log: log}

@@ -1,5 +1,29 @@
 # Changelog for StaticBackend
 
+### Sep 04, 2022 v1.4.0
+
+Features:
+
+* Dev cache impl now handle pub/sub (thanks @rostikts)
+* New server-side runtime function allowing to make HTTP requests (thanks @ksankeerth)
+* Magic link to login without entering password
+* Clean up log output via zerolog (thanks @VladPetriv)
+* Ability to update multiple documents from a query. (thanks @rostikts)
+* UI list uploaded files. (thanks @VladPetriv)
+* Added `/me` endpoint that returns current user with their role.
+* Creation of the `config` package to holw all configuration variables
+* In memory datastore and cache (for local dev / CLI)
+
+Bug fixes:
+
+* Fixed bug when calling List/Query when collection did not exists (thanks @rostikts)
+* Fixed a bug with PostgreSQL read/write permission
+* Fixed issue when serving local store files.
+* Fixed UI displaying internal SB collections
+* Fixed Go version in DockerFile (thanks @MyWay)
+* Fixed issue with PostgreSQL schema name not starting with a letter
+
+
 ### Mar 16, 2022 v1.3.0
 
 * Feature: resize image when uploading

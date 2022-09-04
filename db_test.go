@@ -69,7 +69,7 @@ func dbReq(t *testing.T, hf func(http.ResponseWriter, *http.Request), method, pa
 	if params[0] {
 		stdAuth = []middleware.Middleware{
 			middleware.WithDB(datastore, volatile, getStripePortalURL),
-			middleware.RequireRoot(datastore),
+			middleware.RequireRoot(datastore, volatile),
 		}
 	}
 	h := middleware.Chain(http.HandlerFunc(hf), stdAuth...)
@@ -154,7 +154,7 @@ func TestDBListCollections(t *testing.T) {
 
 	stdRoot := []middleware.Middleware{
 		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireRoot(datastore),
+		middleware.RequireRoot(datastore, volatile),
 	}
 	h := middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...)
 
@@ -189,7 +189,7 @@ func TestListDocumentsInvalidDB(t *testing.T) {
 
 	stdRoot := []middleware.Middleware{
 		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireRoot(datastore),
+		middleware.RequireRoot(datastore, volatile),
 	}
 	h := middleware.Chain(http.HandlerFunc(database.list), stdRoot...)
 
@@ -312,7 +312,7 @@ func TestDBCreateIndex(t *testing.T) {
 
 	stdRoot := []middleware.Middleware{
 		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireRoot(datastore),
+		middleware.RequireRoot(datastore, volatile),
 	}
 	h := middleware.Chain(http.HandlerFunc(database.index), stdRoot...)
 
