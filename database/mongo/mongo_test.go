@@ -3,6 +3,7 @@ package mongo
 import (
 	"context"
 	"errors"
+	"github.com/staticbackendhq/core/logger"
 	"log"
 	"os"
 	"testing"
@@ -51,6 +52,7 @@ func TestMain(m *testing.M) {
 		Client:          cl,
 		Ctx:             context.Background(),
 		PublishDocument: fakePubDocEvent,
+		log:             logger.Get(config.Current),
 	}
 
 	if err := datastore.Ping(); err != nil {

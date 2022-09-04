@@ -265,7 +265,30 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 	where := secureWrite(auth, col)
 	where = applyFilter(where, filters)
 
+	var idsForUpdate []string
 	qry := fmt.Sprintf(`
+		SELECT id
+		FROM %s.%s 
+		%s
+	`, dbName, internal.CleanCollectionName(col), where)
+
+	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			pg.log.Error().Err(err).Msg("error occurred during scanning id for UpdateDocument event")
+			continue
+		}
+		idsForUpdate = append(idsForUpdate, id)
+	}
+	if len(idsForUpdate) == 0 {
+		return 0, nil
+	}
+
+	qry = fmt.Sprintf(`
 		UPDATE %s.%s SET
 			data = data || $3
 		%s
@@ -283,6 +306,17 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 	if err != nil {
 		return 0, err
 	}
+
+	go func() {
+		for _, id := range idsForUpdate {
+			doc, err := pg.GetDocumentByID(auth, dbName, col, id)
+			if err != nil {
+				pg.log.Error().Err(err).Msgf("the document with id=%s is not received for publishDocument event", id)
+				continue
+			}
+			pg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, doc)
+		}
+	}()
 	return
 }
 

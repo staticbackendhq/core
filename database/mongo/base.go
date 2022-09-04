@@ -377,6 +377,26 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 	secureWrite(acctID, userID, auth.Role, col, filters)
 	removeNotEditableFields(updateFields)
 
+	var ids []string
+	findOpts := options.Find().SetProjection(bson.D{{"id", 1}})
+	cur, err := db.Collection(internal.CleanCollectionName(col)).Find(mg.Ctx, filters, findOpts)
+	if err != nil {
+		return 0, err
+	}
+	for cur.Next(mg.Ctx) {
+		var v map[string]interface{}
+		if err := cur.Decode(&v); err != nil {
+			mg.log.Error().Err(err).Msg("")
+		}
+		id, ok := v[FieldID].(primitive.ObjectID)
+		if ok {
+			ids = append(ids, id.Hex())
+		}
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
 	newProps := bson.M{}
 	for k, v := range updateFields {
 		newProps[k] = v
@@ -388,6 +408,17 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 	if err != nil {
 		return 0, err
 	}
+
+	go func() {
+		for _, id := range ids {
+			doc, err := mg.GetDocumentByID(auth, dbName, col, id)
+			if err != nil {
+				mg.log.Error().Err(err).Msgf("the document with id=%s is not received for publishDocument event", id)
+				continue
+			}
+			mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, doc)
+		}
+	}()
 	return res.ModifiedCount, err
 }
 
