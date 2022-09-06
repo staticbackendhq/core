@@ -320,6 +320,43 @@ func (mg *Mongo) GetDocumentByID(auth model.Auth, dbName, col, id string) (map[s
 	return result, nil
 }
 
+func (mg *Mongo) GetDocumentsByIDs(auth model.Auth, dbName, col string, ids []string) (docs []map[string]interface{}, err error) {
+	db := mg.Client.Database(dbName)
+
+	var oids []primitive.ObjectID
+
+	for _, id := range ids {
+		oid, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return []map[string]interface{}{}, err
+		}
+		oids = append(oids, oid)
+	}
+
+	acctID, userID, err := parseObjectID(auth)
+	if err != nil {
+		return []map[string]interface{}{}, err
+	}
+
+	filter := bson.M{FieldID: bson.D{{"$in", oids}}}
+
+	secureRead(acctID, userID, auth.Role, col, filter)
+
+	cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filter)
+	if err != nil {
+		return docs, err
+	}
+	for cur.Next(mg.Ctx) {
+		var v map[string]interface{}
+		if err := cur.Decode(&v); err != nil {
+			return []map[string]interface{}{}, err
+		}
+		cleanMap(v)
+		docs = append(docs, v)
+	}
+	return
+}
+
 func (mg *Mongo) UpdateDocument(auth model.Auth, dbName, col, id string, doc map[string]interface{}) (map[string]interface{}, error) {
 	db := mg.Client.Database(dbName)
 
@@ -379,7 +416,7 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 
 	var ids []string
 	findOpts := options.Find().SetProjection(bson.D{{"id", 1}})
-	cur, err := db.Collection(internal.CleanCollectionName(col)).Find(mg.Ctx, filters, findOpts)
+	cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filters, findOpts)
 	if err != nil {
 		return 0, err
 	}
@@ -410,13 +447,12 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 	}
 
 	go func() {
-		for _, id := range ids {
-			doc, err := mg.GetDocumentByID(auth, dbName, col, id)
-			if err != nil {
-				mg.log.Error().Err(err).Msgf("the document with id=%s is not received for publishDocument event", id)
-				continue
-			}
-			mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, doc)
+		docs, err := mg.GetDocumentsByIDs(auth, dbName, col, ids)
+		if err != nil {
+			mg.log.Error().Err(err).Msgf("the documents with ids=%#s are not received for publishDocument event", ids)
+		}
+		for _, doc := range docs {
+			mg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
 		}
 	}()
 	return res.ModifiedCount, err

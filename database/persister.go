@@ -87,6 +87,8 @@ type Persister interface {
 	QueryDocuments(auth model.Auth, dbName, col string, filter map[string]interface{}, params model.ListParams) (model.PagedResult, error)
 	// GetDocumentByID returns a record by its ID
 	GetDocumentByID(auth model.Auth, dbName, col, id string) (map[string]interface{}, error)
+	// GetDocumentsByIDs returns a list of records by multiple ids
+	GetDocumentsByIDs(auth model.Auth, dbName, col string, ids []string) ([]map[string]interface{}, error)
 	// UpdateDocument updates a full or partial record
 	UpdateDocument(auth model.Auth, dbName, col, id string, doc map[string]interface{}) (map[string]interface{}, error)
 	// UpdateDocuments updates multiple records matching filters

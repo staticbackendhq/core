@@ -169,6 +169,40 @@ func TestGetDocumentByID(t *testing.T) {
 	}
 }
 
+func TestGetDocumentsByIDs(t *testing.T) {
+	input := []map[string]interface{}{newTask("getbyids1", false), newTask("getbyids1", false)}
+
+	var assertionTasks []map[string]interface{}
+	var ids []string
+
+	for _, v := range input {
+		res, err := datastore.CreateDocument(adminAuth, confDBName, colName, v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, res["id"].(string))
+	}
+
+	for _, v := range ids {
+		m, err := datastore.GetDocumentByID(adminAuth, confDBName, colName, v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertionTasks = append(assertionTasks, m)
+	}
+
+	res, err := datastore.GetDocumentsByIDs(adminAuth, confDBName, colName, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(assertionTasks) != len(res) {
+		t.Fatal("received incorrect number of documents")
+	}
+	if !reflect.DeepEqual(assertionTasks, res) {
+		t.Errorf("Does not received expected tasks\nE: %v\nA: %v", assertionTasks, res)
+	}
+}
+
 func TestUpdateDocument(t *testing.T) {
 	task1 := newTask("inserted", false)
 
