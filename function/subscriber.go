@@ -8,7 +8,7 @@ import (
 )
 
 type Subscriber struct {
-	PubSub     internal.PubSuber
+	PubSub     internal.Volatilizer
 	GetExecEnv func(token string) (ExecutionEnvironment, error)
 	Log        *logger.Logger
 }

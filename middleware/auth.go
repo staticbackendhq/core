@@ -15,7 +15,7 @@ const (
 	RootRole = 100
 )
 
-func RequireAuth(datastore internal.Persister, volatile internal.PubSuber) Middleware {
+func RequireAuth(datastore internal.Persister, volatile internal.Volatilizer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
@@ -67,7 +67,7 @@ func RequireAuth(datastore internal.Persister, volatile internal.PubSuber) Middl
 	}
 }
 
-func ValidateAuthKey(datastore internal.Persister, volatile internal.PubSuber, ctx context.Context, key string) (internal.Auth, error) {
+func ValidateAuthKey(datastore internal.Persister, volatile internal.Volatilizer, ctx context.Context, key string) (internal.Auth, error) {
 	a := internal.Auth{}
 
 	var pl internal.JWTPayload
@@ -120,7 +120,7 @@ func ValidateAuthKey(datastore internal.Persister, volatile internal.PubSuber, c
 	return a, nil
 }
 
-func RequireRoot(datastore internal.Persister, volatile internal.PubSuber) Middleware {
+func RequireRoot(datastore internal.Persister, volatile internal.Volatilizer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")

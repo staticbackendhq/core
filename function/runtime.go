@@ -19,7 +19,7 @@ type ExecutionEnvironment struct {
 	Auth      internal.Auth
 	BaseName  string
 	DataStore internal.Persister
-	Volatile  internal.PubSuber
+	Volatile  internal.Volatilizer
 	Data      internal.ExecData
 
 	CurrentRun internal.ExecHistory
