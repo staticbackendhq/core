@@ -149,7 +149,7 @@ func (m *membership) getAuthToken(tok internal.Token, conf internal.BaseConfig) 
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
 	// get their JWT
-	jwtBytes, err = m.getJWT(token)
+	jwtBytes, err = GetJWT(token)
 	if err != nil {
 		return
 	}
@@ -211,7 +211,7 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 	token := fmt.Sprintf("%s|%s", tokID, tok.Token)
 
 	// Get their JWT
-	jwtBytes, err := m.getJWT(token)
+	jwtBytes, err := GetJWT(token)
 	if err != nil {
 		return nil, tok, err
 	}
@@ -355,7 +355,7 @@ func (m *membership) setPassword(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
-func (m *membership) getJWT(token string) ([]byte, error) {
+func GetJWT(token string) ([]byte, error) {
 	now := time.Now()
 	pl := internal.JWTPayload{
 		Payload: jwt.Payload{
@@ -392,7 +392,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
-	jwtBytes, err := m.getJWT(token)
+	jwtBytes, err := GetJWT(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

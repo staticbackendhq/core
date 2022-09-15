@@ -16,6 +16,7 @@ var (
 	adminEmail    string
 	adminPassword string
 	adminAuth     internal.Auth
+	jwtToken      string
 
 	base internal.BaseConfig
 )
@@ -76,7 +77,7 @@ func createTenantAndDatabase() error {
 }
 
 func createUser() error {
-	id, err := bkn.User.CreateAccount(base.Name, adminEmail)
+	id, err := bkn.User(base.ID).CreateAccount(adminEmail)
 	if err != nil {
 		return err
 	}
@@ -90,10 +91,12 @@ func createUser() error {
 		Created:   time.Now(),
 	}
 
-	userID, err := bkn.User.CreateUserToken(base.Name, tok)
+	userID, err := bkn.User(base.ID).CreateUserToken(tok)
 	if err != nil {
 		return err
 	}
+
+	tok.ID = userID
 
 	adminAuth = internal.Auth{
 		AccountID: id,
@@ -101,6 +104,11 @@ func createUser() error {
 		Email:     adminEmail,
 		Role:      100,
 		Token:     tok.Token,
+	}
+
+	jwtToken, err = bkn.User(base.ID).Authenticate(adminEmail, adminPassword)
+	if err != nil {
+		return err
 	}
 
 	return nil

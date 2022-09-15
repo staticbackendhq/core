@@ -3,6 +3,8 @@ package backend_test
 import (
 	"testing"
 	"time"
+
+	"github.com/staticbackendhq/core/backend"
 )
 
 type Task struct {
@@ -29,17 +31,108 @@ func newTask(title string, done bool) Task {
 }
 
 func TestDatabaseCreate(t *testing.T) {
+	db := backend.NewDatabase[Task](jwtToken, base.ID)
+
 	task := newTask("db create", false)
-	if err := bkn.DB.Create(adminAuth, base.Name, "tasks", task, &task); err != nil {
+	task, err := db.Create("tasks", task)
+	if err != nil {
 		t.Fatal(err)
 	} else if len(task.ID) == 0 {
 		t.Error("expected task id length to be > 0")
 	}
 
-	var check Task
-	if err := bkn.DB.GetByID(adminAuth, base.Name, "tasks", task.ID, &check); err != nil {
+	check, err := db.GetByID("tasks", task.ID)
+	if err != nil {
 		t.Fatal(err)
 	} else if task.Title != check.Title {
 		t.Errorf(`expected title to be "%s" got "%s"`, task.Title, check.Title)
+	}
+}
+
+func TestDatabaseList(t *testing.T) {
+	db := backend.NewDatabase[Task](jwtToken, base.ID)
+
+	tasks := []Task{
+		newTask("t1", false),
+		newTask("t2", true),
+	}
+
+	if err := db.BulkCreate("tasks", tasks); err != nil {
+		t.Fatal(err)
+	}
+
+	lp := backend.ListParams{Page: 1, Size: 50}
+	res, err := db.List("tasks", lp)
+	if err != nil {
+		t.Fatal(err)
+	} else if len(res.Results) < 2 {
+		t.Errorf("expected to have at least 2 elem, got %d", len(res.Results))
+	}
+}
+
+func TestDatabaseQuery(t *testing.T) {
+	db := backend.NewDatabase[Task](jwtToken, base.ID)
+
+	tasks := []Task{
+		newTask("qry1", false),
+		newTask("qry2", true),
+		newTask("qry2", false),
+	}
+
+	if err := db.BulkCreate("tasks", tasks); err != nil {
+		t.Fatal(err)
+	}
+
+	filters, err := backend.BuildQueryFilters(
+		"title", "==", "qry2",
+		"done", "==", true,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lp := backend.ListParams{Page: 1, Size: 50}
+	res, err := db.Query("tasks", filters, lp)
+	if err != nil {
+		t.Fatal(err)
+	} else if res.Total != 1 {
+		t.Errorf("expected total to be 1 got %d", res.Total)
+	} else if res.Results[0].Title != "qry2" {
+		t.Error("got the wrong task", res.Results[0])
+	}
+}
+
+func TestDatabaseBuildQueryFilters(t *testing.T) {
+	filters, err := backend.BuildQueryFilters(
+		"field", "=", "value",
+		"field2", ">=", 123,
+	)
+
+	var expected [][]any
+	f1 := []any{"field", "=", "value"}
+	f2 := []any{"field2", ">=", 123}
+	expected = append(expected, f1)
+	expected = append(expected, f2)
+
+	compare := func(s1, s2 [][]any) bool {
+		if len(s1) != len(s2) {
+			return false
+		}
+
+		for i := 0; i < len(s1); i++ {
+			for j := 0; j < len(s1[i]); j++ {
+				if s1[i][j] != s2[i][j] {
+					return false
+				}
+			}
+		}
+		return true
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	} else if !compare(filters, expected) {
+		t.Log(filters)
+		t.Error("filters are not properly created")
 	}
 }

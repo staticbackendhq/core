@@ -16,6 +16,7 @@ import (
 	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/storage"
 	mongodrv "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -26,8 +27,8 @@ import (
 
 type Backend struct {
 	Tenant Tenant
-	DB     Database
-	User   User
+	//DB     func(token, baseID string) Database
+	User func(baseID string) User
 }
 
 var (
@@ -38,7 +39,7 @@ var (
 	// Cache exposes the cache / pub-sub functionalities
 	Cache internal.Volatilizer
 	// Log expose the configured logger
-	Log logger.Logger
+	Log *logger.Logger
 )
 
 // Init prepares the backend core based on the configuration
@@ -47,7 +48,7 @@ func New(cfg config.AppConfig) Backend {
 	// Might be an idea to create some kind of helper in the internal package
 	// that would return a structure with all the initialized services
 
-	Log := logger.Get(cfg)
+	Log = logger.Get(cfg)
 
 	if strings.EqualFold(cfg.DatabaseURL, "mem") {
 		Cache = cache.NewDevCache(Log)
@@ -126,8 +127,8 @@ func New(cfg config.AppConfig) Backend {
 
 	return Backend{
 		Tenant: Tenant{},
-		DB:     Database{},
-		User:   User{},
+		//DB:     newDatabase,
+		User: newUser,
 	}
 }
 
@@ -163,4 +164,24 @@ func openPGDatabase(dbHost string) (*sql.DB, error) {
 
 func NewID() string {
 	return datastore.NewID()
+}
+
+func findAuth(token string) internal.Auth {
+	auth, err := middleware.ValidateAuthKey(datastore, Cache, context.Background(), token)
+	if err != nil {
+		return internal.Auth{}
+	}
+	return auth
+}
+
+func findBase(baseID string) internal.BaseConfig {
+	var conf internal.BaseConfig
+	if err := Cache.GetTyped(baseID, &conf); err != nil {
+		db, err := datastore.FindDatabase(baseID)
+		if err != nil {
+			return conf
+		}
+		conf = db
+	}
+	return conf
 }

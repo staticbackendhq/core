@@ -229,7 +229,7 @@ func (el *ExternalLogins) signIn(dbName, email string) (sessionToken string, err
 
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
-	b, err := el.membership.getJWT(token)
+	b, err := GetJWT(token)
 	if err != nil {
 		return
 	}
