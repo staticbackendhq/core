@@ -12,7 +12,7 @@ import (
 
 type TaskScheduler struct {
 	Client    *mongo.Client
-	Volatile  internal.PubSuber
+	Volatile  internal.Volatilizer
 	DataStore internal.Persister
 	Scheduler *gocron.Scheduler
 	log       *logger.Logger

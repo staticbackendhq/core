@@ -31,12 +31,12 @@ type Broker struct {
 	subscriptions      map[string][]chan bool
 	validateAuth       Validator
 
-	pubsub internal.PubSuber
+	pubsub internal.Volatilizer
 
 	log *logger.Logger
 }
 
-func NewBroker(v Validator, pubsub internal.PubSuber, log *logger.Logger) *Broker {
+func NewBroker(v Validator, pubsub internal.Volatilizer, log *logger.Logger) *Broker {
 	b := &Broker{
 		Broadcast:          make(chan internal.Command, 1),
 		newConnections:     make(chan ConnectionData),
