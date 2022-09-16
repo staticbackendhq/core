@@ -9,6 +9,7 @@ import (
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -81,7 +82,7 @@ func (c *Cache) Dec(key string, by int64) (int64, error) {
 	return c.Rdb.DecrBy(c.Ctx, key, by).Result()
 }
 
-func (c *Cache) Subscribe(send chan internal.Command, token, channel string, close chan bool) {
+func (c *Cache) Subscribe(send chan model.Command, token, channel string, close chan bool) {
 	pubsub := c.Rdb.Subscribe(c.Ctx, channel)
 
 	if _, err := pubsub.Receive(c.Ctx); err != nil {
@@ -94,7 +95,7 @@ func (c *Cache) Subscribe(send chan internal.Command, token, channel string, clo
 	for {
 		select {
 		case m := <-ch:
-			var msg internal.Command
+			var msg model.Command
 			if err := json.Unmarshal([]byte(m.Payload), &msg); err != nil {
 				c.log.Error().Err(err).Msg("error parsing JSON message")
 				_ = pubsub.Close()
@@ -102,8 +103,8 @@ func (c *Cache) Subscribe(send chan internal.Command, token, channel string, clo
 			}
 
 			// TODO: this will need more thinking
-			if msg.Type == internal.MsgTypeChanIn {
-				msg.Type = internal.MsgTypeChanOut
+			if msg.Type == model.MsgTypeChanIn {
+				msg.Type = model.MsgTypeChanOut
 			} else if msg.IsSystemEvent {
 
 			} else if msg.IsDBEvent() && c.HasPermission(token, channel, msg.Data) == false {
@@ -117,7 +118,7 @@ func (c *Cache) Subscribe(send chan internal.Command, token, channel string, clo
 	}
 }
 
-func (c *Cache) Publish(msg internal.Command) error {
+func (c *Cache) Publish(msg model.Command) error {
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -127,7 +128,7 @@ func (c *Cache) Publish(msg internal.Command) error {
 	defer cancel()
 
 	// Publish the event to system so server-side function can trigger
-	go func(sysmsg internal.Command) {
+	go func(sysmsg model.Command) {
 		sysmsg.IsSystemEvent = true
 		b, err := json.Marshal(sysmsg)
 		if err != nil {
@@ -166,7 +167,7 @@ func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 		return
 	}
 
-	msg := internal.Command{
+	msg := model.Command{
 		Channel: channel,
 		Data:    string(b),
 		Type:    typ,
@@ -178,7 +179,7 @@ func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 }
 
 func (c *Cache) HasPermission(token, repo, payload string) bool {
-	var me internal.Auth
+	var me model.Auth
 	if err := c.GetTyped(token, &me); err != nil {
 		return false
 	}

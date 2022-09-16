@@ -16,14 +16,15 @@ import (
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/config"
+	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/database/memory"
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/function"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/realtime"
 	"github.com/staticbackendhq/core/storage"
 
@@ -42,10 +43,10 @@ const (
 )
 
 var (
-	datastore internal.Persister
-	volatile  internal.Volatilizer
-	emailer   internal.Mailer
-	storer    internal.Storer
+	datastore database.Persister
+	volatile  cache.Volatilizer
+	emailer   email.Mailer
+	storer    storage.Storer
 )
 
 func init() {
@@ -79,7 +80,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		// useful for an Intercom-like SaaS I'm building.
 		if strings.HasPrefix(key, "__tmp__experimental_public") {
 			// let's create the most minimal authentication possible
-			a := internal.Auth{
+			a := model.Auth{
 				AccountID: randStringRunes(30),
 				UserID:    randStringRunes(30),
 				Email:     "exp@tmp.com",
@@ -100,7 +101,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		}
 
 		// set base:token useful when executing pubsub event message / function
-		conf, ok := ctx.Value(middleware.ContextBase).(internal.BaseConfig)
+		conf, ok := ctx.Value(middleware.ContextBase).(model.BaseConfig)
 		if !ok {
 			return "", errors.New("could not find base config")
 		}
@@ -200,7 +201,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 
 	http.Handle("/sse/connect", middleware.Chain(http.HandlerFunc(b.Accept), pubWithDB...))
 	receiveMessage := func(w http.ResponseWriter, r *http.Request) {
-		var msg internal.Command
+		var msg model.Command
 		if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -313,14 +314,14 @@ func initServices(dbHost string, log *logger.Logger) {
 	}
 
 	mp := config.Current.MailProvider
-	if strings.EqualFold(mp, internal.MailProviderSES) {
+	if strings.EqualFold(mp, email.MailProviderSES) {
 		emailer = email.AWSSES{}
 	} else {
 		emailer = email.Dev{}
 	}
 
 	sp := config.Current.StorageProvider
-	if strings.EqualFold(sp, internal.StorageProviderS3) {
+	if strings.EqualFold(sp, storage.StorageProviderS3) {
 		storer = storage.S3{}
 	} else {
 		storer = storage.Local{}
@@ -331,7 +332,7 @@ func initServices(dbHost string, log *logger.Logger) {
 	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
 		var exe function.ExecutionEnvironment
 
-		var conf internal.BaseConfig
+		var conf model.BaseConfig
 		// for public websocket (experimental)
 		if strings.HasPrefix(token, "__tmp__experimental_public") {
 			pk := strings.Replace(token, "__tmp__experimental_public_", "", -1)
@@ -346,7 +347,7 @@ func initServices(dbHost string, log *logger.Logger) {
 			return exe, err
 		}
 
-		var auth internal.Auth
+		var auth model.Auth
 		if err := volatile.GetTyped(token, &auth); err != nil {
 			log.Error().Err(err).Msg("cannot find auth")
 			return exe, err

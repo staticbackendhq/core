@@ -4,17 +4,17 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (m *Memory) AddFile(dbName string, f internal.File) (id string, err error) {
+func (m *Memory) AddFile(dbName string, f model.File) (id string, err error) {
 	id = m.NewID()
 	f.ID = id
 	err = create(m, dbName, "sb_files", id, f)
 	return
 }
 
-func (m *Memory) GetFileByID(dbName, fileID string) (f internal.File, err error) {
+func (m *Memory) GetFileByID(dbName, fileID string) (f model.File, err error) {
 	err = getByID(m, dbName, "sb_files", fileID, &f)
 	return
 }
@@ -33,13 +33,13 @@ func (m *Memory) DeleteFile(dbName, fileID string) error {
 	return nil
 }
 
-func (m *Memory) ListAllFiles(dbName, accountID string) (results []internal.File, err error) {
-	files, err := all[internal.File](m, dbName, "sb_files")
+func (m *Memory) ListAllFiles(dbName, accountID string) (results []model.File, err error) {
+	files, err := all[model.File](m, dbName, "sb_files")
 	if err != nil {
 		return
 	}
 
-	results = filter(files, func(x internal.File) bool {
+	results = filter(files, func(x model.File) bool {
 		return x.AccountID == accountID
 	})
 

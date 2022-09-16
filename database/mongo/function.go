@@ -3,8 +3,7 @@ package mongo
 import (
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
-
+	"github.com/staticbackendhq/core/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -30,7 +29,7 @@ type LocalExecHistory struct {
 	Output    []string  `bson:"out" json:"output"`
 }
 
-func toLocalExecData(ex internal.ExecData) LocalExecData {
+func toLocalExecData(ex model.ExecData) LocalExecData {
 	oid, err := primitive.ObjectIDFromHex(ex.ID)
 	if err != nil {
 		//TODO: fin a way to handle this error properly
@@ -49,7 +48,7 @@ func toLocalExecData(ex internal.ExecData) LocalExecData {
 	}
 }
 
-func toLocalExecHistory(h []internal.ExecHistory) []LocalExecHistory {
+func toLocalExecHistory(h []model.ExecHistory) []LocalExecHistory {
 	lh := make([]LocalExecHistory, 0)
 
 	for _, exh := range h {
@@ -66,8 +65,8 @@ func toLocalExecHistory(h []internal.ExecHistory) []LocalExecHistory {
 	return lh
 }
 
-func fromLocalExecData(lex LocalExecData) internal.ExecData {
-	return internal.ExecData{
+func fromLocalExecData(lex LocalExecData) model.ExecData {
+	return model.ExecData{
 		ID:           lex.ID.Hex(),
 		FunctionName: lex.FunctionName,
 		TriggerTopic: lex.TriggerTopic,
@@ -79,10 +78,10 @@ func fromLocalExecData(lex LocalExecData) internal.ExecData {
 	}
 }
 
-func fromLocalExecHistory(lh []LocalExecHistory) []internal.ExecHistory {
-	var h []internal.ExecHistory
+func fromLocalExecHistory(lh []LocalExecHistory) []model.ExecHistory {
+	var h []model.ExecHistory
 	for _, exh := range lh {
-		h = append(h, internal.ExecHistory{
+		h = append(h, model.ExecHistory{
 			ID:        exh.ID,
 			Version:   exh.Version,
 			Started:   exh.Started,
@@ -95,13 +94,13 @@ func fromLocalExecHistory(lh []LocalExecHistory) []internal.ExecHistory {
 	return h
 }
 
-func (mg *Mongo) AddFunction(dbName string, data internal.ExecData) (string, error) {
+func (mg *Mongo) AddFunction(dbName string, data model.ExecData) (string, error) {
 	db := mg.Client.Database(dbName)
 
 	data.ID = primitive.NewObjectID().Hex()
 	data.Version = 1
 	data.LastUpdated = time.Now()
-	data.History = make([]internal.ExecHistory, 0)
+	data.History = make([]model.ExecHistory, 0)
 
 	lex := toLocalExecData(data)
 
@@ -140,7 +139,7 @@ func (mg *Mongo) UpdateFunction(dbName, id, code, trigger string) error {
 	return nil
 }
 
-func (mg *Mongo) GetFunctionForExecution(dbName, name string) (result internal.ExecData, err error) {
+func (mg *Mongo) GetFunctionForExecution(dbName, name string) (result model.ExecData, err error) {
 	db := mg.Client.Database(dbName)
 
 	filter := bson.M{"name": name}
@@ -160,7 +159,7 @@ func (mg *Mongo) GetFunctionForExecution(dbName, name string) (result internal.E
 	return result, nil
 }
 
-func (mg *Mongo) GetFunctionByID(dbName, id string) (result internal.ExecData, err error) {
+func (mg *Mongo) GetFunctionByID(dbName, id string) (result model.ExecData, err error) {
 	db := mg.Client.Database(dbName)
 
 	oid, err := primitive.ObjectIDFromHex(id)
@@ -182,7 +181,7 @@ func (mg *Mongo) GetFunctionByID(dbName, id string) (result internal.ExecData, e
 	return
 }
 
-func (mg *Mongo) GetFunctionByName(dbName, name string) (result internal.ExecData, err error) {
+func (mg *Mongo) GetFunctionByName(dbName, name string) (result model.ExecData, err error) {
 	db := mg.Client.Database(dbName)
 
 	filter := bson.M{"name": name}
@@ -198,7 +197,7 @@ func (mg *Mongo) GetFunctionByName(dbName, name string) (result internal.ExecDat
 	return
 }
 
-func (mg *Mongo) ListFunctions(dbName string) (results []internal.ExecData, err error) {
+func (mg *Mongo) ListFunctions(dbName string) (results []model.ExecData, err error) {
 	db := mg.Client.Database(dbName)
 
 	opt := &options.FindOptions{}
@@ -223,7 +222,7 @@ func (mg *Mongo) ListFunctions(dbName string) (results []internal.ExecData, err 
 	return
 }
 
-func (mg *Mongo) ListFunctionsByTrigger(dbName, trigger string) (results []internal.ExecData, err error) {
+func (mg *Mongo) ListFunctionsByTrigger(dbName, trigger string) (results []model.ExecData, err error) {
 	db := mg.Client.Database(dbName)
 
 	opt := &options.FindOptions{}
@@ -260,7 +259,7 @@ func (mg *Mongo) DeleteFunction(dbName, name string) error {
 	return nil
 }
 
-func (mg *Mongo) RanFunction(dbName, id string, rh internal.ExecHistory) error {
+func (mg *Mongo) RanFunction(dbName, id string, rh model.ExecHistory) error {
 	db := mg.Client.Database(dbName)
 
 	oid, err := primitive.ObjectIDFromHex(id)
@@ -269,7 +268,7 @@ func (mg *Mongo) RanFunction(dbName, id string, rh internal.ExecHistory) error {
 	}
 
 	rh.ID = primitive.NewObjectID().Hex()
-	leh := toLocalExecHistory([]internal.ExecHistory{rh})[0]
+	leh := toLocalExecHistory([]model.ExecHistory{rh})[0]
 
 	filter := bson.M{FieldID: oid}
 	update := bson.M{

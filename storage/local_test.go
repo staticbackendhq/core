@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func TestLocalSave(t *testing.T) {
@@ -14,7 +14,7 @@ func TestLocalSave(t *testing.T) {
 
 	local := Local{}
 
-	data := internal.UploadFileData{FileKey: "unit/test/file.txt", File: rdr}
+	data := model.UploadFileData{FileKey: "unit/test/file.txt", File: rdr}
 	url, err := local.Save(data)
 	if err != nil {
 		t.Fatal(err)

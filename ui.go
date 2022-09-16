@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 )
 
 type ui struct {
@@ -128,7 +128,7 @@ func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 
 	keys, ok := logins[provider]
 	if !ok {
-		keys = internal.OAuthConfig{}
+		keys = model.OAuthConfig{}
 	}
 
 	keys.ConsumerKey = apikey
@@ -186,7 +186,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 	col := names[0]
 
-	params := internal.ListParams{
+	params := model.ListParams{
 		Page:           1,
 		Size:           50,
 		SortDescending: true,
@@ -221,7 +221,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var list internal.PagedResult
+	var list model.PagedResult
 	if !strings.HasPrefix(col, "sb_") {
 		if len(filter) == 0 {
 			list, err = datastore.ListDocuments(auth, conf.Name, col, params)
@@ -444,7 +444,7 @@ func (x ui) fnList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (x *ui) fnNew(w http.ResponseWriter, r *http.Request) {
-	fn := internal.ExecData{}
+	fn := model.ExecData{}
 	render(w, r, "fn_edit.html", fn, nil, x.log)
 }
 
@@ -481,7 +481,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 	code := r.Form.Get("code")
 
 	if id == "new" {
-		fn := internal.ExecData{
+		fn := model.ExecData{
 			FunctionName: name,
 			Code:         code,
 			TriggerTopic: trigger,

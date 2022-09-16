@@ -2,25 +2,26 @@ package cache
 
 import (
 	"encoding/json"
-	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
-	"github.com/staticbackendhq/core/logger"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/staticbackendhq/core/config"
+	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 )
 
 var (
 	redisCache *Cache
 	devCache   *CacheDev
-	adminToken internal.Token
-	adminAuth  internal.Auth
+	adminToken model.Token
+	adminAuth  model.Auth
 	document   string
 )
 
 type suite struct {
 	name  string
-	cache internal.Volatilizer
+	cache Volatilizer
 }
 
 func TestMain(m *testing.M) {
@@ -29,7 +30,7 @@ func TestMain(m *testing.M) {
 	redisCache = NewCache(logz)
 	devCache = NewDevCache(logz)
 
-	adminAuth = internal.Auth{
+	adminAuth = model.Auth{
 		AccountID: "047cfe5b-b91d-4ec6-9bc2-8f68309d8532",
 		UserID:    "5dc37900-2a2e-46d9-8a5d-6699376975ad",
 		Email:     "test@email.com",
@@ -47,12 +48,12 @@ func TestCacheSubscribe(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			receiver := make(chan internal.Command)
+			receiver := make(chan model.Command)
 			closeCn := make(chan bool)
 			defer close(receiver)
 			defer close(closeCn)
 
-			payload := internal.Command{Type: internal.MsgTypeError, Data: "invalid token", Channel: "random_cahn"}
+			payload := model.Command{Type: model.MsgTypeError, Data: "invalid token", Channel: "random_cahn"}
 
 			go tc.cache.Subscribe(receiver, "", payload.Channel, closeCn)
 			time.Sleep(10 * time.Millisecond) // need to wait for proper subscriber startup
@@ -84,7 +85,7 @@ func TestCacheSubscribeOnDBEvent(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			receiver := make(chan internal.Command)
+			receiver := make(chan model.Command)
 			closeCn := make(chan bool)
 			defer close(receiver)
 			defer close(closeCn)
@@ -94,7 +95,7 @@ func TestCacheSubscribeOnDBEvent(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			payload := internal.Command{Type: internal.MsgTypeDBUpdated, Data: document, Channel: "random_cahn"}
+			payload := model.Command{Type: model.MsgTypeDBUpdated, Data: document, Channel: "random_cahn"}
 
 			go tc.cache.Subscribe(receiver, "token", payload.Channel, closeCn)
 
@@ -134,7 +135,7 @@ func TestCacheDontReceiveDBEvent(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			receiver := make(chan internal.Command)
+			receiver := make(chan model.Command)
 			closeCn := make(chan bool)
 			defer close(receiver)
 			defer close(closeCn)
@@ -145,7 +146,7 @@ func TestCacheDontReceiveDBEvent(t *testing.T) {
 			if err != nil {
 				t.Fatal(err.Error())
 			}
-			event := internal.Command{Type: internal.MsgTypeDBUpdated, Data: document, Channel: "chan"}
+			event := model.Command{Type: model.MsgTypeDBUpdated, Data: document, Channel: "chan"}
 			go tc.cache.Subscribe(receiver, "token", event.Channel, closeCn)
 
 			time.Sleep(10 * time.Millisecond) // need to wait for proper subscriber startup
@@ -175,7 +176,7 @@ func TestCachePublishDocument(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			receiver := make(chan internal.Command)
+			receiver := make(chan model.Command)
 			closeCn := make(chan bool)
 			defer close(receiver)
 			defer close(closeCn)
@@ -185,7 +186,7 @@ func TestCachePublishDocument(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			payload := internal.Command{Type: internal.MsgTypeDBUpdated, Data: document, Channel: "random_cahn"}
+			payload := model.Command{Type: model.MsgTypeDBUpdated, Data: document, Channel: "random_cahn"}
 
 			// convert to map for simulation of real usage
 			var documentMap map[string]interface{}

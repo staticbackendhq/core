@@ -3,10 +3,10 @@ package postgresql
 import (
 	"fmt"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (pg *PostgreSQL) ListTasks() (results []internal.Task, err error) {
+func (pg *PostgreSQL) ListTasks() (results []model.Task, err error) {
 	bases, err := pg.ListDatabases()
 	if err != nil {
 		return
@@ -24,7 +24,7 @@ func (pg *PostgreSQL) ListTasks() (results []internal.Task, err error) {
 	return
 }
 
-func (pg *PostgreSQL) ListTasksByBase(dbName string) (results []internal.Task, err error) {
+func (pg *PostgreSQL) ListTasksByBase(dbName string) (results []model.Task, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_tasks 
@@ -37,7 +37,7 @@ func (pg *PostgreSQL) ListTasksByBase(dbName string) (results []internal.Task, e
 	defer rows.Close()
 
 	for rows.Next() {
-		var t internal.Task
+		var t model.Task
 		if err = scanTask(rows, &t); err != nil {
 			return
 		}
@@ -49,7 +49,7 @@ func (pg *PostgreSQL) ListTasksByBase(dbName string) (results []internal.Task, e
 	return
 }
 
-func scanTask(rows Scanner, t *internal.Task) error {
+func scanTask(rows Scanner, t *model.Task) error {
 	return rows.Scan(
 		&t.ID,
 		&t.Name,

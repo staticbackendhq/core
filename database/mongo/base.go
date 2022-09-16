@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,7 +16,7 @@ type Base struct {
 	PublishDocument func(topic, msg string, doc interface{})
 }
 
-func (mg *Mongo) CreateDocument(auth internal.Auth, dbName, col string, doc map[string]interface{}) (map[string]interface{}, error) {
+func (mg *Mongo) CreateDocument(auth model.Auth, dbName, col string, doc map[string]interface{}) (map[string]interface{}, error) {
 	db := mg.Client.Database(dbName)
 
 	delete(doc, "id")
@@ -35,15 +35,15 @@ func (mg *Mongo) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 	doc[FieldAccountID] = acctID
 	doc[FieldOwnerID] = userID
 
-	if _, err := db.Collection(internal.CleanCollectionName(col)).InsertOne(mg.Ctx, doc); err != nil {
+	if _, err := db.Collection(model.CleanCollectionName(col)).InsertOne(mg.Ctx, doc); err != nil {
 		return nil, err
 	}
 
 	cleanMap(doc)
 
-	mg.PublishDocument("db-"+col, internal.MsgTypeDBCreated, doc)
+	mg.PublishDocument("db-"+col, model.MsgTypeDBCreated, doc)
 
-	go mg.ensureIndex(dbName, internal.CleanCollectionName(col))
+	go mg.ensureIndex(dbName, model.CleanCollectionName(col))
 
 	return doc, nil
 }
@@ -113,7 +113,7 @@ func (mg *Mongo) ensureIndex(dbName, col string) {
 	}
 }
 
-func (mg *Mongo) BulkCreateDocument(auth internal.Auth, dbName, col string, docs []interface{}) error {
+func (mg *Mongo) BulkCreateDocument(auth model.Auth, dbName, col string, docs []interface{}) error {
 	db := mg.Client.Database(dbName)
 
 	acctID, userID, err := parseObjectID(auth)
@@ -137,16 +137,16 @@ func (mg *Mongo) BulkCreateDocument(auth internal.Auth, dbName, col string, docs
 		doc[FieldOwnerID] = userID
 	}
 
-	if _, err := db.Collection(internal.CleanCollectionName(col)).InsertMany(mg.Ctx, docs); err != nil {
+	if _, err := db.Collection(model.CleanCollectionName(col)).InsertMany(mg.Ctx, docs); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params internal.ListParams) (internal.PagedResult, error) {
+func (mg *Mongo) ListDocuments(auth model.Auth, dbName, col string, params model.ListParams) (model.PagedResult, error) {
 	db := mg.Client.Database(dbName)
 
-	result := internal.PagedResult{
+	result := model.PagedResult{
 		Page: params.Page,
 		Size: params.Size,
 	}
@@ -160,7 +160,7 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 
 	secureRead(acctID, userID, auth.Role, col, filter)
 
-	count, err := db.Collection(internal.CleanCollectionName(col)).CountDocuments(mg.Ctx, filter)
+	count, err := db.Collection(model.CleanCollectionName(col)).CountDocuments(mg.Ctx, filter)
 	if err != nil {
 		return result, err
 	}
@@ -185,7 +185,7 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 	opt.SetLimit(params.Size)
 	opt.SetSort(sortBy)
 
-	cur, err := db.Collection(internal.CleanCollectionName(col)).Find(mg.Ctx, filter, opt)
+	cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filter, opt)
 	if err != nil {
 		return result, err
 	}
@@ -217,10 +217,10 @@ func (mg *Mongo) ListDocuments(auth internal.Auth, dbName, col string, params in
 	return result, nil
 }
 
-func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter map[string]interface{}, params internal.ListParams) (internal.PagedResult, error) {
+func (mg *Mongo) QueryDocuments(auth model.Auth, dbName, col string, filter map[string]interface{}, params model.ListParams) (model.PagedResult, error) {
 	db := mg.Client.Database(dbName)
 
-	result := internal.PagedResult{
+	result := model.PagedResult{
 		Page: params.Page,
 		Size: params.Size,
 	}
@@ -232,7 +232,7 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 
 	secureRead(acctID, userID, auth.Role, col, filter)
 
-	count, err := db.Collection(internal.CleanCollectionName(col)).CountDocuments(mg.Ctx, filter)
+	count, err := db.Collection(model.CleanCollectionName(col)).CountDocuments(mg.Ctx, filter)
 	if err != nil {
 		return result, err
 	}
@@ -262,7 +262,7 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 	opt.SetLimit(params.Size)
 	opt.SetSort(sortBy)
 
-	cur, err := db.Collection(internal.CleanCollectionName(col)).Find(mg.Ctx, filter, opt)
+	cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filter, opt)
 	if err != nil {
 		return result, err
 	}
@@ -289,7 +289,7 @@ func (mg *Mongo) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 	return result, nil
 }
 
-func (mg *Mongo) GetDocumentByID(auth internal.Auth, dbName, col, id string) (map[string]interface{}, error) {
+func (mg *Mongo) GetDocumentByID(auth model.Auth, dbName, col, id string) (map[string]interface{}, error) {
 	db := mg.Client.Database(dbName)
 
 	var result map[string]interface{}
@@ -308,7 +308,7 @@ func (mg *Mongo) GetDocumentByID(auth internal.Auth, dbName, col, id string) (ma
 
 	secureRead(acctID, userID, auth.Role, col, filter)
 
-	sr := db.Collection(internal.CleanCollectionName(col)).FindOne(mg.Ctx, filter)
+	sr := db.Collection(model.CleanCollectionName(col)).FindOne(mg.Ctx, filter)
 	if err := sr.Decode(&result); err != nil {
 		return result, err
 	} else if err := sr.Err(); err != nil {
@@ -320,7 +320,7 @@ func (mg *Mongo) GetDocumentByID(auth internal.Auth, dbName, col, id string) (ma
 	return result, nil
 }
 
-func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc map[string]interface{}) (map[string]interface{}, error) {
+func (mg *Mongo) UpdateDocument(auth model.Auth, dbName, col, id string, doc map[string]interface{}) (map[string]interface{}, error) {
 	db := mg.Client.Database(dbName)
 
 	oid, err := primitive.ObjectIDFromHex(id)
@@ -346,13 +346,13 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 
 	update := bson.M{"$set": newProps}
 
-	res := db.Collection(internal.CleanCollectionName(col)).FindOneAndUpdate(mg.Ctx, filter, update)
+	res := db.Collection(model.CleanCollectionName(col)).FindOneAndUpdate(mg.Ctx, filter, update)
 	if err := res.Err(); err != nil {
 		return doc, err
 	}
 
 	var result bson.M
-	sr := db.Collection(internal.CleanCollectionName(col)).FindOne(mg.Ctx, filter)
+	sr := db.Collection(model.CleanCollectionName(col)).FindOne(mg.Ctx, filter)
 	if err := sr.Decode(&result); err != nil {
 		return doc, err
 	} else if err := sr.Err(); err != nil {
@@ -361,12 +361,12 @@ func (mg *Mongo) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 
 	cleanMap(result)
 
-	mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, result)
+	mg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, result)
 
 	return result, nil
 }
 
-func (mg *Mongo) UpdateDocuments(auth internal.Auth, dbName, col string, filters map[string]interface{}, updateFields map[string]interface{}) (n int64, err error) {
+func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters map[string]interface{}, updateFields map[string]interface{}) (n int64, err error) {
 	db := mg.Client.Database(dbName)
 
 	acctID, userID, err := parseObjectID(auth)
@@ -384,14 +384,14 @@ func (mg *Mongo) UpdateDocuments(auth internal.Auth, dbName, col string, filters
 
 	update := bson.M{"$set": newProps}
 
-	res, err := db.Collection(internal.CleanCollectionName(col)).UpdateMany(mg.Ctx, filters, update)
+	res, err := db.Collection(model.CleanCollectionName(col)).UpdateMany(mg.Ctx, filters, update)
 	if err != nil {
 		return 0, err
 	}
 	return res.ModifiedCount, err
 }
 
-func (mg *Mongo) IncrementValue(auth internal.Auth, dbName, col, id, field string, n int) error {
+func (mg *Mongo) IncrementValue(auth model.Auth, dbName, col, id, field string, n int) error {
 	db := mg.Client.Database(dbName)
 
 	oid, err := primitive.ObjectIDFromHex(id)
@@ -410,7 +410,7 @@ func (mg *Mongo) IncrementValue(auth internal.Auth, dbName, col, id, field strin
 
 	update := bson.M{"$inc": bson.M{field: n}}
 
-	res := db.Collection(internal.CleanCollectionName(col)).FindOneAndUpdate(mg.Ctx, filter, update)
+	res := db.Collection(model.CleanCollectionName(col)).FindOneAndUpdate(mg.Ctx, filter, update)
 	if err := res.Err(); err != nil {
 		return err
 	}
@@ -420,12 +420,12 @@ func (mg *Mongo) IncrementValue(auth internal.Auth, dbName, col, id, field strin
 		return err
 	}
 
-	mg.PublishDocument("db-"+col, internal.MsgTypeDBUpdated, updated)
+	mg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, updated)
 
 	return nil
 }
 
-func (mg *Mongo) DeleteDocument(auth internal.Auth, dbName, col, id string) (int64, error) {
+func (mg *Mongo) DeleteDocument(auth model.Auth, dbName, col, id string) (int64, error) {
 	db := mg.Client.Database(dbName)
 
 	oid, err := primitive.ObjectIDFromHex(id)
@@ -442,12 +442,12 @@ func (mg *Mongo) DeleteDocument(auth internal.Auth, dbName, col, id string) (int
 
 	secureWrite(acctID, userID, auth.Role, col, filter)
 
-	res, err := db.Collection(internal.CleanCollectionName(col)).DeleteOne(mg.Ctx, filter)
+	res, err := db.Collection(model.CleanCollectionName(col)).DeleteOne(mg.Ctx, filter)
 	if err != nil {
 		return 0, err
 	}
 
-	mg.PublishDocument("db-"+col, internal.MsgTypeDBDeleted, id)
+	mg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
 
 	return res.DeletedCount, nil
 }
@@ -475,7 +475,7 @@ func (mg *Mongo) ListCollections(dbName string) ([]string, error) {
 	return names, nil
 }
 
-func parseObjectID(auth internal.Auth) (acctID, userID primitive.ObjectID, err error) {
+func parseObjectID(auth model.Auth) (acctID, userID primitive.ObjectID, err error) {
 	acctID, err = primitive.ObjectIDFromHex(auth.AccountID)
 	if err != nil {
 		return

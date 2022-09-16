@@ -9,20 +9,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/dop251/goja"
 )
 
 type ExecutionEnvironment struct {
-	Auth      internal.Auth
+	Auth      model.Auth
 	BaseName  string
-	DataStore internal.Persister
-	Volatile  internal.Volatilizer
-	Data      internal.ExecData
+	DataStore database.Persister
+	Volatile  cache.Volatilizer
+	Data      model.ExecData
 
-	CurrentRun internal.ExecHistory
+	CurrentRun model.ExecHistory
 	log        *logger.Logger
 }
 
@@ -53,7 +55,7 @@ func (env *ExecutionEnvironment) Execute(data interface{}) error {
 		return fmt.Errorf("error preparing argument: %v", err)
 	}
 
-	env.CurrentRun = internal.ExecHistory{
+	env.CurrentRun = model.ExecHistory{
 		Version: env.Data.Version,
 		Started: time.Now(),
 		Output:  make([]string, 0),
@@ -223,7 +225,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: "the first agrument should be a string"})
 		}
 
-		var params internal.ListParams
+		var params model.ListParams
 		if len(call.Arguments) >= 2 {
 			v := call.Argument(1)
 			if !goja.IsNull(v) && !goja.IsUndefined(v) {
@@ -287,7 +289,7 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error parsing query filter: %v", err)})
 		}
 
-		var params internal.ListParams
+		var params model.ListParams
 		if len(call.Arguments) >= 3 {
 			v := call.Argument(2)
 			if !goja.IsNull(v) && !goja.IsUndefined(v) {
@@ -406,7 +408,7 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error converting your data: %v", err)})
 		}
 
-		msg := internal.Command{
+		msg := model.Command{
 			SID:     env.Data.ID,
 			Type:    typ,
 			Data:    string(b),

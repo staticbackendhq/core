@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func TestFunctionsExecuteDBOperations(t *testing.T) {
@@ -138,7 +138,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			return;
 		}
 	}`
-	data := internal.ExecData{
+	data := model.ExecData{
 		FunctionName: "unittest",
 		Code:         code,
 		TriggerTopic: "web",
@@ -172,7 +172,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 
 	infoResp := dbReq(t, funexec.info, "GET", "/fn/info/unittest", nil, true)
 
-	var checkFn internal.ExecData
+	var checkFn model.ExecData
 	if err := parseBody(infoResp.Body, &checkFn); err != nil {
 		t.Fatal(err)
 	}

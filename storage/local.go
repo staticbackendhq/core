@@ -7,12 +7,12 @@ import (
 	"path"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 type Local struct{}
 
-func (Local) Save(data internal.UploadFileData) (string, error) {
+func (Local) Save(data model.UploadFileData) (string, error) {
 	dir := path.Join(os.TempDir(), path.Dir(data.FileKey))
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err

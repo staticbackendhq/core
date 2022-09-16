@@ -3,10 +3,10 @@ package postgresql
 import (
 	"fmt"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (pg *PostgreSQL) FindToken(dbName, tokenID, token string) (tok internal.Token, err error) {
+func (pg *PostgreSQL) FindToken(dbName, tokenID, token string) (tok model.Token, err error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
@@ -19,7 +19,7 @@ func (pg *PostgreSQL) FindToken(dbName, tokenID, token string) (tok internal.Tok
 	return
 }
 
-func (pg *PostgreSQL) FindRootToken(dbName, tokenID, accountID, token string) (tok internal.Token, err error) {
+func (pg *PostgreSQL) FindRootToken(dbName, tokenID, accountID, token string) (tok model.Token, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_tokens
@@ -32,7 +32,7 @@ func (pg *PostgreSQL) FindRootToken(dbName, tokenID, accountID, token string) (t
 	return
 }
 
-func (pg *PostgreSQL) GetRootForBase(dbName string) (tok internal.Token, err error) {
+func (pg *PostgreSQL) GetRootForBase(dbName string) (tok model.Token, err error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
@@ -45,7 +45,7 @@ func (pg *PostgreSQL) GetRootForBase(dbName string) (tok internal.Token, err err
 	return
 }
 
-func (pg *PostgreSQL) FindTokenByEmail(dbName, email string) (tok internal.Token, err error) {
+func (pg *PostgreSQL) FindTokenByEmail(dbName, email string) (tok model.Token, err error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
@@ -58,7 +58,7 @@ func (pg *PostgreSQL) FindTokenByEmail(dbName, email string) (tok internal.Token
 	return
 }
 
-func scanToken(rows Scanner, tok *internal.Token) error {
+func scanToken(rows Scanner, tok *model.Token) error {
 	return rows.Scan(
 		&tok.ID,
 		&tok.AccountID,

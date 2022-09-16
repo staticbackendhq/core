@@ -12,9 +12,9 @@ import (
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/staticbackendhq/core/extra"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/sms"
 )
 
@@ -81,14 +81,14 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 	resizedBytes := buf.Bytes()
 
 	ex.log.Info().Msgf("resized bytes: %d", len(resizedBytes))
-	upData := internal.UploadFileData{FileKey: fileKey, File: bytes.NewReader(resizedBytes)}
+	upData := model.UploadFileData{FileKey: fileKey, File: bytes.NewReader(resizedBytes)}
 	url, err := storer.Save(upData)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	f := internal.File{
+	f := model.File{
 		AccountID: auth.AccountID,
 		Key:       fileKey,
 		URL:       url,
@@ -177,7 +177,7 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 		ext,
 	)
 
-	ufd := internal.UploadFileData{
+	ufd := model.UploadFileData{
 		FileKey: fileKey,
 		File:    bytes.NewReader(buf),
 	}
@@ -187,7 +187,7 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f := internal.File{
+	f := model.File{
 		AccountID: auth.AccountID,
 		Key:       fileKey,
 		URL:       fileURL,

@@ -3,10 +3,10 @@ package postgresql
 import (
 	"fmt"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (pg *PostgreSQL) AddFile(dbName string, f internal.File) (id string, err error) {
+func (pg *PostgreSQL) AddFile(dbName string, f model.File) (id string, err error) {
 	qry := fmt.Sprintf(`
 		INSERT INTO %s.sb_files(account_id, key, url, size, uploaded)
 		VALUES($1, $2, $3, $4, $5)
@@ -24,7 +24,7 @@ func (pg *PostgreSQL) AddFile(dbName string, f internal.File) (id string, err er
 	return
 }
 
-func (pg *PostgreSQL) GetFileByID(dbName, fileID string) (f internal.File, err error) {
+func (pg *PostgreSQL) GetFileByID(dbName, fileID string) (f model.File, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_files 
@@ -50,7 +50,7 @@ func (pg *PostgreSQL) DeleteFile(dbName, fileID string) error {
 	return nil
 }
 
-func (pg *PostgreSQL) ListAllFiles(dbName, accountID string) (results []internal.File, err error) {
+func (pg *PostgreSQL) ListAllFiles(dbName, accountID string) (results []model.File, err error) {
 	where := "WHERE account_id = $1"
 
 	// if no accountID is specify, the admin UI
@@ -73,7 +73,7 @@ func (pg *PostgreSQL) ListAllFiles(dbName, accountID string) (results []internal
 	defer rows.Close()
 
 	for rows.Next() {
-		var f internal.File
+		var f model.File
 		if err = scanFile(rows, &f); err != nil {
 			return
 		}
@@ -86,7 +86,7 @@ func (pg *PostgreSQL) ListAllFiles(dbName, accountID string) (results []internal
 	return
 }
 
-func scanFile(rows Scanner, f *internal.File) error {
+func scanFile(rows Scanner, f *model.File) error {
 	return rows.Scan(
 		&f.ID,
 		&f.AccountID,

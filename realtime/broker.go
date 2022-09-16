@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/google/uuid"
 )
@@ -18,31 +19,31 @@ type Validator func(context.Context, string) (string, error)
 
 type ConnectionData struct {
 	ctx      context.Context
-	messages chan internal.Command
+	messages chan model.Command
 }
 
 type Broker struct {
-	Broadcast          chan internal.Command
+	Broadcast          chan model.Command
 	newConnections     chan ConnectionData
-	closingConnections chan chan internal.Command
-	clients            map[chan internal.Command]string
-	ids                map[string]chan internal.Command
+	closingConnections chan chan model.Command
+	clients            map[chan model.Command]string
+	ids                map[string]chan model.Command
 	conf               map[string]context.Context
 	subscriptions      map[string][]chan bool
 	validateAuth       Validator
 
-	pubsub internal.Volatilizer
+	pubsub cache.Volatilizer
 
 	log *logger.Logger
 }
 
-func NewBroker(v Validator, pubsub internal.Volatilizer, log *logger.Logger) *Broker {
+func NewBroker(v Validator, pubsub cache.Volatilizer, log *logger.Logger) *Broker {
 	b := &Broker{
-		Broadcast:          make(chan internal.Command, 1),
+		Broadcast:          make(chan model.Command, 1),
 		newConnections:     make(chan ConnectionData),
-		closingConnections: make(chan chan internal.Command),
-		clients:            make(map[chan internal.Command]string),
-		ids:                make(map[string]chan internal.Command),
+		closingConnections: make(chan chan model.Command),
+		clients:            make(map[chan model.Command]string),
+		ids:                make(map[string]chan model.Command),
 		conf:               make(map[string]context.Context),
 		subscriptions:      make(map[string][]chan bool),
 		validateAuth:       v,
@@ -68,8 +69,8 @@ func (b *Broker) start() {
 			b.ids[id.String()] = data.messages
 			b.conf[id.String()] = data.ctx
 
-			msg := internal.Command{
-				Type: internal.MsgTypeInit,
+			msg := model.Command{
+				Type: model.MsgTypeInit,
 				Data: id.String(),
 			}
 
@@ -85,7 +86,7 @@ func (b *Broker) start() {
 	}
 }
 
-func (b *Broker) unsub(c chan internal.Command) {
+func (b *Broker) unsub(c chan model.Command) {
 	defer delete(b.clients, c)
 
 	id, ok := b.clients[c]
@@ -118,7 +119,7 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 	//w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// each connection has their own message channel
-	messages := make(chan internal.Command)
+	messages := make(chan model.Command)
 	data := ConnectionData{
 		ctx:      r.Context(),
 		messages: messages,
@@ -156,10 +157,10 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Command, payload internal.Command) {
-	var sender chan internal.Command
+func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, payload model.Command) {
+	var sender chan model.Command
 
-	if msg.SID != internal.SystemID {
+	if msg.SID != model.SystemID {
 		s, ok := b.ids[msg.SID]
 		if !ok {
 			b.log.Info().Msgf("cannot find sender socket: %d", msg.SID)
@@ -170,23 +171,23 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 	}
 
 	switch msg.Type {
-	case internal.MsgTypeEcho:
+	case model.MsgTypeEcho:
 		payload = msg
 		payload.Data = "echo: " + msg.Data
-	case internal.MsgTypeAuth:
+	case model.MsgTypeAuth:
 		ctx, ok := b.conf[msg.SID]
 		if !ok {
-			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid request"}
+			payload = model.Command{Type: model.MsgTypeError, Data: "invalid request"}
 			return
 		}
 
 		if _, err := b.validateAuth(ctx, msg.Data); err != nil {
-			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid token"}
+			payload = model.Command{Type: model.MsgTypeError, Data: "invalid token"}
 			return
 		}
 
-		payload = internal.Command{Type: internal.MsgTypeToken, Data: msg.Data}
-	case internal.MsgTypeJoin:
+		payload = model.Command{Type: model.MsgTypeToken, Data: msg.Data}
+	case model.MsgTypeJoin:
 		subs, ok := b.subscriptions[msg.SID]
 		if !ok {
 			subs = make([]chan bool, 0)
@@ -199,33 +200,33 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 
 		go b.pubsub.Subscribe(sender, msg.Token, msg.Data, closesub)
 
-		joinedMsg := internal.Command{
-			Type:    internal.MsgTypeJoined,
+		joinedMsg := model.Command{
+			Type:    model.MsgTypeJoined,
 			Data:    msg.SID,
 			Channel: msg.Data,
 		}
 		// make sure the subscription had time to kick-off
-		go func(m internal.Command) {
+		go func(m model.Command) {
 			time.Sleep(250 * time.Millisecond)
 			b.pubsub.Publish(joinedMsg)
 		}(joinedMsg)
 
-		payload = internal.Command{Type: internal.MsgTypeOk, Data: msg.Data}
-	case internal.MsgTypePresence:
+		payload = model.Command{Type: model.MsgTypeOk, Data: msg.Data}
+	case model.MsgTypePresence:
 		v, err := b.pubsub.Get(msg.Data)
 		if err != nil {
 			//TODO: Make sure it's because the channel key does not exists
 			v = "0"
 		}
 
-		payload = internal.Command{Type: internal.MsgTypePresence, Data: v}
-	case internal.MsgTypeChanIn:
+		payload = model.Command{Type: model.MsgTypePresence, Data: v}
+	case model.MsgTypeChanIn:
 		if len(msg.Channel) == 0 {
-			payload = internal.Command{Type: internal.MsgTypeError, Data: "no channel was specified"}
+			payload = model.Command{Type: model.MsgTypeError, Data: "no channel was specified"}
 			return
 		} else if strings.HasPrefix(strings.ToLower(msg.Channel), "db-") {
-			payload = internal.Command{
-				Type: internal.MsgTypeError,
+			payload = model.Command{
+				Type: model.MsgTypeError,
 				Data: "you cannot write to database channel",
 			}
 			return
@@ -234,9 +235,9 @@ func (b *Broker) getTargets(msg internal.Command) (sockets []chan internal.Comma
 		go b.pubsub.Publish(msg)
 		//go b.Publish(msg, msg.Channel)
 
-		payload = internal.Command{Type: internal.MsgTypeOk}
+		payload = model.Command{Type: model.MsgTypeOk}
 	default:
-		payload.Type = internal.MsgTypeError
+		payload.Type = model.MsgTypeError
 		payload.Data = fmt.Sprintf(`%s command not found`, msg.Type)
 	}
 

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/webhook"
 )
@@ -118,7 +118,7 @@ func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
 		return
 	}
 
-	if err := datastore.ChangeCustomerPlan(cus.ID, internal.PlanIdea); err != nil {
+	if err := datastore.ChangeCustomerPlan(cus.ID, model.PlanIdea); err != nil {
 		wh.log.Error().Err(err).Msg("STRIPE ERROR (update cus plan)")
 	}
 }
@@ -144,14 +144,14 @@ func (wh *stripeWebhook) handlePaymentMethodAttached(pm stripe.PaymentMethod) {
 func (wh *stripeWebhook) priceToLevel(priceID string) int {
 	switch priceID {
 	case config.Current.StripePriceIDIdea:
-		return internal.PlanIdea
+		return model.PlanIdea
 	case config.Current.StripePriceIDLaunch:
-		return internal.PleanLaunch
+		return model.PleanLaunch
 	case config.Current.StripePriceIDTraction:
-		return internal.PlanTraction
+		return model.PlanTraction
 	case config.Current.StripePriceIDGrowth:
-		return internal.PlanGrowth
+		return model.PlanGrowth
 	default:
-		return internal.PlanIdea
+		return model.PlanIdea
 	}
 }

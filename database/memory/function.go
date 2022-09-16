@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (m *Memory) AddFunction(dbName string, data internal.ExecData) (id string, err error) {
+func (m *Memory) AddFunction(dbName string, data model.ExecData) (id string, err error) {
 	id = m.NewID()
 
 	data.ID = id
@@ -19,7 +19,7 @@ func (m *Memory) AddFunction(dbName string, data internal.ExecData) (id string, 
 }
 
 func (m *Memory) UpdateFunction(dbName, id, code, trigger string) error {
-	var data internal.ExecData
+	var data model.ExecData
 	if err := getByID(m, dbName, "sb_functions", id, &data); err != nil {
 		return err
 	}
@@ -31,13 +31,13 @@ func (m *Memory) UpdateFunction(dbName, id, code, trigger string) error {
 	return create(m, dbName, "sb_functions", id, data)
 }
 
-func (m *Memory) GetFunctionForExecution(dbName, name string) (data internal.ExecData, err error) {
-	list, err := all[internal.ExecData](m, dbName, "sb_functions")
+func (m *Memory) GetFunctionForExecution(dbName, name string) (data model.ExecData, err error) {
+	list, err := all[model.ExecData](m, dbName, "sb_functions")
 	if err != nil {
 		return
 	}
 
-	list = filter(list, func(data internal.ExecData) bool {
+	list = filter(list, func(data model.ExecData) bool {
 		return data.FunctionName == name
 	})
 
@@ -50,28 +50,28 @@ func (m *Memory) GetFunctionForExecution(dbName, name string) (data internal.Exe
 	return
 }
 
-func (m *Memory) GetFunctionByID(dbName, id string) (data internal.ExecData, err error) {
+func (m *Memory) GetFunctionByID(dbName, id string) (data model.ExecData, err error) {
 	err = getByID(m, dbName, "sb_functions", id, &data)
 	return
 }
 
-func (m *Memory) GetFunctionByName(dbName, name string) (data internal.ExecData, err error) {
+func (m *Memory) GetFunctionByName(dbName, name string) (data model.ExecData, err error) {
 	return m.GetFunctionForExecution(dbName, name)
 }
 
-func (m *Memory) ListFunctions(dbName string) (list []internal.ExecData, err error) {
-	list, err = all[internal.ExecData](m, dbName, "sb_functions")
+func (m *Memory) ListFunctions(dbName string) (list []model.ExecData, err error) {
+	list, err = all[model.ExecData](m, dbName, "sb_functions")
 	return
 
 }
 
-func (m *Memory) ListFunctionsByTrigger(dbName, trigger string) (list []internal.ExecData, err error) {
+func (m *Memory) ListFunctionsByTrigger(dbName, trigger string) (list []model.ExecData, err error) {
 	list, err = m.ListFunctions(dbName)
 	if err != nil {
 		return
 	}
 
-	list = filter(list, func(data internal.ExecData) bool {
+	list = filter(list, func(data model.ExecData) bool {
 		return data.TriggerTopic == trigger
 	})
 
@@ -98,7 +98,7 @@ func (m *Memory) DeleteFunction(dbName, name string) error {
 	return nil
 }
 
-func (m *Memory) RanFunction(dbName, id string, rh internal.ExecHistory) error {
+func (m *Memory) RanFunction(dbName, id string, rh model.ExecHistory) error {
 	exists, err := m.GetFunctionByID(dbName, id)
 	if err != nil {
 		return err

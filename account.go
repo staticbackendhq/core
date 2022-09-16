@@ -9,9 +9,9 @@ import (
 
 	"github.com/staticbackendhq/core/config"
 	emailFuncs "github.com/staticbackendhq/core/email"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/billingportal/session"
@@ -105,12 +105,12 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	// create the account
 
-	cust := internal.Customer{
+	cust := model.Customer{
 		ID:             "cust-local-dev", // easier for CLI/memory flow
 		Email:          email,
 		StripeID:       stripeCustomerID,
 		SubscriptionID: subID,
-		Plan:           internal.PlanIdea,
+		Plan:           model.PlanIdea,
 		IsActive:       active,
 		Created:        time.Now(),
 	}
@@ -140,7 +140,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		break
 	}
 
-	base := internal.BaseConfig{
+	base := model.BaseConfig{
 		ID:            dbName, // easier for CLI/memory flow
 		CustomerID:    cust.ID,
 		Name:          dbName,
@@ -208,7 +208,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	<p>Dominic<br />Founder</p>
 	`, bc.ID, email, pw, rootToken)
 
-	ed := internal.SendMailData{
+	ed := emailFuncs.SendMailData{
 		From:     config.Current.FromEmail,
 		FromName: config.Current.FromName,
 		To:       email,

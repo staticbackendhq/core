@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 	FieldCreated   = "sb_created"
 )
 
-func (m *Memory) CreateDocument(auth internal.Auth, dbName, col string, doc map[string]interface{}) (map[string]interface{}, error) {
+func (m *Memory) CreateDocument(auth model.Auth, dbName, col string, doc map[string]interface{}) (map[string]interface{}, error) {
 	id := m.NewID()
 	doc[FieldID] = id
 	doc[FieldAccountID] = auth.AccountID
@@ -30,7 +30,7 @@ func (m *Memory) CreateDocument(auth internal.Auth, dbName, col string, doc map[
 	return doc, nil
 }
 
-func (m *Memory) BulkCreateDocument(auth internal.Auth, dbName, col string, docs []interface{}) error {
+func (m *Memory) BulkCreateDocument(auth model.Auth, dbName, col string, docs []interface{}) error {
 	for _, v := range docs {
 		doc, ok := v.(map[string]any)
 		if !ok {
@@ -45,11 +45,11 @@ func (m *Memory) BulkCreateDocument(auth internal.Auth, dbName, col string, docs
 	return nil
 }
 
-func (m *Memory) ListDocuments(auth internal.Auth, dbName, col string, params internal.ListParams) (result internal.PagedResult, err error) {
+func (m *Memory) ListDocuments(auth model.Auth, dbName, col string, params model.ListParams) (result model.PagedResult, err error) {
 	list, err := all[map[string]any](m, dbName, col)
 	if err != nil {
 		if errors.Is(err, collectionNotFoundErr) {
-			return internal.PagedResult{Page: params.Page, Size: params.Size}, nil
+			return model.PagedResult{Page: params.Page, Size: params.Size}, nil
 		}
 		return
 	}
@@ -77,11 +77,11 @@ func (m *Memory) ListDocuments(auth internal.Auth, dbName, col string, params in
 	return
 }
 
-func (m *Memory) QueryDocuments(auth internal.Auth, dbName, col string, filter map[string]any, params internal.ListParams) (result internal.PagedResult, err error) {
+func (m *Memory) QueryDocuments(auth model.Auth, dbName, col string, filter map[string]any, params model.ListParams) (result model.PagedResult, err error) {
 	list, err := all[map[string]any](m, dbName, col)
 	if err != nil {
 		if errors.Is(err, collectionNotFoundErr) {
-			return internal.PagedResult{Page: params.Page, Size: params.Size}, nil
+			return model.PagedResult{Page: params.Page, Size: params.Size}, nil
 		}
 		return
 	}
@@ -105,7 +105,7 @@ func (m *Memory) QueryDocuments(auth internal.Auth, dbName, col string, filter m
 	return
 }
 
-func (m *Memory) GetDocumentByID(auth internal.Auth, dbName, col, id string) (doc map[string]interface{}, err error) {
+func (m *Memory) GetDocumentByID(auth model.Auth, dbName, col, id string) (doc map[string]interface{}, err error) {
 	err = getByID(m, dbName, col, id, &doc)
 
 	list := secureRead(auth, col, []map[string]any{doc})
@@ -117,7 +117,7 @@ func (m *Memory) GetDocumentByID(auth internal.Auth, dbName, col, id string) (do
 	return
 }
 
-func (m *Memory) UpdateDocument(auth internal.Auth, dbName, col, id string, doc map[string]any) (exists map[string]any, err error) {
+func (m *Memory) UpdateDocument(auth model.Auth, dbName, col, id string, doc map[string]any) (exists map[string]any, err error) {
 	exists, err = m.GetDocumentByID(auth, dbName, col, id)
 	if err != nil {
 		return
@@ -136,7 +136,7 @@ func (m *Memory) UpdateDocument(auth internal.Auth, dbName, col, id string, doc 
 	return
 }
 
-func (m *Memory) UpdateDocuments(auth internal.Auth, dbName, col string, filter map[string]interface{}, updateFields map[string]interface{}) (n int64, err error) {
+func (m *Memory) UpdateDocuments(auth model.Auth, dbName, col string, filter map[string]interface{}, updateFields map[string]interface{}) (n int64, err error) {
 	list, err := all[map[string]any](m, dbName, col)
 
 	if err != nil {
@@ -158,7 +158,7 @@ func (m *Memory) UpdateDocuments(auth internal.Auth, dbName, col string, filter 
 	return
 }
 
-func (m *Memory) IncrementValue(auth internal.Auth, dbName, col, id, field string, n int) error {
+func (m *Memory) IncrementValue(auth model.Auth, dbName, col, id, field string, n int) error {
 	doc, err := m.GetDocumentByID(auth, dbName, col, id)
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func (m *Memory) IncrementValue(auth internal.Auth, dbName, col, id, field strin
 	return create(m, dbName, col, id, doc)
 }
 
-func (m *Memory) DeleteDocument(auth internal.Auth, dbName, col, id string) (n int64, err error) {
+func (m *Memory) DeleteDocument(auth model.Auth, dbName, col, id string) (n int64, err error) {
 	doc, err := m.GetDocumentByID(auth, dbName, col, id)
 	if err != nil {
 		return

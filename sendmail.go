@@ -5,12 +5,11 @@ import (
 	"net/http"
 
 	"github.com/staticbackendhq/core/email"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 )
 
 func sudoSendMail(w http.ResponseWriter, r *http.Request) {
-	var data internal.SendMailData
+	var data email.SendMailData
 	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

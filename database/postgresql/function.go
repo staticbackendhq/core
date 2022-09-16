@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (pg *PostgreSQL) AddFunction(dbName string, data internal.ExecData) (id string, err error) {
+func (pg *PostgreSQL) AddFunction(dbName string, data model.ExecData) (id string, err error) {
 	qry := fmt.Sprintf(`
 		INSERT INTO %s.sb_functions(function_name, trigger_topic, code, version, last_updated, last_run)
 		VALUES($1, $2, $3, $4, $5, $6)
@@ -40,7 +40,7 @@ func (pg *PostgreSQL) UpdateFunction(dbName, id, code, trigger string) error {
 	return nil
 }
 
-func (pg *PostgreSQL) GetFunctionForExecution(dbName, name string) (result internal.ExecData, err error) {
+func (pg *PostgreSQL) GetFunctionForExecution(dbName, name string) (result model.ExecData, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_functions 
@@ -53,7 +53,7 @@ func (pg *PostgreSQL) GetFunctionForExecution(dbName, name string) (result inter
 	return
 }
 
-func (pg *PostgreSQL) GetFunctionByID(dbName, id string) (result internal.ExecData, err error) {
+func (pg *PostgreSQL) GetFunctionByID(dbName, id string) (result model.ExecData, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_functions 
@@ -82,7 +82,7 @@ func (pg *PostgreSQL) GetFunctionByID(dbName, id string) (result internal.ExecDa
 	defer rows.Close()
 
 	for rows.Next() {
-		var h internal.ExecHistory
+		var h model.ExecHistory
 		if err = scanExecHistory(rows, &h); err != nil {
 			return
 		}
@@ -94,7 +94,7 @@ func (pg *PostgreSQL) GetFunctionByID(dbName, id string) (result internal.ExecDa
 	return
 }
 
-func (pg *PostgreSQL) GetFunctionByName(dbName, name string) (result internal.ExecData, err error) {
+func (pg *PostgreSQL) GetFunctionByName(dbName, name string) (result model.ExecData, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_functions 
@@ -124,7 +124,7 @@ func (pg *PostgreSQL) GetFunctionByName(dbName, name string) (result internal.Ex
 	defer rows.Close()
 
 	for rows.Next() {
-		var h internal.ExecHistory
+		var h model.ExecHistory
 		if err = scanExecHistory(rows, &h); err != nil {
 			return
 		}
@@ -136,7 +136,7 @@ func (pg *PostgreSQL) GetFunctionByName(dbName, name string) (result internal.Ex
 	return
 }
 
-func (pg *PostgreSQL) ListFunctions(dbName string) (results []internal.ExecData, err error) {
+func (pg *PostgreSQL) ListFunctions(dbName string) (results []model.ExecData, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_functions 
@@ -150,7 +150,7 @@ func (pg *PostgreSQL) ListFunctions(dbName string) (results []internal.ExecData,
 	defer rows.Close()
 
 	for rows.Next() {
-		var ex internal.ExecData
+		var ex model.ExecData
 		if err = scanExecData(rows, &ex); err != nil {
 			return
 		}
@@ -162,7 +162,7 @@ func (pg *PostgreSQL) ListFunctions(dbName string) (results []internal.ExecData,
 	return
 }
 
-func (pg *PostgreSQL) ListFunctionsByTrigger(dbName, trigger string) (results []internal.ExecData, err error) {
+func (pg *PostgreSQL) ListFunctionsByTrigger(dbName, trigger string) (results []model.ExecData, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_functions 
@@ -177,7 +177,7 @@ func (pg *PostgreSQL) ListFunctionsByTrigger(dbName, trigger string) (results []
 	defer rows.Close()
 
 	for rows.Next() {
-		var ex internal.ExecData
+		var ex model.ExecData
 		if err = scanExecData(rows, &ex); err != nil {
 			return
 		}
@@ -201,7 +201,7 @@ func (pg *PostgreSQL) DeleteFunction(dbName, name string) error {
 	return nil
 }
 
-func (pg *PostgreSQL) RanFunction(dbName, id string, rh internal.ExecHistory) error {
+func (pg *PostgreSQL) RanFunction(dbName, id string, rh model.ExecHistory) error {
 	qry := fmt.Sprintf(`
 		UPDATE %s.sb_functions SET
 			last_run = $2
@@ -230,7 +230,7 @@ func (pg *PostgreSQL) RanFunction(dbName, id string, rh internal.ExecHistory) er
 	return err
 }
 
-func scanExecData(rows Scanner, ex *internal.ExecData) error {
+func scanExecData(rows Scanner, ex *model.ExecData) error {
 	return rows.Scan(
 		&ex.ID,
 		&ex.FunctionName,
@@ -242,7 +242,7 @@ func scanExecData(rows Scanner, ex *internal.ExecData) error {
 	)
 }
 
-func scanExecHistory(rows Scanner, h *internal.ExecHistory) error {
+func scanExecHistory(rows Scanner, h *model.ExecHistory) error {
 	return rows.Scan(
 		&h.ID,
 		&h.FunctionID,

@@ -9,14 +9,15 @@ import (
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/config"
+	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/database/memory"
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/function"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/storage"
 	mongodrv "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -32,12 +33,12 @@ type Backend struct {
 }
 
 var (
-	datastore internal.Persister
-	emailer   internal.Mailer
-	filestore internal.Storer
+	datastore database.Persister
+	emailer   email.Mailer
+	filestore storage.Storer
 
 	// Cache exposes the cache / pub-sub functionalities
-	Cache internal.Volatilizer
+	Cache cache.Volatilizer
 	// Log expose the configured logger
 	Log *logger.Logger
 )
@@ -75,14 +76,14 @@ func New(cfg config.AppConfig) Backend {
 	}
 
 	mp := cfg.MailProvider
-	if strings.EqualFold(mp, internal.MailProviderSES) {
+	if strings.EqualFold(mp, email.MailProviderSES) {
 		emailer = email.AWSSES{}
 	} else {
 		emailer = email.Dev{}
 	}
 
 	sp := cfg.StorageProvider
-	if strings.EqualFold(sp, internal.StorageProviderS3) {
+	if strings.EqualFold(sp, storage.StorageProviderS3) {
 		filestore = storage.S3{}
 	} else {
 		filestore = storage.Local{}
@@ -93,7 +94,7 @@ func New(cfg config.AppConfig) Backend {
 	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
 		var exe function.ExecutionEnvironment
 
-		var conf internal.BaseConfig
+		var conf model.BaseConfig
 		// for public websocket (experimental)
 		if strings.HasPrefix(token, "__tmp__experimental_public") {
 			pk := strings.Replace(token, "__tmp__experimental_public_", "", -1)
@@ -108,7 +109,7 @@ func New(cfg config.AppConfig) Backend {
 			return exe, err
 		}
 
-		var auth internal.Auth
+		var auth model.Auth
 		if err := Cache.GetTyped(token, &auth); err != nil {
 			Log.Error().Err(err).Msg("cannot find auth")
 			return exe, err
@@ -166,16 +167,16 @@ func NewID() string {
 	return datastore.NewID()
 }
 
-func findAuth(token string) internal.Auth {
+func findAuth(token string) model.Auth {
 	auth, err := middleware.ValidateAuthKey(datastore, Cache, context.Background(), token)
 	if err != nil {
-		return internal.Auth{}
+		return model.Auth{}
 	}
 	return auth
 }
 
-func findBase(baseID string) internal.BaseConfig {
-	var conf internal.BaseConfig
+func findBase(baseID string) model.BaseConfig {
+	var conf model.BaseConfig
 	if err := Cache.GetTyped(baseID, &conf); err != nil {
 		db, err := datastore.FindDatabase(baseID)
 		if err != nil {

@@ -1,4 +1,4 @@
-package internal
+package email
 
 const (
 	MailProviderDev = "dev"

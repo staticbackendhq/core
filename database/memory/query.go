@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func (m *Memory) ParseQuery(clauses [][]interface{}) (filter map[string]any, err error) {
@@ -53,7 +54,7 @@ func (m *Memory) ParseQuery(clauses [][]interface{}) (filter map[string]any, err
 	return
 }
 
-func secureRead(auth internal.Auth, col string, list []map[string]any) []map[string]any {
+func secureRead(auth model.Auth, col string, list []map[string]any) []map[string]any {
 	var filtered []map[string]any
 
 	filter := make(map[string]string)
@@ -86,7 +87,7 @@ func secureRead(auth internal.Auth, col string, list []map[string]any) []map[str
 	return filtered
 }
 
-func canWrite(auth internal.Auth, col string, doc map[string]any) bool {
+func canWrite(auth model.Auth, col string, doc map[string]any) bool {
 	// if they are not "root", we use permission
 	if auth.Role < 100 {
 		switch internal.WritePermission(col) {

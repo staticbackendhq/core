@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func TestGetCurrentAuthUser(t *testing.T) {
@@ -16,7 +16,7 @@ func TestGetCurrentAuthUser(t *testing.T) {
 		t.Fatal(GetResponseBody(t, resp))
 	}
 
-	var me internal.Auth
+	var me model.Auth
 	if err := parseBody(resp.Body, &me); err != nil {
 		t.Fatal(err)
 	} else if !strings.EqualFold(me.Email, admEmail) {

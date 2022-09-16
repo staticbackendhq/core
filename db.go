@@ -7,13 +7,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 )
 
 type Database struct {
-	cache internal.Volatilizer
+	cache cache.Volatilizer
 	log   *logger.Logger
 }
 
@@ -108,7 +109,7 @@ func (database *Database) bulkAdd(w http.ResponseWriter, r *http.Request) {
 func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 	page, size := getPagination(r.URL)
 
-	params := internal.ListParams{
+	params := model.ListParams{
 		Page:           page,
 		Size:           size,
 		SortDescending: len(r.URL.Query().Get("desc")) > 0,
@@ -173,7 +174,7 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 
 	sort := r.URL.Query().Get("sort")
 
-	params := internal.ListParams{
+	params := model.ListParams{
 		Page:           page,
 		Size:           size,
 		SortBy:         sort,

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -13,7 +13,7 @@ import (
 
 type S3 struct{}
 
-func (S3) Save(data internal.UploadFileData) (string, error) {
+func (S3) Save(data model.UploadFileData) (string, error) {
 	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
 	if err != nil {
 		return "", err

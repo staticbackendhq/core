@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 type Tenant struct{}
 
-func (t Tenant) CreateCustomer(cus internal.Customer) (internal.Customer, error) {
+func (t Tenant) CreateCustomer(cus model.Customer) (model.Customer, error) {
 	cus.Email = strings.ToLower(cus.Email)
 	if exists, err := datastore.EmailExists(cus.Email); err != nil {
 		return cus, err
@@ -19,7 +19,7 @@ func (t Tenant) CreateCustomer(cus internal.Customer) (internal.Customer, error)
 	return datastore.CreateCustomer(cus)
 }
 
-func (t Tenant) CreateBase(base internal.BaseConfig) (internal.BaseConfig, error) {
+func (t Tenant) CreateBase(base model.BaseConfig) (model.BaseConfig, error) {
 	if exists, err := datastore.DatabaseExists(base.Name); err != nil {
 		return base, err
 	} else if exists {

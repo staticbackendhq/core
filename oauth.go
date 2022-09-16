@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/facebook"
@@ -106,7 +106,7 @@ func (el *ExternalLogins) callback() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		provider, reqID, baseID := el.fromState(el.getState(r))
 
-		var conf internal.BaseConfig
+		var conf model.BaseConfig
 		if err := volatile.GetTyped("oauth_"+reqID, &conf); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -250,7 +250,7 @@ func (el *ExternalLogins) signUp(dbName, provider, email, accessToken string) (s
 	return
 }
 
-func (el *ExternalLogins) getProvider(dbID, provider, reqID string, info internal.OAuthConfig) (p goth.Provider, err error) {
+func (el *ExternalLogins) getProvider(dbID, provider, reqID string, info model.OAuthConfig) (p goth.Provider, err error) {
 	callbackURL := fmt.Sprintf(
 		"%s/oauth/callback",
 		config.Current.AppURL,

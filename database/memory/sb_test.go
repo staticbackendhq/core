@@ -3,7 +3,7 @@ package memory
 import (
 	"testing"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func TestFindAccount(t *testing.T) {
@@ -90,15 +90,15 @@ func TestActivateCustomer(t *testing.T) {
 }
 
 func TestChangeCustomerPlan(t *testing.T) {
-	if err := datastore.ChangeCustomerPlan(dbTest.CustomerID, internal.PlanTraction); err != nil {
+	if err := datastore.ChangeCustomerPlan(dbTest.CustomerID, model.PlanTraction); err != nil {
 		t.Fatal(err)
 	}
 
 	cus, err := datastore.FindAccount(dbTest.CustomerID)
 	if err != nil {
 		t.Fatal(err)
-	} else if cus.Plan != internal.PlanTraction {
-		t.Errorf("expected cus plan to be %d got %d", internal.PlanTraction, cus.Plan)
+	} else if cus.Plan != model.PlanTraction {
+		t.Errorf("expected cus plan to be %d got %d", model.PlanTraction, cus.Plan)
 	}
 }
 
@@ -114,8 +114,8 @@ func TestNewID(t *testing.T) {
 }
 
 func TestEnableExternalLogins(t *testing.T) {
-	m := make(map[string]internal.OAuthConfig)
-	m["twitter"] = internal.OAuthConfig{ConsumerKey: "key", ConsumerSecret: "secret"}
+	m := make(map[string]model.OAuthConfig)
+	m["twitter"] = model.OAuthConfig{ConsumerKey: "key", ConsumerSecret: "secret"}
 
 	if err := datastore.EnableExternalLogin(dbTest.CustomerID, m); err != nil {
 		t.Fatal(err)

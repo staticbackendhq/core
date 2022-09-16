@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 )
 
 func upload(w http.ResponseWriter, r *http.Request) {
@@ -52,14 +52,14 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		ext,
 	)
 
-	upData := internal.UploadFileData{FileKey: fileKey, File: file}
+	upData := model.UploadFileData{FileKey: fileKey, File: file}
 	url, err := storer.Save(upData)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	f := internal.File{
+	f := model.File{
 		AccountID: auth.AccountID,
 		Key:       fileKey,
 		URL:       url,

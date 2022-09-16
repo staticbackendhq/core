@@ -3,14 +3,15 @@ package staticbackend
 import (
 	"net/http"
 
+	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/function"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 )
 
 type functions struct {
 	dbName    string
-	datastore internal.Persister
+	datastore database.Persister
 }
 
 func (f *functions) add(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +21,7 @@ func (f *functions) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data internal.ExecData
+	var data model.ExecData
 	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -54,7 +55,7 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var l internal.Login
+	var l model.Login
 	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -77,7 +78,7 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
-func (m *membership) validateUserPassword(dbName, email, password string) (tok internal.Token, err error) {
+func (m *membership) validateUserPassword(dbName, email, password string) (tok model.Token, err error) {
 	email = strings.ToLower(email)
 
 	tok, err = datastore.FindTokenByEmail(dbName, email)
@@ -100,7 +101,7 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var l internal.Login
+	var l model.Login
 	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -125,7 +126,7 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 
 	token := string(jwtBytes)
 
-	auth := internal.Auth{
+	auth := model.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
@@ -145,7 +146,7 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, token)
 }
 
-func (m *membership) getAuthToken(tok internal.Token, conf internal.BaseConfig) (jwtBytes []byte, err error) {
+func (m *membership) getAuthToken(tok model.Token, conf model.BaseConfig) (jwtBytes []byte, err error) {
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
 	// get their JWT
@@ -154,7 +155,7 @@ func (m *membership) getAuthToken(tok internal.Token, conf internal.BaseConfig) 
 		return
 	}
 
-	auth := internal.Auth{
+	auth := model.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
@@ -174,26 +175,26 @@ func (m *membership) getAuthToken(tok internal.Token, conf internal.BaseConfig) 
 	return
 }
 
-func (m *membership) createAccountAndUser(dbName, email, password string, role int) ([]byte, internal.Token, error) {
+func (m *membership) createAccountAndUser(dbName, email, password string, role int) ([]byte, model.Token, error) {
 	acctID, err := datastore.CreateUserAccount(dbName, email)
 	if err != nil {
-		return nil, internal.Token{}, err
+		return nil, model.Token{}, err
 	}
 
 	jwtBytes, tok, err := m.createUser(dbName, acctID, email, password, role)
 	if err != nil {
-		return nil, internal.Token{}, err
+		return nil, model.Token{}, err
 	}
 	return jwtBytes, tok, nil
 }
 
-func (m *membership) createUser(dbName, accountID, email, password string, role int) ([]byte, internal.Token, error) {
+func (m *membership) createUser(dbName, accountID, email, password string, role int) ([]byte, model.Token, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, internal.Token{}, err
+		return nil, model.Token{}, err
 	}
 
-	tok := internal.Token{
+	tok := model.Token{
 		AccountID: accountID,
 		Email:     email,
 		Token:     datastore.NewID(),
@@ -203,7 +204,7 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 
 	tokID, err := datastore.CreateUserToken(dbName, tok)
 	if err != nil {
-		return nil, internal.Token{}, err
+		return nil, model.Token{}, err
 	}
 
 	tok.ID = tokID
@@ -216,7 +217,7 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 		return nil, tok, err
 	}
 
-	auth := internal.Auth{
+	auth := model.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
@@ -357,7 +358,7 @@ func (m *membership) setPassword(w http.ResponseWriter, r *http.Request) {
 
 func GetJWT(token string) ([]byte, error) {
 	now := time.Now()
-	pl := internal.JWTPayload{
+	pl := model.JWTPayload{
 		Payload: jwt.Payload{
 			Issuer:         "StaticBackend",
 			ExpirationTime: jwt.NumericDate(now.Add(12 * time.Hour)),
@@ -368,7 +369,7 @@ func GetJWT(token string) ([]byte, error) {
 		Token: token,
 	}
 
-	return jwt.Sign(pl, internal.HashSecret)
+	return jwt.Sign(pl, model.HashSecret)
 
 }
 
@@ -398,7 +399,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	auth := internal.Auth{
+	auth := model.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,
@@ -507,7 +508,7 @@ func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mail := internal.SendMailData{
+	mail := email.SendMailData{
 		From:     data.FromEmail,
 		FromName: data.FromName,
 		To:       data.Email,

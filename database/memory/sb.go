@@ -4,24 +4,24 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (m *Memory) CreateCustomer(customer internal.Customer) (internal.Customer, error) {
+func (m *Memory) CreateCustomer(customer model.Customer) (model.Customer, error) {
 	err := create(m, "sb", "customers", customer.ID, customer)
 	return customer, err
 }
 
-func (m *Memory) CreateBase(base internal.BaseConfig) (internal.BaseConfig, error) {
+func (m *Memory) CreateBase(base model.BaseConfig) (model.BaseConfig, error) {
 	if err := create(m, "sb", "apps", base.ID, base); err != nil {
 		return base, err
 	}
 
 	// needed to make tests pass
-	task := internal.Task{
+	task := model.Task{
 		ID:    m.NewID(),
 		Name:  "demo task",
-		Type:  internal.TaskTypeMessage,
+		Type:  model.TaskTypeMessage,
 		Value: "task demo",
 	}
 	err := create(m, base.Name, "sb_tasks", task.ID, task)
@@ -29,12 +29,12 @@ func (m *Memory) CreateBase(base internal.BaseConfig) (internal.BaseConfig, erro
 }
 
 func (m *Memory) EmailExists(email string) (exists bool, err error) {
-	list, err := all[internal.Customer](m, "sb", "customers")
+	list, err := all[model.Customer](m, "sb", "customers")
 	if err != nil {
 		return
 	}
 
-	results := filter(list, func(x internal.Customer) bool {
+	results := filter(list, func(x model.Customer) bool {
 		return strings.EqualFold(x.Email, email)
 	})
 
@@ -46,23 +46,23 @@ func (m *Memory) EmailExists(email string) (exists bool, err error) {
 	return
 }
 
-func (m *Memory) FindAccount(customerID string) (cus internal.Customer, err error) {
+func (m *Memory) FindAccount(customerID string) (cus model.Customer, err error) {
 	err = getByID(m, "sb", "customers", customerID, &cus)
 	return
 }
 
-func (m *Memory) FindDatabase(baseID string) (base internal.BaseConfig, err error) {
+func (m *Memory) FindDatabase(baseID string) (base model.BaseConfig, err error) {
 	err = getByID(m, "sb", "apps", baseID, &base)
 	return
 }
 
 func (m *Memory) DatabaseExists(name string) (exists bool, err error) {
-	list, err := all[internal.BaseConfig](m, "sb", "apps")
+	list, err := all[model.BaseConfig](m, "sb", "apps")
 	if err != nil {
 		return
 	}
 
-	results := filter(list, func(x internal.BaseConfig) bool {
+	results := filter(list, func(x model.BaseConfig) bool {
 		return x.Name == name
 	})
 
@@ -70,8 +70,8 @@ func (m *Memory) DatabaseExists(name string) (exists bool, err error) {
 	return
 }
 
-func (m *Memory) ListDatabases() (results []internal.BaseConfig, err error) {
-	results, err = all[internal.BaseConfig](m, "sb", "apps")
+func (m *Memory) ListDatabases() (results []model.BaseConfig, err error) {
+	results, err = all[model.BaseConfig](m, "sb", "apps")
 	return
 }
 
@@ -86,13 +86,13 @@ func (m *Memory) IncrementMonthlyEmailSent(baseID string) error {
 	return create(m, "sb", "apps", baseID, base)
 }
 
-func (m *Memory) GetCustomerByStripeID(stripeID string) (cus internal.Customer, err error) {
-	list, err := all[internal.Customer](m, "sb", "customers")
+func (m *Memory) GetCustomerByStripeID(stripeID string) (cus model.Customer, err error) {
+	list, err := all[model.Customer](m, "sb", "customers")
 	if err != nil {
 		return
 	}
 
-	results := filter(list, func(x internal.Customer) bool {
+	results := filter(list, func(x model.Customer) bool {
 		return strings.EqualFold(x.StripeID, stripeID)
 	})
 
@@ -106,7 +106,7 @@ func (m *Memory) GetCustomerByStripeID(stripeID string) (cus internal.Customer, 
 }
 
 func (m *Memory) ActivateCustomer(customerID string, active bool) error {
-	var cus internal.Customer
+	var cus model.Customer
 	if err := getByID(m, "sb", "customers", customerID, &cus); err != nil {
 		return err
 	}
@@ -130,8 +130,8 @@ func (m *Memory) ChangeCustomerPlan(customerID string, plan int) error {
 	return create(m, "sb", "customers", customerID, cus)
 }
 
-func (m *Memory) EnableExternalLogin(customerID string, config map[string]internal.OAuthConfig) error {
-	b, err := internal.EncryptExternalLogins(config)
+func (m *Memory) EnableExternalLogin(customerID string, config map[string]model.OAuthConfig) error {
+	b, err := model.EncryptExternalLogins(config)
 	if err != nil {
 		return err
 	}

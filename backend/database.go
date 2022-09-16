@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 type Database[T any] struct {
-	auth internal.Auth
-	conf internal.BaseConfig
+	auth model.Auth
+	conf model.BaseConfig
 }
 
 func NewDatabase[T any](token, baseID string) Database[T] {
@@ -62,7 +62,7 @@ type PagedResult[T any] struct {
 }
 
 func (d Database[T]) List(col string, lp ListParams) (res PagedResult[T], err error) {
-	ilp := internal.ListParams{
+	ilp := model.ListParams{
 		Page:           lp.Page,
 		Size:           lp.Size,
 		SortBy:         lp.SortBy,
@@ -95,7 +95,7 @@ func (d Database[T]) Query(col string, filters [][]any, lp ListParams) (res Page
 		return
 	}
 
-	ilp := internal.ListParams{
+	ilp := model.ListParams{
 		Page:           lp.Page,
 		Size:           lp.Size,
 		SortBy:         lp.SortBy,

@@ -4,7 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -18,7 +19,7 @@ type LocalFile struct {
 	Uploaded  time.Time          `bson:"on" json:"uploaded"`
 }
 
-func toLocalFile(f internal.File) LocalFile {
+func toLocalFile(f model.File) LocalFile {
 	id, err := primitive.ObjectIDFromHex(f.ID)
 	if err != nil {
 		return LocalFile{}
@@ -39,8 +40,8 @@ func toLocalFile(f internal.File) LocalFile {
 	}
 }
 
-func fromLocalFile(lf LocalFile) internal.File {
-	return internal.File{
+func fromLocalFile(lf LocalFile) model.File {
+	return model.File{
 		ID:        lf.ID.Hex(),
 		AccountID: lf.AccountID.Hex(),
 		Key:       lf.Key,
@@ -50,7 +51,7 @@ func fromLocalFile(lf LocalFile) internal.File {
 	}
 }
 
-func (mg *Mongo) AddFile(dbName string, f internal.File) (id string, err error) {
+func (mg *Mongo) AddFile(dbName string, f model.File) (id string, err error) {
 	db := mg.Client.Database(dbName)
 
 	f.ID = primitive.NewObjectID().Hex()
@@ -71,7 +72,7 @@ func (mg *Mongo) AddFile(dbName string, f internal.File) (id string, err error) 
 	return
 }
 
-func (mg *Mongo) GetFileByID(dbName, fileID string) (f internal.File, err error) {
+func (mg *Mongo) GetFileByID(dbName, fileID string) (f model.File, err error) {
 	db := mg.Client.Database(dbName)
 
 	oid, err := primitive.ObjectIDFromHex(fileID)
@@ -109,7 +110,7 @@ func (mg *Mongo) DeleteFile(dbName, fileID string) error {
 	return nil
 }
 
-func (mg *Mongo) ListAllFiles(dbName, accountID string) ([]internal.File, error) {
+func (mg *Mongo) ListAllFiles(dbName, accountID string) ([]model.File, error) {
 	db := mg.Client.Database(dbName)
 
 	var filter bson.M
@@ -130,7 +131,7 @@ func (mg *Mongo) ListAllFiles(dbName, accountID string) ([]internal.File, error)
 
 	defer sr.Close(mg.Ctx)
 
-	var results []internal.File
+	var results []model.File
 
 	for sr.Next(mg.Ctx) {
 		var f LocalFile

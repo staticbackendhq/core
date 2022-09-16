@@ -14,6 +14,7 @@ import (
 
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
+	"github.com/staticbackendhq/core/model"
 )
 
 // dbReq post on behalf of adminToken by default (use:
@@ -130,7 +131,7 @@ func TestDBCreate(t *testing.T) {
 			Created: time.Now(),
 		}
 
-	resp := dbReq(t, database.add, "POST", "/db/tasks", task)
+	resp := dbReq(t, db.add, "POST", "/db/tasks", task)
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
@@ -156,7 +157,7 @@ func TestDBListCollections(t *testing.T) {
 		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireRoot(datastore, volatile),
 	}
-	h := middleware.Chain(http.HandlerFunc(database.listCollections), stdRoot...)
+	h := middleware.Chain(http.HandlerFunc(db.listCollections), stdRoot...)
 
 	h.ServeHTTP(w, req)
 
@@ -191,7 +192,7 @@ func TestListDocumentsInvalidDB(t *testing.T) {
 		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireRoot(datastore, volatile),
 	}
-	h := middleware.Chain(http.HandlerFunc(database.list), stdRoot...)
+	h := middleware.Chain(http.HandlerFunc(db.list), stdRoot...)
 
 	h.ServeHTTP(w, req)
 
@@ -205,9 +206,9 @@ func TestListDocumentsInvalidDB(t *testing.T) {
 
 		t.Errorf("got error for list documents: %s", string(b))
 	}
-	expected := internal.PagedResult{Page: 1, Size: 25}
+	expected := model.PagedResult{Page: 1, Size: 25}
 
-	var response internal.PagedResult
+	var response model.PagedResult
 	if err := parseBody(resp.Body, &response); err != nil {
 		t.Fatal(err)
 	} else if !reflect.DeepEqual(expected, response) {
@@ -228,7 +229,7 @@ func TestDBBulkUpdate(t *testing.T) {
 		},
 	}
 
-	resp := dbReq(t, database.bulkAdd, "POST", "/db/tasks/bulk", tasks)
+	resp := dbReq(t, db.bulkAdd, "POST", "/db/tasks/bulk", tasks)
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
@@ -242,7 +243,7 @@ func TestDBBulkUpdate(t *testing.T) {
 	data.UpdateFields = map[string]any{"done": true}
 	data.Clauses = append(data.Clauses, []interface{}{"title", "=", "should be updated"})
 
-	resp = dbReq(t, database.bulkUpdate, "PUT", "/db/tasks/bulk", data)
+	resp = dbReq(t, db.bulkUpdate, "PUT", "/db/tasks/bulk", data)
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
@@ -265,7 +266,7 @@ func TestDBIncrease(t *testing.T) {
 			Count:   1,
 		}
 
-	resp := dbReq(t, database.add, "POST", "/db/tasks", task)
+	resp := dbReq(t, db.add, "POST", "/db/tasks", task)
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
@@ -284,13 +285,13 @@ func TestDBIncrease(t *testing.T) {
 	data.Field = "count"
 	data.Range = 4
 
-	resp = dbReq(t, database.increase, "PUT", "/inc/tasks/"+createdTask.ID, data)
+	resp = dbReq(t, db.increase, "PUT", "/inc/tasks/"+createdTask.ID, data)
 
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
 	}
 
-	resp = dbReq(t, database.get, "GET", "/db/tasks/"+createdTask.ID, nil)
+	resp = dbReq(t, db.get, "GET", "/db/tasks/"+createdTask.ID, nil)
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
 	}
@@ -314,7 +315,7 @@ func TestDBCreateIndex(t *testing.T) {
 		middleware.WithDB(datastore, volatile, getStripePortalURL),
 		middleware.RequireRoot(datastore, volatile),
 	}
-	h := middleware.Chain(http.HandlerFunc(database.index), stdRoot...)
+	h := middleware.Chain(http.HandlerFunc(db.index), stdRoot...)
 
 	h.ServeHTTP(w, req)
 

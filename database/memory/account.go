@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (m *Memory) FindToken(dbName, tokenID, token string) (tok internal.Token, err error) {
+func (m *Memory) FindToken(dbName, tokenID, token string) (tok model.Token, err error) {
 	if err = getByID(m, dbName, "sb_tokens", tokenID, &tok); err != nil {
 		return
 	} else if tok.Token != token {
@@ -16,7 +16,7 @@ func (m *Memory) FindToken(dbName, tokenID, token string) (tok internal.Token, e
 	return
 }
 
-func (m *Memory) FindRootToken(dbName, tokenID, accountID, token string) (tok internal.Token, err error) {
+func (m *Memory) FindRootToken(dbName, tokenID, accountID, token string) (tok model.Token, err error) {
 	tok, err = m.FindToken(dbName, tokenID, token)
 	if err != nil {
 		return
@@ -26,13 +26,13 @@ func (m *Memory) FindRootToken(dbName, tokenID, accountID, token string) (tok in
 	return
 }
 
-func (m *Memory) GetRootForBase(dbName string) (tok internal.Token, err error) {
-	tokens, err := all[internal.Token](m, dbName, "sb_tokens")
+func (m *Memory) GetRootForBase(dbName string) (tok model.Token, err error) {
+	tokens, err := all[model.Token](m, dbName, "sb_tokens")
 	if err != nil {
 		return
 	}
 
-	rootTokens := filter(tokens, func(t internal.Token) bool {
+	rootTokens := filter(tokens, func(t model.Token) bool {
 		return t.Role == 100
 	})
 
@@ -45,13 +45,13 @@ func (m *Memory) GetRootForBase(dbName string) (tok internal.Token, err error) {
 	return
 }
 
-func (m *Memory) FindTokenByEmail(dbName, email string) (tok internal.Token, err error) {
-	tokens, err := all[internal.Token](m, dbName, "sb_tokens")
+func (m *Memory) FindTokenByEmail(dbName, email string) (tok model.Token, err error) {
+	tokens, err := all[model.Token](m, dbName, "sb_tokens")
 	if err != nil {
 		return
 	}
 
-	matches := filter(tokens, func(t internal.Token) bool {
+	matches := filter(tokens, func(t model.Token) bool {
 		return strings.EqualFold(t.Email, email)
 	})
 
@@ -71,17 +71,17 @@ func (m *Memory) UserEmailExists(dbName, email string) (exists bool, err error) 
 	return
 }
 
-func (m *Memory) GetFirstTokenFromAccountID(dbName, accountID string) (tok internal.Token, err error) {
-	tokens, err := all[internal.Token](m, dbName, "sb_tokens")
+func (m *Memory) GetFirstTokenFromAccountID(dbName, accountID string) (tok model.Token, err error) {
+	tokens, err := all[model.Token](m, dbName, "sb_tokens")
 	if err != nil {
 		return
 	}
 
-	matches := filter(tokens, func(t internal.Token) bool {
+	matches := filter(tokens, func(t model.Token) bool {
 		return t.AccountID == accountID
 	})
 
-	matches = sortSlice(matches, func(a, b internal.Token) bool {
+	matches = sortSlice(matches, func(a, b model.Token) bool {
 		return a.Created.Before(b.Created)
 	})
 

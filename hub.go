@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/staticbackendhq/core/internal"
-
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gorilla/websocket"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/model"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to the
@@ -23,7 +23,7 @@ type Hub struct {
 	channels map[*Socket][]chan bool
 
 	// Inbound messages from the clients.
-	broadcast chan internal.Command
+	broadcast chan model.Command
 
 	// Register requests from the clients.
 	register chan *Socket
@@ -32,12 +32,12 @@ type Hub struct {
 	unregister chan *Socket
 
 	// Cache used for keys and pub/sub (Redis)
-	volatile internal.Volatilizer
+	volatile cache.Volatilizer
 }
 
-func newHub(c internal.Volatilizer) *Hub {
+func newHub(c cache.Volatilizer) *Hub {
 	return &Hub{
-		broadcast:  make(chan internal.Command),
+		broadcast:  make(chan model.Command),
 		register:   make(chan *Socket),
 		unregister: make(chan *Socket),
 		sockets:    make(map[*Socket]string),
@@ -54,7 +54,7 @@ func (h *Hub) run() {
 			h.sockets[sck] = sck.id
 			h.ids[sck.id] = sck
 
-			cmd := internal.Command{
+			cmd := model.Command{
 				Type: "init",
 				Data: sck.id,
 			}
@@ -87,32 +87,32 @@ func (h *Hub) run() {
 	}
 }
 
-func (h *Hub) getTargets(msg internal.Command) (sockets []*Socket, payload internal.Command) {
+func (h *Hub) getTargets(msg model.Command) (sockets []*Socket, payload model.Command) {
 	sender, ok := h.ids[msg.SID]
 	if !ok {
 		return
 	}
 
 	switch msg.Type {
-	case internal.MsgTypeEcho:
+	case model.MsgTypeEcho:
 		sockets = append(sockets, sender)
 		payload = msg
 		payload.Data = "echo: " + msg.Data
-	case internal.MsgTypeAuth:
+	case model.MsgTypeAuth:
 		sockets = append(sockets, sender)
-		var pl internal.JWTPayload
-		if _, err := jwt.Verify([]byte(msg.Data), internal.HashSecret, &pl); err != nil {
-			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid token"}
+		var pl model.JWTPayload
+		if _, err := jwt.Verify([]byte(msg.Data), model.HashSecret, &pl); err != nil {
+			payload = model.Command{Type: model.MsgTypeError, Data: "invalid token"}
 			return
 		}
 
-		var a internal.Auth
+		var a model.Auth
 		if err := volatile.GetTyped(pl.Token, &a); err != nil {
-			payload = internal.Command{Type: internal.MsgTypeError, Data: "invalid token"}
+			payload = model.Command{Type: model.MsgTypeError, Data: "invalid token"}
 		} else {
-			payload = internal.Command{Type: internal.MsgTypeToken, Data: pl.Token}
+			payload = model.Command{Type: model.MsgTypeToken, Data: pl.Token}
 		}
-	case internal.MsgTypeJoin:
+	case model.MsgTypeJoin:
 		subs, ok := h.channels[sender]
 		if !ok {
 			subs = make([]chan bool, 0)
@@ -124,31 +124,31 @@ func (h *Hub) getTargets(msg internal.Command) (sockets []*Socket, payload inter
 		go h.volatile.Subscribe(sender.send, msg.Token, msg.Data, closeSubChan)
 
 		sockets = append(sockets, sender)
-		payload = internal.Command{Type: internal.MsgTypeJoined, Data: msg.Data}
-	case internal.MsgTypeChanIn:
+		payload = model.Command{Type: model.MsgTypeJoined, Data: msg.Data}
+	case model.MsgTypeChanIn:
 		sockets = append(sockets, sender)
 
 		if len(msg.Channel) == 0 {
-			payload = internal.Command{Type: internal.MsgTypeError, Data: "no channel was specified"}
+			payload = model.Command{Type: model.MsgTypeError, Data: "no channel was specified"}
 			return
 		} else if strings.HasPrefix(strings.ToLower(msg.Channel), "db-") {
-			payload = internal.Command{
-				Type: internal.MsgTypeError,
+			payload = model.Command{
+				Type: model.MsgTypeError,
 				Data: "you cannot write to database channel",
 			}
 			return
 		}
 
 		if err := h.volatile.Publish(msg); err != nil {
-			payload = internal.Command{Type: internal.MsgTypeError, Data: "unable to send your message"}
+			payload = model.Command{Type: model.MsgTypeError, Data: "unable to send your message"}
 			return
 		}
 
-		payload = internal.Command{Type: internal.MsgTypeOk}
+		payload = model.Command{Type: model.MsgTypeOk}
 	default:
 		sockets = append(sockets, sender)
 
-		payload.Type = internal.MsgTypeError
+		payload.Type = model.MsgTypeError
 		payload.Data = fmt.Sprintf(`%s command not found`, msg.Type)
 	}
 

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func (m *Memory) CreateUserAccount(dbName, email string) (id string, err error) {
 	id = m.NewID()
 
-	acct := internal.Account{
+	acct := model.Account{
 		ID:      id,
 		Created: time.Now(),
 		Email:   email,
@@ -19,7 +19,7 @@ func (m *Memory) CreateUserAccount(dbName, email string) (id string, err error) 
 	return
 }
 
-func (m *Memory) CreateUserToken(dbName string, tok internal.Token) (id string, err error) {
+func (m *Memory) CreateUserToken(dbName string, tok model.Token) (id string, err error) {
 	id = m.NewID()
 	tok.ID = id
 
@@ -28,7 +28,7 @@ func (m *Memory) CreateUserToken(dbName string, tok internal.Token) (id string, 
 }
 
 func (m *Memory) SetPasswordResetCode(dbName, tokenID, code string) error {
-	var tok internal.Token
+	var tok model.Token
 	if err := getByID(m, dbName, "sb_tokens", tokenID, &tok); err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (m *Memory) SetUserRole(dbName, email string, role int) error {
 }
 
 func (m *Memory) UserSetPassword(dbName, tokenID, password string) error {
-	var tok internal.Token
+	var tok model.Token
 	if err := getByID(m, dbName, "sb_tokens", tokenID, &tok); err != nil {
 		return err
 	}

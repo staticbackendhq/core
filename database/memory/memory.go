@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database"
 )
 
 /*const (
@@ -29,10 +30,10 @@ func init() {
 
 type Memory struct {
 	DB              map[string]map[string][]byte
-	PublishDocument internal.PublishDocumentEvent
+	PublishDocument cache.PublishDocumentEvent
 }
 
-func New(pubdoc internal.PublishDocumentEvent) internal.Persister {
+func New(pubdoc cache.PublishDocumentEvent) database.Persister {
 	db := make(map[string]map[string][]byte)
 
 	if err := initDB(db); err != nil {

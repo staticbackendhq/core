@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
-func (pg *PostgreSQL) CreateCustomer(customer internal.Customer) (c internal.Customer, err error) {
+func (pg *PostgreSQL) CreateCustomer(customer model.Customer) (c model.Customer, err error) {
 	var id string
 	c = customer
 
@@ -30,7 +30,7 @@ func (pg *PostgreSQL) CreateCustomer(customer internal.Customer) (c internal.Cus
 	return
 }
 
-func (pg *PostgreSQL) CreateBase(base internal.BaseConfig) (b internal.BaseConfig, err error) {
+func (pg *PostgreSQL) CreateBase(base model.BaseConfig) (b model.BaseConfig, err error) {
 	b = base
 
 	_, err = pg.DB.Exec(fmt.Sprintf("CREATE SCHEMA %s;", b.Name))
@@ -147,7 +147,7 @@ func (pg *PostgreSQL) EmailExists(email string) (bool, error) {
 	return count > 0, nil
 }
 
-func (pg *PostgreSQL) FindAccount(customerID string) (customer internal.Customer, err error) {
+func (pg *PostgreSQL) FindAccount(customerID string) (customer model.Customer, err error) {
 	row := pg.DB.QueryRow(`
 		SELECT * 
 		FROM sb.customers
@@ -158,7 +158,7 @@ func (pg *PostgreSQL) FindAccount(customerID string) (customer internal.Customer
 	return
 }
 
-func (pg *PostgreSQL) FindDatabase(baseID string) (base internal.BaseConfig, err error) {
+func (pg *PostgreSQL) FindDatabase(baseID string) (base model.BaseConfig, err error) {
 	row := pg.DB.QueryRow(`
 		SELECT * 
 		FROM sb.apps 
@@ -181,7 +181,7 @@ func (pg *PostgreSQL) DatabaseExists(name string) (exists bool, err error) {
 	return
 }
 
-func (pg *PostgreSQL) ListDatabases() (results []internal.BaseConfig, err error) {
+func (pg *PostgreSQL) ListDatabases() (results []model.BaseConfig, err error) {
 	rows, err := pg.DB.Query(`
 		SELECT * 
 		FROM sb.apps 
@@ -193,7 +193,7 @@ func (pg *PostgreSQL) ListDatabases() (results []internal.BaseConfig, err error)
 	defer rows.Close()
 
 	for rows.Next() {
-		var base internal.BaseConfig
+		var base model.BaseConfig
 		if err = scanBase(rows, &base); err != nil {
 			return
 		}
@@ -214,7 +214,7 @@ func (pg *PostgreSQL) IncrementMonthlyEmailSent(baseID string) error {
 	return err
 }
 
-func (pg *PostgreSQL) GetCustomerByStripeID(stripeID string) (cus internal.Customer, err error) {
+func (pg *PostgreSQL) GetCustomerByStripeID(stripeID string) (cus model.Customer, err error) {
 	row := pg.DB.QueryRow(`
 		SELECT * 
 		FROM sb.customers 
@@ -249,8 +249,8 @@ func (pg *PostgreSQL) ChangeCustomerPlan(customerID string, plan int) error {
 	return nil
 }
 
-func (pg *PostgreSQL) EnableExternalLogin(customerID string, config map[string]internal.OAuthConfig) error {
-	b, err := internal.EncryptExternalLogins(config)
+func (pg *PostgreSQL) EnableExternalLogin(customerID string, config map[string]model.OAuthConfig) error {
+	b, err := model.EncryptExternalLogins(config)
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func (pg *PostgreSQL) DeleteCustomer(dbName, email string) error {
 	return err
 }
 
-func scanCustomer(rows Scanner, c *internal.Customer) error {
+func scanCustomer(rows Scanner, c *model.Customer) error {
 	return rows.Scan(
 		&c.ID,
 		&c.Email,
@@ -296,7 +296,7 @@ func scanCustomer(rows Scanner, c *internal.Customer) error {
 	)
 }
 
-func scanBase(rows Scanner, b *internal.BaseConfig) error {
+func scanBase(rows Scanner, b *model.BaseConfig) error {
 	return rows.Scan(
 		&b.ID,
 		&b.CustomerID,

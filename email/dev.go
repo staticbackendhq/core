@@ -2,13 +2,11 @@ package email
 
 import (
 	"fmt"
-
-	"github.com/staticbackendhq/core/internal"
 )
 
 type Dev struct{}
 
-func (d Dev) Send(data internal.SendMailData) error {
+func (d Dev) Send(data SendMailData) error {
 	fmt.Println("====== SENDING EMAIL ======")
 	fmt.Println("from: ", data.From)
 	fmt.Println("ReplyTo: ", data.ReplyTo)

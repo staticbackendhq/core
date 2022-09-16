@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{}, error) {
@@ -52,7 +53,7 @@ func applyFilter(where string, filters map[string]interface{}) string {
 	return where
 }
 
-func secureRead(auth internal.Auth, col string) string {
+func secureRead(auth model.Auth, col string) string {
 	if strings.HasPrefix(col, "pub_") || auth.Role == 100 {
 		return "WHERE $1=$1 AND $2=$2 "
 	}
@@ -68,7 +69,7 @@ func secureRead(auth internal.Auth, col string) string {
 	}
 }
 
-func secureWrite(auth internal.Auth, col string) string {
+func secureWrite(auth model.Auth, col string) string {
 	if strings.HasPrefix(col, "pub_") || auth.Role == 100 {
 		return "WHERE $1=$1 AND $2=$2 "
 	}
@@ -88,7 +89,7 @@ func secureWrite(auth internal.Auth, col string) string {
 	}
 }
 
-func setPaging(params internal.ListParams) string {
+func setPaging(params model.ListParams) string {
 	if len(params.SortBy) == 0 {
 		params.SortBy = "created"
 	}

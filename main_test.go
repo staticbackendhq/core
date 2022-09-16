@@ -15,8 +15,8 @@ import (
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/storage"
 )
 
@@ -37,8 +37,8 @@ var (
 	userToken  string
 	rootToken  string
 
-	mship    *membership
-	database *Database
+	mship *membership
+	db    *Database
 )
 
 func TestMain(m *testing.M) {
@@ -66,12 +66,12 @@ func TestMain(m *testing.M) {
 		datastore = postgresql.New(dbConn, volatile.PublishDocument, "./sql/", logz)
 	}
 
-	database = &Database{cache: volatile, log: logz}
+	db = &Database{cache: volatile, log: logz}
 
 	mship = &membership{log: logz}
 
 	mp := config.Current.MailProvider
-	if strings.EqualFold(mp, internal.MailProviderSES) {
+	if strings.EqualFold(mp, email.MailProviderSES) {
 		emailer = email.AWSSES{}
 	} else {
 		emailer = email.Dev{}
@@ -101,7 +101,7 @@ func deleteAndSetupTestAccount() {
 		log.Fatal(err)
 	}
 
-	cus := internal.Customer{
+	cus := model.Customer{
 		Email: admEmail,
 	}
 	cus, err := datastore.CreateCustomer(cus)
@@ -109,7 +109,7 @@ func deleteAndSetupTestAccount() {
 		log.Fatal(err)
 	}
 
-	base := internal.BaseConfig{
+	base := model.BaseConfig{
 		CustomerID:    cus.ID,
 		Name:          dbName,
 		AllowedDomain: []string{"localhost"},

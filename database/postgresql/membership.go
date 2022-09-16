@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func (pg *PostgreSQL) CreateUserAccount(dbName, email string) (id string, err error) {
@@ -18,7 +18,7 @@ func (pg *PostgreSQL) CreateUserAccount(dbName, email string) (id string, err er
 	return
 }
 
-func (pg *PostgreSQL) CreateUserToken(dbName string, tok internal.Token) (id string, err error) {
+func (pg *PostgreSQL) CreateUserToken(dbName string, tok model.Token) (id string, err error) {
 	qry := fmt.Sprintf(`
 		INSERT INTO %s.sb_tokens(account_id, email, password, token, role, reset_code, created)
 		VALUES($1, $2, $3, $4, $5, $6, $7)
@@ -76,7 +76,7 @@ func (pg *PostgreSQL) UserSetPassword(dbName, tokenID, password string) error {
 	return nil
 }
 
-func (pg *PostgreSQL) GetFirstTokenFromAccountID(dbName, accountID string) (tok internal.Token, err error) {
+func (pg *PostgreSQL) GetFirstTokenFromAccountID(dbName, accountID string) (tok model.Token, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_tokens 

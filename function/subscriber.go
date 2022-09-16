@@ -3,12 +3,13 @@ package function
 import (
 	"fmt"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 )
 
 type Subscriber struct {
-	PubSub     internal.Volatilizer
+	PubSub     cache.Volatilizer
 	GetExecEnv func(token string) (ExecutionEnvironment, error)
 	Log        *logger.Logger
 }
@@ -17,7 +18,7 @@ type Subscriber struct {
 // This channel is responsible of executing functions that match the
 // topic/trigger
 func (sub *Subscriber) Start() {
-	receiver := make(chan internal.Command)
+	receiver := make(chan model.Command)
 	close := make(chan bool)
 
 	go sub.PubSub.Subscribe(receiver, "", "sbsys", close)
@@ -32,17 +33,17 @@ func (sub *Subscriber) Start() {
 	}
 }
 
-func (sub *Subscriber) process(msg internal.Command) {
+func (sub *Subscriber) process(msg model.Command) {
 	switch msg.Type {
-	case internal.MsgTypeChanOut,
-		internal.MsgTypeDBCreated,
-		internal.MsgTypeDBUpdated,
-		internal.MsgTypeDBDeleted:
+	case model.MsgTypeChanOut,
+		model.MsgTypeDBCreated,
+		model.MsgTypeDBUpdated,
+		model.MsgTypeDBDeleted:
 		sub.handleRealtimeEvents(msg)
 	}
 }
 
-func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
+func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
 	exe, err := sub.GetExecEnv(msg.Token)
 	if err != nil {
 		sub.Log.Error().Err(err).Msgf("cannot retrieve base from token: %s", msg.Token)
@@ -72,7 +73,7 @@ func (sub *Subscriber) handleRealtimeEvents(msg internal.Command) {
 	}
 
 	for _, id := range ids {
-		var fn internal.ExecData
+		var fn model.ExecData
 		if err := sub.PubSub.GetTyped("fn_"+id, &fn); err != nil {
 			sub.Log.Error().Err(err).Msg("error getting function out of cache")
 			return

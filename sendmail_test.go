@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/email"
 )
 
 func Test_Sendmail(t *testing.T) {
-	data := internal.SendMailData{
+	data := email.SendMailData{
 		FromName: config.Current.FromName,
 		From:     config.Current.FromEmail,
 		To:       "dominicstpierre+unittest@gmail.com",

@@ -3,10 +3,9 @@ package mongo
 import (
 	"time"
 
+	"github.com/staticbackendhq/core/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-
-	"github.com/staticbackendhq/core/internal"
 )
 
 type LocalTask struct {
@@ -26,7 +25,7 @@ type LocalMetaMessage struct {
 	Channel string `bson:"channel" json:"channel"`
 }
 
-func (mg *Mongo) ListTasks() ([]internal.Task, error) {
+func (mg *Mongo) ListTasks() ([]model.Task, error) {
 	bases, err := mg.ListDatabases()
 	if err != nil {
 		return nil, err
@@ -35,7 +34,7 @@ func (mg *Mongo) ListTasks() ([]internal.Task, error) {
 	filter := bson.M{}
 
 	//TODO: Might be worth doing this concurrently
-	var results []internal.Task
+	var results []model.Task
 
 	for _, base := range bases {
 		db := mg.Client.Database(base.Name)
@@ -45,7 +44,7 @@ func (mg *Mongo) ListTasks() ([]internal.Task, error) {
 		}
 		defer cur.Close(mg.Ctx)
 
-		var tasks []internal.Task
+		var tasks []model.Task
 
 		for cur.Next(mg.Ctx) {
 			var t LocalTask
@@ -67,8 +66,8 @@ func (mg *Mongo) ListTasks() ([]internal.Task, error) {
 	return results, nil
 }
 
-func fromLocalTask(lt LocalTask) internal.Task {
-	return internal.Task{
+func fromLocalTask(lt LocalTask) model.Task {
+	return model.Task{
 		ID:       lt.ID.Hex(),
 		Name:     lt.Name,
 		Type:     lt.Type,

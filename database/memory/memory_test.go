@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 const (
@@ -20,10 +20,10 @@ const (
 
 var (
 	datastore    *Memory
-	dbTest       internal.BaseConfig
-	adminAccount internal.Account
-	adminToken   internal.Token
-	adminAuth    internal.Auth
+	dbTest       model.BaseConfig
+	adminAccount model.Account
+	adminToken   model.Token
+	adminAuth    model.Auth
 )
 
 func fakePubDocEvent(channel, typ string, v interface{}) {
@@ -67,7 +67,7 @@ func createCustomerAndSchema() error {
 		return errors.New("admin email exists, should not")
 	}
 
-	cus := internal.Customer{
+	cus := model.Customer{
 		Email:          adminEmail,
 		StripeID:       adminEmail,
 		SubscriptionID: adminEmail,
@@ -80,7 +80,7 @@ func createCustomerAndSchema() error {
 		return err
 	}
 
-	base := internal.BaseConfig{
+	base := model.BaseConfig{
 		CustomerID:    cus.ID,
 		Name:          confDBName,
 		AllowedDomain: []string{"localhost"},
@@ -113,9 +113,9 @@ func createAdminAccountAndToken() error {
 		return err
 	}
 
-	adminAccount = internal.Account{ID: acctID, Email: adminEmail}
+	adminAccount = model.Account{ID: acctID, Email: adminEmail}
 
-	adminToken = internal.Token{
+	adminToken = model.Token{
 		AccountID: adminAccount.ID,
 		Token:     adminEmail,
 		Email:     adminEmail,
@@ -131,7 +131,7 @@ func createAdminAccountAndToken() error {
 
 	adminToken.ID = tokID
 
-	adminAuth = internal.Auth{
+	adminAuth = model.Auth{
 		AccountID: acctID,
 		UserID:    tokID,
 		Email:     adminEmail,

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func createFunction(name string, args ...string) (string, error) {
@@ -13,7 +13,7 @@ func createFunction(name string, args ...string) (string, error) {
 		topic = args[0]
 	}
 
-	fn := internal.ExecData{
+	fn := model.ExecData{
 		AccountID:    adminAccount.ID,
 		FunctionName: name,
 		TriggerTopic: topic,
@@ -175,7 +175,7 @@ func TestRanFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rh := internal.ExecHistory{
+	rh := model.ExecHistory{
 		FunctionID: id,
 		Version:    1,
 		Started:    time.Now().Add(-2 * time.Second),

@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func TestFileStorage(t *testing.T) {
-	f := internal.File{
+	f := model.File{
 		AccountID: adminAccount.ID,
 		Key:       "key",
 		URL:       "https://test",
@@ -16,7 +16,7 @@ func TestFileStorage(t *testing.T) {
 		Uploaded:  time.Now(),
 	}
 
-	f1 := internal.File{
+	f1 := model.File{
 		AccountID: adminAccount.ID,
 		Key:       "key1",
 		URL:       "https://test1",

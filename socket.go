@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -46,7 +46,7 @@ type Socket struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan internal.Command
+	send chan model.Command
 
 	// unique socket identifier
 	id string
@@ -68,7 +68,7 @@ func (c *Socket) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		var msg internal.Command
+		var msg model.Command
 		if err := c.conn.ReadJSON(&msg); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				c.log.Error().Err(err).Msg("error")
@@ -121,7 +121,7 @@ func serveWs(log *logger.Logger, hub *Hub, w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		log.Error().Err(err)
 	}
-	sck := &Socket{hub: hub, conn: conn, send: make(chan internal.Command), id: id.String(), log: log}
+	sck := &Socket{hub: hub, conn: conn, send: make(chan model.Command), id: id.String(), log: log}
 	sck.hub.register <- sck
 
 	// Allow collection of memory referenced by the caller by doing all work in

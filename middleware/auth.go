@@ -6,16 +6,17 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/staticbackendhq/core/internal"
-
 	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database"
+	"github.com/staticbackendhq/core/model"
 )
 
 const (
 	RootRole = 100
 )
 
-func RequireAuth(datastore internal.Persister, volatile internal.Volatilizer) Middleware {
+func RequireAuth(datastore database.Persister, volatile cache.Volatilizer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
@@ -24,13 +25,13 @@ func RequireAuth(datastore internal.Persister, volatile internal.Volatilizer) Mi
 				// if they requested a public repo we let them continue
 				// to next security check.
 				if strings.HasPrefix(r.URL.Path, "/db/pub_") || strings.HasPrefix(r.URL.Path, "/query/pub_") {
-					a := internal.Auth{
+					a := model.Auth{
 						AccountID: "public_repo_called",
 						UserID:    "public_repo_called",
 						Email:     "",
 						Role:      0,
 						Token:     "pub",
-						Plan:      internal.PlanIdea,
+						Plan:      model.PlanIdea,
 					}
 
 					ctx := context.WithValue(r.Context(), ContextAuth, a)
@@ -67,20 +68,20 @@ func RequireAuth(datastore internal.Persister, volatile internal.Volatilizer) Mi
 	}
 }
 
-func ValidateAuthKey(datastore internal.Persister, volatile internal.Volatilizer, ctx context.Context, key string) (internal.Auth, error) {
-	a := internal.Auth{}
+func ValidateAuthKey(datastore database.Persister, volatile cache.Volatilizer, ctx context.Context, key string) (model.Auth, error) {
+	a := model.Auth{}
 
-	var pl internal.JWTPayload
-	if _, err := jwt.Verify([]byte(key), internal.HashSecret, &pl); err != nil {
+	var pl model.JWTPayload
+	if _, err := jwt.Verify([]byte(key), model.HashSecret, &pl); err != nil {
 		return a, fmt.Errorf("could not verify your authentication token: %s", err.Error())
 	}
 
-	conf, ok := ctx.Value(ContextBase).(internal.BaseConfig)
+	conf, ok := ctx.Value(ContextBase).(model.BaseConfig)
 	if !ok {
 		return a, fmt.Errorf("invalid StaticBackend public token")
 	}
 
-	var auth internal.Auth
+	var auth model.Auth
 	if err := volatile.GetTyped(pl.Token, &auth); err == nil {
 		return auth, nil
 	}
@@ -100,7 +101,7 @@ func ValidateAuthKey(datastore internal.Persister, volatile internal.Volatilizer
 		return a, fmt.Errorf("error retrieving your customer account: %v", err)
 	}
 
-	a = internal.Auth{
+	a = model.Auth{
 		AccountID: token.AccountID,
 		UserID:    token.ID,
 		Email:     token.Email,
@@ -120,7 +121,7 @@ func ValidateAuthKey(datastore internal.Persister, volatile internal.Volatilizer
 	return a, nil
 }
 
-func RequireRoot(datastore internal.Persister, volatile internal.Volatilizer) Middleware {
+func RequireRoot(datastore database.Persister, volatile cache.Volatilizer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("Authorization")
@@ -163,7 +164,7 @@ func RequireRoot(datastore internal.Persister, volatile internal.Volatilizer) Mi
 			}
 
 			ctx := r.Context()
-			conf, ok := ctx.Value(ContextBase).(internal.BaseConfig)
+			conf, ok := ctx.Value(ContextBase).(model.BaseConfig)
 			if !ok {
 				http.Error(w, "invalid StaticBackend public key", http.StatusBadRequest)
 				return
@@ -175,7 +176,7 @@ func RequireRoot(datastore internal.Persister, volatile internal.Volatilizer) Mi
 				return
 			}
 
-			a := internal.Auth{
+			a := model.Auth{
 				AccountID: tok.AccountID,
 				UserID:    tok.ID,
 				Email:     tok.Email,
@@ -190,8 +191,8 @@ func RequireRoot(datastore internal.Persister, volatile internal.Volatilizer) Mi
 	}
 }
 
-func ValidateRootToken(datastore internal.Persister, base, token string) (internal.Token, error) {
-	tok := internal.Token{}
+func ValidateRootToken(datastore database.Persister, base, token string) (model.Token, error) {
+	tok := model.Token{}
 
 	parts := strings.Split(token, "|")
 	if len(parts) != 3 {

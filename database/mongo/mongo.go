@@ -4,8 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -14,11 +16,11 @@ import (
 type Mongo struct {
 	Client          *mongo.Client
 	Ctx             context.Context
-	PublishDocument internal.PublishDocumentEvent
+	PublishDocument cache.PublishDocumentEvent
 	log             *logger.Logger
 }
 
-func New(client *mongo.Client, pubdoc internal.PublishDocumentEvent, log *logger.Logger) internal.Persister {
+func New(client *mongo.Client, pubdoc cache.PublishDocumentEvent, log *logger.Logger) database.Persister {
 	return &Mongo{
 		Client:          client,
 		Ctx:             context.Background(),
@@ -39,7 +41,7 @@ func (mg *Mongo) CreateIndex(dbName, col, field string) error {
 		Keys: bson.M{field: 1},
 	}
 
-	dbCol := db.Collection(internal.CleanCollectionName(col))
+	dbCol := db.Collection(model.CleanCollectionName(col))
 
 	if _, err := dbCol.Indexes().CreateOne(mg.Ctx, idx); err != nil {
 		return err

@@ -7,13 +7,15 @@ import (
 	"strings"
 
 	"github.com/spf13/afero"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 )
 
 type PostgreSQL struct {
 	DB              *sql.DB
-	PublishDocument internal.PublishDocumentEvent
+	PublishDocument cache.PublishDocumentEvent
 	log             *logger.Logger
 }
 
@@ -22,7 +24,7 @@ var (
 	appFS         = afero.NewOsFs()
 )
 
-func New(db *sql.DB, pubdoc internal.PublishDocumentEvent, migPath string, log *logger.Logger) internal.Persister {
+func New(db *sql.DB, pubdoc cache.PublishDocumentEvent, migPath string, log *logger.Logger) database.Persister {
 	migrationPath = migPath
 
 	// run migrations
@@ -48,7 +50,7 @@ func (pg *PostgreSQL) CreateIndex(dbName, col, field string) error {
 		USING btree ((data->'{col}'))
 	`
 
-	qry = strings.Replace(qry, "{col}", internal.CleanCollectionName(col), -1)
+	qry = strings.Replace(qry, "{col}", model.CleanCollectionName(col), -1)
 	qry = strings.Replace(qry, "{field}", field, -1)
 	qry = strings.Replace(qry, "{schema}", dbName, -1)
 

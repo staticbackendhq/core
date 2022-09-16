@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -14,7 +13,7 @@ import (
 
 type AWSSES struct{}
 
-func (AWSSES) Send(data internal.SendMailData) error {
+func (AWSSES) Send(data SendMailData) error {
 	if len(data.To) == 0 || strings.Index(data.To, "@") == -1 {
 		return fmt.Errorf("empty To email")
 	}

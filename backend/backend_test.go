@@ -7,7 +7,7 @@ import (
 
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 var (
@@ -15,10 +15,10 @@ var (
 
 	adminEmail    string
 	adminPassword string
-	adminAuth     internal.Auth
+	adminAuth     model.Auth
 	jwtToken      string
 
-	base internal.BaseConfig
+	base model.BaseConfig
 )
 
 func TestMain(t *testing.M) {
@@ -52,7 +52,7 @@ func setup() {
 }
 
 func createTenantAndDatabase() error {
-	cus := internal.Customer{
+	cus := model.Customer{
 		Email:    adminEmail,
 		IsActive: true,
 		Created:  time.Now(),
@@ -63,7 +63,7 @@ func createTenantAndDatabase() error {
 		return err
 	}
 
-	base = internal.BaseConfig{
+	base = model.BaseConfig{
 		CustomerID: cus.ID,
 		Name:       "dev-memory-pk",
 		IsActive:   true,
@@ -82,7 +82,7 @@ func createUser() error {
 		return err
 	}
 
-	tok := internal.Token{
+	tok := model.Token{
 		AccountID: id,
 		Token:     backend.NewID(),
 		Email:     adminEmail,
@@ -98,7 +98,7 @@ func createUser() error {
 
 	tok.ID = userID
 
-	adminAuth = internal.Auth{
+	adminAuth = model.Auth{
 		AccountID: id,
 		UserID:    userID,
 		Email:     adminEmail,

@@ -3,8 +3,10 @@ package function
 import (
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 
 	"github.com/go-co-op/gocron"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,8 +14,8 @@ import (
 
 type TaskScheduler struct {
 	Client    *mongo.Client
-	Volatile  internal.Volatilizer
-	DataStore internal.Persister
+	Volatile  cache.Volatilizer
+	DataStore database.Persister
 	Scheduler *gocron.Scheduler
 	log       *logger.Logger
 }
@@ -36,9 +38,9 @@ func (ts *TaskScheduler) Start() {
 	}
 }
 
-func (ts *TaskScheduler) run(task internal.Task) {
+func (ts *TaskScheduler) run(task model.Task) {
 	// the task must run as the root base user
-	var auth internal.Auth
+	var auth model.Auth
 	if err := ts.Volatile.GetTyped("root:"+task.BaseName, &auth); err != nil {
 		tok, err := ts.DataStore.GetRootForBase(task.BaseName)
 		if err != nil {
@@ -47,7 +49,7 @@ func (ts *TaskScheduler) run(task internal.Task) {
 			return
 		}
 
-		auth = internal.Auth{
+		auth = model.Auth{
 			AccountID: tok.AccountID,
 			UserID:    tok.ID,
 			Email:     tok.Email,
@@ -62,14 +64,14 @@ func (ts *TaskScheduler) run(task internal.Task) {
 	}
 
 	switch task.Type {
-	case internal.TaskTypeFunction:
+	case model.TaskTypeFunction:
 		ts.execFunction(auth, task)
-	case internal.TaskTypeMessage:
+	case model.TaskTypeMessage:
 		ts.sendMessage(auth, task)
 	}
 }
 
-func (ts *TaskScheduler) execFunction(auth internal.Auth, task internal.Task) {
+func (ts *TaskScheduler) execFunction(auth model.Auth, task model.Task) {
 	fn, err := ts.DataStore.GetFunctionForExecution(task.BaseName, task.Value)
 	if err != nil {
 		ts.log.Error().Err(err).Msgf("cannot find function %s on task %s", task.Value)
@@ -90,16 +92,16 @@ func (ts *TaskScheduler) execFunction(auth internal.Auth, task internal.Task) {
 	}
 }
 
-func (ts *TaskScheduler) sendMessage(auth internal.Auth, task internal.Task) {
+func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 	token := auth.ReconstructToken()
 
-	meta, ok := task.Meta.(internal.MetaMessage)
+	meta, ok := task.Meta.(model.MetaMessage)
 	if !ok {
 		ts.log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %d", task.ID)
 		return
 	}
 
-	msg := internal.Command{
+	msg := model.Command{
 		SID:     task.ID,
 		Type:    task.Value,
 		Data:    meta.Data,

@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	sb "github.com/staticbackendhq/core"
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	conf internal.BaseConfig
+	conf model.BaseConfig
 }
 
 func newUser(baseID string) User {
@@ -29,7 +29,7 @@ func (u User) CreateAccount(email string) (string, error) {
 	return datastore.CreateUserAccount(u.conf.Name, email)
 }
 
-func (u User) CreateUserToken(tok internal.Token) (string, error) {
+func (u User) CreateUserToken(tok model.Token) (string, error) {
 	return datastore.CreateUserToken(u.conf.Name, tok)
 }
 
@@ -50,7 +50,7 @@ func (u User) Authenticate(email, password string) (string, error) {
 		return "", err
 	}
 
-	auth := internal.Auth{
+	auth := model.Auth{
 		AccountID: tok.AccountID,
 		UserID:    tok.ID,
 		Email:     tok.Email,

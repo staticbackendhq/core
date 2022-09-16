@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -30,7 +30,7 @@ type LocalToken struct {
 	Created   time.Time          `bson:"created" json:"created"`
 }
 
-func toLocalToken(token internal.Token) LocalToken {
+func toLocalToken(token model.Token) LocalToken {
 	id, err := primitive.ObjectIDFromHex(token.ID)
 	if err != nil {
 		return LocalToken{}
@@ -53,8 +53,8 @@ func toLocalToken(token internal.Token) LocalToken {
 	}
 }
 
-func fromLocalToken(tok LocalToken) internal.Token {
-	return internal.Token{
+func fromLocalToken(tok LocalToken) model.Token {
+	return model.Token{
 		ID:        tok.ID.Hex(),
 		AccountID: tok.AccountID.Hex(),
 		Token:     tok.Token,
@@ -66,7 +66,7 @@ func fromLocalToken(tok LocalToken) internal.Token {
 	}
 }
 
-func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok internal.Token, err error) {
+func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok model.Token, err error) {
 	db := mg.Client.Database(dbName)
 
 	id, err := primitive.ObjectIDFromHex(tokenID)
@@ -82,7 +82,7 @@ func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok internal.Token, e
 	return
 }
 
-func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok internal.Token, err error) {
+func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok model.Token, err error) {
 	db := mg.Client.Database(dbName)
 
 	id, err := primitive.ObjectIDFromHex(tokenID)
@@ -111,7 +111,7 @@ func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok in
 	return
 }
 
-func (mg *Mongo) GetRootForBase(dbName string) (tok internal.Token, err error) {
+func (mg *Mongo) GetRootForBase(dbName string) (tok model.Token, err error) {
 	db := mg.Client.Database(dbName)
 
 	filter := bson.M{
@@ -128,7 +128,7 @@ func (mg *Mongo) GetRootForBase(dbName string) (tok internal.Token, err error) {
 	return
 }
 
-func (mg *Mongo) FindTokenByEmail(dbName, email string) (tok internal.Token, err error) {
+func (mg *Mongo) FindTokenByEmail(dbName, email string) (tok model.Token, err error) {
 	db := mg.Client.Database(dbName)
 
 	var lt LocalToken

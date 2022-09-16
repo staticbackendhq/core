@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/staticbackendhq/core/internal"
+	"github.com/staticbackendhq/core/model"
 )
 
 func TestCreateUserAccountAndToken(t *testing.T) {
@@ -13,7 +13,7 @@ func TestCreateUserAccountAndToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tok := internal.Token{
+	tok := model.Token{
 		AccountID: acctID,
 		Token:     "123",
 		Email:     "unit@test.com",
@@ -67,7 +67,7 @@ func TestSetPasswordResetCode(t *testing.T) {
 }
 
 func TestSetUserRole(t *testing.T) {
-	newTok := internal.Token{
+	newTok := model.Token{
 		AccountID: adminAccount.ID,
 		Token:     "normal-user-token",
 		Email:     "normal@test.com",
