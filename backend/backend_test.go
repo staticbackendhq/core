@@ -58,7 +58,7 @@ func createTenantAndDatabase() error {
 		Created:  time.Now(),
 	}
 
-	cus, err := bkn.Tenant.CreateCustomer(cus)
+	cus, err := bkn.DB.CreateCustomer(cus)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func createTenantAndDatabase() error {
 		IsActive:   true,
 	}
 
-	base, err = bkn.Tenant.CreateBase(base)
+	base, err = bkn.DB.CreateBase(base)
 	if err != nil {
 		return err
 	}
@@ -82,21 +82,18 @@ func createUser() error {
 		return err
 	}
 
-	tok := model.Token{
-		AccountID: id,
-		Token:     backend.NewID(),
-		Email:     adminEmail,
-		Password:  adminPassword,
-		Role:      100,
-		Created:   time.Now(),
-	}
-
-	userID, err := bkn.User(base.ID).CreateUserToken(tok)
+	userID, err := bkn.User(base.ID).CreateUserToken(id, adminEmail, adminPassword, 100)
 	if err != nil {
 		return err
 	}
 
-	tok.ID = userID
+	tok := model.Token{
+		ID:        userID,
+		AccountID: id,
+		Email:     adminEmail,
+		Role:      100,
+		Created:   time.Now(),
+	}
 
 	adminAuth = model.Auth{
 		AccountID: id,

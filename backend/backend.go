@@ -27,23 +27,26 @@ import (
 )
 
 type Backend struct {
-	Tenant Tenant
-	//DB     func(token, baseID string) Database
+	DB   database.Persister
 	User func(baseID string) User
 }
 
 var (
 	datastore database.Persister
-	emailer   email.Mailer
-	filestore storage.Storer
+
+	// Emailer sends email
+	Emailer email.Mailer
+	// Filestore store/load/delete file
+	Filestore storage.Storer
 
 	// Cache exposes the cache / pub-sub functionalities
 	Cache cache.Volatilizer
-	// Log expose the configured logger
+	// Log exposes the configured logger
 	Log *logger.Logger
 )
 
-// Init prepares the backend core based on the configuration
+// New prepared the core services based on the configuration received.
+// It returns a Backend struct that wraps the Persister interface.
 func New(cfg config.AppConfig) Backend {
 	//TODO: this code is an awfuly copy of the server.go init code
 	// Might be an idea to create some kind of helper in the internal package
@@ -77,16 +80,16 @@ func New(cfg config.AppConfig) Backend {
 
 	mp := cfg.MailProvider
 	if strings.EqualFold(mp, email.MailProviderSES) {
-		emailer = email.AWSSES{}
+		Emailer = email.AWSSES{}
 	} else {
-		emailer = email.Dev{}
+		Emailer = email.Dev{}
 	}
 
 	sp := cfg.StorageProvider
 	if strings.EqualFold(sp, storage.StorageProviderS3) {
-		filestore = storage.S3{}
+		Filestore = storage.S3{}
 	} else {
-		filestore = storage.Local{}
+		Filestore = storage.Local{}
 	}
 
 	sub := &function.Subscriber{Log: Log}
@@ -127,8 +130,7 @@ func New(cfg config.AppConfig) Backend {
 	go sub.Start()
 
 	return Backend{
-		Tenant: Tenant{},
-		//DB:     newDatabase,
+		DB:   datastore,
 		User: newUser,
 	}
 }
@@ -163,6 +165,7 @@ func openPGDatabase(dbHost string) (*sql.DB, error) {
 	return dbConn, nil
 }
 
+// NewID generates a new unique identifier
 func NewID() string {
 	return datastore.NewID()
 }

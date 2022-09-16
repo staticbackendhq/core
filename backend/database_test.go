@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/backend"
+	"github.com/staticbackendhq/core/model"
 )
 
 type Task struct {
@@ -61,7 +62,7 @@ func TestDatabaseList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lp := backend.ListParams{Page: 1, Size: 50}
+	lp := model.ListParams{Page: 1, Size: 50}
 	res, err := db.List("tasks", lp)
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +92,7 @@ func TestDatabaseQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lp := backend.ListParams{Page: 1, Size: 50}
+	lp := model.ListParams{Page: 1, Size: 50}
 	res, err := db.Query("tasks", filters, lp)
 	if err != nil {
 		t.Fatal(err)

@@ -27,3 +27,15 @@ func (t Tenant) CreateBase(base model.BaseConfig) (model.BaseConfig, error) {
 	}
 	return datastore.CreateBase(base)
 }
+
+func (t Tenant) EmailExists(email string) (bool, error) {
+	return datastore.EmailExists(email)
+}
+
+func (t Tenant) FindAccount(customerID string) (model.Customer, error) {
+	return datastore.FindAccount(customerID)
+}
+
+func (t Tenant) FindDatabase(baseID string) (model.BaseConfig, error) {
+	return datastore.FindDatabase(baseID)
+}
