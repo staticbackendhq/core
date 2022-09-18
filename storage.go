@@ -1,15 +1,9 @@
 package staticbackend
 
 import (
-	"fmt"
 	"net/http"
-	"path/filepath"
-	"regexp"
-	"strings"
-	"time"
 
 	"github.com/staticbackendhq/core/middleware"
-	"github.com/staticbackendhq/core/model"
 )
 
 func upload(w http.ResponseWriter, r *http.Request) {
@@ -18,7 +12,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, auth, err := middleware.Extract(r, true)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -37,87 +31,32 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ext := filepath.Ext(h.Filename)
-
 	name := r.Form.Get("name")
-	if len(name) == 0 {
-		// if no forced name is used, let's use the original name
-		name = cleanUpFileName(h.Filename)
-	}
 
-	fileKey := fmt.Sprintf("%s/%s/%s%s",
-		config.Name,
-		auth.AccountID,
-		name,
-		ext,
-	)
-
-	upData := model.UploadFileData{FileKey: fileKey, File: file}
-	url, err := storer.Save(upData)
+	fileSvc := bkn.File(auth, conf)
+	savedFile, err := fileSvc.Save(h.Filename, name, file, h.Size)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	f := model.File{
-		AccountID: auth.AccountID,
-		Key:       fileKey,
-		URL:       url,
-		Size:      h.Size,
-		Uploaded:  time.Now(),
-	}
-
-	newID, err := datastore.AddFile(config.Name, f)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data := new(struct {
-		ID  string `json:"id"`
-		URL string `json:"url"`
-	})
-	data.ID = newID
-	data.URL = url
-
-	respond(w, http.StatusOK, data)
+	respond(w, http.StatusOK, savedFile)
 }
 
 func deleteFile(w http.ResponseWriter, r *http.Request) {
-	config, _, err := middleware.Extract(r, false)
+	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	fileID := r.URL.Query().Get("id")
-	f, err := datastore.GetFileByID(config.Name, fileID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
-	fileKey := f.Key
-
-	if err := storer.Delete(fileKey); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := datastore.DeleteFile(config.Name, f.ID); err != nil {
+	fileSvc := bkn.File(auth, conf)
+	if err := fileSvc.Delete(fileID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	respond(w, http.StatusOK, true)
-}
-
-// cleanUpFileName removes file extention and anything but a-zA-Z-_
-func cleanUpFileName(s string) string {
-	s = strings.TrimSuffix(s, filepath.Ext(s))
-
-	exp := regexp.MustCompile(`[^a-zA-Z\-_]`)
-
-	return exp.ReplaceAllString(s, "")
-
 }

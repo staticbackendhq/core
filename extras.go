@@ -12,6 +12,7 @@ import (
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/staticbackendhq/core/extra"
+	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
@@ -54,7 +55,7 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 
 	name := r.Form.Get("name")
 	if len(name) == 0 {
-		name = randStringRunes(32)
+		name = internal.RandStringRunes(32)
 	}
 
 	newWidth, err := strconv.ParseFloat(r.Form.Get("width"), 64)

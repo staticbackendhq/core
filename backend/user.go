@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	sb "github.com/staticbackendhq/core"
+	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/model"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -63,7 +64,7 @@ func (u User) Authenticate(email, password string) (string, error) {
 
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
-	jwt, err := sb.GetJWT(token)
+	jwt, err := GetJWT(token)
 	if err != nil {
 		return "", err
 	}
@@ -116,4 +117,21 @@ func (u User) UserSetPassword(tokenID, password string) error {
 	}
 
 	return datastore.UserSetPassword(u.conf.Name, tokenID, string(b))
+}
+
+func GetJWT(token string) ([]byte, error) {
+	now := time.Now()
+	pl := model.JWTPayload{
+		Payload: jwt.Payload{
+			Issuer:         "StaticBackend",
+			ExpirationTime: jwt.NumericDate(now.Add(12 * time.Hour)),
+			NotBefore:      jwt.NumericDate(now.Add(30 * time.Minute)),
+			IssuedAt:       jwt.NumericDate(now),
+			JWTID:          internal.RandStringRunes(32),
+		},
+		Token: token,
+	}
+
+	return jwt.Sign(pl, model.HashSecret)
+
 }

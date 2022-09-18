@@ -2,6 +2,8 @@ package staticbackend
 
 import (
 	"testing"
+
+	"github.com/staticbackendhq/core/internal"
 )
 
 func TestCleanUpFileName(t *testing.T) {
@@ -12,7 +14,7 @@ func TestCleanUpFileName(t *testing.T) {
 	fakeNames["@file-name_here!.ext"] = "file-name_here"
 
 	for k, v := range fakeNames {
-		if clean := cleanUpFileName(k); clean != v {
+		if clean := internal.CleanUpFileName(k); clean != v {
 			t.Errorf("expected %s got %s", v, clean)
 		}
 	}

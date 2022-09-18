@@ -8,17 +8,16 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/email"
+	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
 
 	"golang.org/x/crypto/bcrypt"
-
-	"github.com/gbrlsnchs/jwt/v3"
 )
 
 type membership struct {
@@ -150,7 +149,7 @@ func (m *membership) getAuthToken(tok model.Token, conf model.BaseConfig) (jwtBy
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
 	// get their JWT
-	jwtBytes, err = GetJWT(token)
+	jwtBytes, err = backend.GetJWT(token)
 	if err != nil {
 		return
 	}
@@ -212,7 +211,7 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 	token := fmt.Sprintf("%s|%s", tokID, tok.Token)
 
 	// Get their JWT
-	jwtBytes, err := GetJWT(token)
+	jwtBytes, err := backend.GetJWT(token)
 	if err != nil {
 		return nil, tok, err
 	}
@@ -238,7 +237,7 @@ func (m *membership) setResetCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := randStringRunes(10)
+	code := internal.RandStringRunes(10)
 
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
@@ -356,23 +355,6 @@ func (m *membership) setPassword(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
-func GetJWT(token string) ([]byte, error) {
-	now := time.Now()
-	pl := model.JWTPayload{
-		Payload: jwt.Payload{
-			Issuer:         "StaticBackend",
-			ExpirationTime: jwt.NumericDate(now.Add(12 * time.Hour)),
-			NotBefore:      jwt.NumericDate(now.Add(30 * time.Minute)),
-			IssuedAt:       jwt.NumericDate(now),
-			JWTID:          randStringRunes(32), // changed from primitive.NewObjectID
-		},
-		Token: token,
-	}
-
-	return jwt.Sign(pl, model.HashSecret)
-
-}
-
 func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
@@ -393,7 +375,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
-	jwtBytes, err := GetJWT(token)
+	jwtBytes, err := backend.GetJWT(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

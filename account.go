@@ -2,13 +2,13 @@ package staticbackend
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/config"
 	emailFuncs "github.com/staticbackendhq/core/email"
+	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
@@ -17,10 +17,6 @@ import (
 	"github.com/stripe/stripe-go/v72/billingportal/session"
 	"github.com/stripe/stripe-go/v72/customer"
 	"github.com/stripe/stripe-go/v72/sub"
-)
-
-var (
-	letterRunes = []rune("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2345679")
 )
 
 type accounts struct {
@@ -123,7 +119,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	// make sure the DB name is unique
 	retry := 10
-	dbName := randStringRunes(12)
+	dbName := internal.RandStringRunes(12)
 	if memoryMode {
 		dbName = "dev-memory-pk"
 	}
@@ -134,7 +130,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 			return
 		} else if exists {
 			retry--
-			dbName = randStringRunes(12)
+			dbName = internal.RandStringRunes(12)
 			continue
 		}
 		break
@@ -156,7 +152,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	// we create an admin user
 	// we make sure to switch DB
-	pw := randStringRunes(6)
+	pw := internal.RandStringRunes(6)
 	if memoryMode {
 		pw = "devpw1234"
 	}
@@ -311,16 +307,4 @@ func getStripePortalURL(customerID string) (string, error) {
 	}
 
 	return s.URL, nil
-}
-
-func randStringRunes(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-
-	// due to PostgreSQL schema requiring letter start.
-	b[0] = letterRunes[0]
-
-	return string(b)
 }

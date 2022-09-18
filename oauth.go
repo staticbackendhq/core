@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
@@ -229,7 +230,7 @@ func (el *ExternalLogins) signIn(dbName, email string) (sessionToken string, err
 
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
-	b, err := GetJWT(token)
+	b, err := backend.GetJWT(token)
 	if err != nil {
 		return
 	}

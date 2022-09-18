@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/database"
@@ -22,6 +23,7 @@ import (
 	"github.com/staticbackendhq/core/database/postgresql"
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/function"
+	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
@@ -47,6 +49,9 @@ var (
 	volatile  cache.Volatilizer
 	emailer   email.Mailer
 	storer    storage.Storer
+
+	// this would replace all the above once refactoring is completed
+	bkn backend.Backend
 )
 
 func init() {
@@ -68,6 +73,9 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		}
 	}
 
+	//TODO: this would go inside the initService once refactor is done
+	bkn = backend.New(c)
+
 	initServices(c.DatabaseURL, log)
 
 	// websockets
@@ -81,8 +89,8 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		if strings.HasPrefix(key, "__tmp__experimental_public") {
 			// let's create the most minimal authentication possible
 			a := model.Auth{
-				AccountID: randStringRunes(30),
-				UserID:    randStringRunes(30),
+				AccountID: internal.RandStringRunes(30),
+				UserID:    internal.RandStringRunes(30),
 				Email:     "exp@tmp.com",
 				Role:      0,
 				Token:     key,

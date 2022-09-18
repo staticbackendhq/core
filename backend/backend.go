@@ -29,6 +29,7 @@ import (
 type Backend struct {
 	DB   database.Persister
 	User func(baseID string) User
+	File func(model.Auth, model.BaseConfig) FileStore
 }
 
 var (
@@ -132,6 +133,7 @@ func New(cfg config.AppConfig) Backend {
 	return Backend{
 		DB:   datastore,
 		User: newUser,
+		File: newFile,
 	}
 }
 
