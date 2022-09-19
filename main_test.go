@@ -65,27 +65,27 @@ func TestMain(m *testing.M) {
 }
 
 func deleteAndSetupTestAccount() {
-	if err := backend.DB.DeleteCustomer(dbName, admEmail); err != nil {
+	if err := backend.DB.DeleteTenant(dbName, admEmail); err != nil {
 		log.Fatal(err)
 	}
 
-	cus := model.Customer{
+	cus := model.Tenant{
 		Email: admEmail,
 	}
-	cus, err := backend.DB.CreateCustomer(cus)
+	cus, err := backend.DB.CreateTenant(cus)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	base := model.BaseConfig{
-		CustomerID:    cus.ID,
+	base := model.DatabaseConfig{
+		TenantID:      cus.ID,
 		Name:          dbName,
 		AllowedDomain: []string{"localhost"},
 		IsActive:      true,
 		Created:       time.Now(),
 	}
 
-	base, err = backend.DB.CreateBase(base)
+	base, err = backend.DB.CreateDatabase(base)
 	if err != nil {
 		log.Fatal(err)
 	}

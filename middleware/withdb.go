@@ -37,7 +37,7 @@ func WithDB(datastore database.Persister, volatile cache.Volatilizer, g BillingP
 
 			ctx := r.Context()
 
-			var conf model.BaseConfig
+			var conf model.DatabaseConfig
 			if err := volatile.GetTyped(key, &conf); err == nil {
 				ctx = context.WithValue(ctx, ContextBase, conf)
 			} else {
@@ -48,7 +48,7 @@ func WithDB(datastore database.Persister, volatile cache.Volatilizer, g BillingP
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				} else if !conf.IsActive {
-					url, err := g(conf.CustomerID)
+					url, err := g(conf.TenantID)
 					if err != nil {
 						err = fmt.Errorf("error generating billing portal: %w", err)
 						http.Error(w, err.Error(), http.StatusInternalServerError)

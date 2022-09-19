@@ -59,7 +59,7 @@ func (el *ExternalLogins) login() http.Handler {
 			return
 		}
 
-		customer, err := backend.DB.FindAccount(conf.CustomerID)
+		customer, err := backend.DB.FindTenant(conf.TenantID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -107,7 +107,7 @@ func (el *ExternalLogins) callback() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		provider, reqID, baseID := el.fromState(el.getState(r))
 
-		var conf model.BaseConfig
+		var conf model.DatabaseConfig
 		if err := backend.Cache.GetTyped("oauth_"+reqID, &conf); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -116,7 +116,7 @@ func (el *ExternalLogins) callback() http.Handler {
 			return
 		}
 
-		customer, err := backend.DB.FindAccount(conf.CustomerID)
+		customer, err := backend.DB.FindTenant(conf.TenantID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -223,7 +223,7 @@ func (el *ExternalLogins) registerOrLogin(dbName, provider, email, accessToken s
 }
 
 func (el *ExternalLogins) signIn(dbName, email string) (sessionToken string, err error) {
-	tok, err := backend.DB.FindTokenByEmail(dbName, email)
+	tok, err := backend.DB.FindUserByEmail(dbName, email)
 	if err != nil {
 		return
 	}

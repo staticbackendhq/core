@@ -10,7 +10,7 @@ import (
 // Database enables all CRUD and querying operations on a type
 type Database[T any] struct {
 	auth model.Auth
-	conf model.BaseConfig
+	conf model.DatabaseConfig
 }
 
 // NewDatabase returns a ready to use Database to perform operations on a type

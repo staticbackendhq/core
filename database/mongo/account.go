@@ -30,7 +30,7 @@ type LocalToken struct {
 	Created   time.Time          `bson:"created" json:"created"`
 }
 
-func toLocalToken(token model.Token) LocalToken {
+func toLocalToken(token model.User) LocalToken {
 	id, err := primitive.ObjectIDFromHex(token.ID)
 	if err != nil {
 		return LocalToken{}
@@ -53,8 +53,8 @@ func toLocalToken(token model.Token) LocalToken {
 	}
 }
 
-func fromLocalToken(tok LocalToken) model.Token {
-	return model.Token{
+func fromLocalToken(tok LocalToken) model.User {
+	return model.User{
 		ID:        tok.ID.Hex(),
 		AccountID: tok.AccountID.Hex(),
 		Token:     tok.Token,
@@ -66,10 +66,10 @@ func fromLocalToken(tok LocalToken) model.Token {
 	}
 }
 
-func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok model.Token, err error) {
+func (mg *Mongo) FindUser(dbName, userID, token string) (tok model.User, err error) {
 	db := mg.Client.Database(dbName)
 
-	id, err := primitive.ObjectIDFromHex(tokenID)
+	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return
 	}
@@ -82,10 +82,10 @@ func (mg *Mongo) FindToken(dbName, tokenID, token string) (tok model.Token, err 
 	return
 }
 
-func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok model.Token, err error) {
+func (mg *Mongo) FindRootUser(dbName, userID, accountID, token string) (tok model.User, err error) {
 	db := mg.Client.Database(dbName)
 
-	id, err := primitive.ObjectIDFromHex(tokenID)
+	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return
 	}
@@ -111,7 +111,7 @@ func (mg *Mongo) FindRootToken(dbName, tokenID, accountID, token string) (tok mo
 	return
 }
 
-func (mg *Mongo) GetRootForBase(dbName string) (tok model.Token, err error) {
+func (mg *Mongo) GetRootForBase(dbName string) (tok model.User, err error) {
 	db := mg.Client.Database(dbName)
 
 	filter := bson.M{
@@ -128,7 +128,7 @@ func (mg *Mongo) GetRootForBase(dbName string) (tok model.Token, err error) {
 	return
 }
 
-func (mg *Mongo) FindTokenByEmail(dbName, email string) (tok model.Token, err error) {
+func (mg *Mongo) FindUserByEmail(dbName, email string) (tok model.User, err error) {
 	db := mg.Client.Database(dbName)
 
 	var lt LocalToken

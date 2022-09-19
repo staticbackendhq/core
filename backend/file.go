@@ -12,10 +12,10 @@ import (
 
 type FileStore struct {
 	auth model.Auth
-	conf model.BaseConfig
+	conf model.DatabaseConfig
 }
 
-func newFile(auth model.Auth, conf model.BaseConfig) FileStore {
+func newFile(auth model.Auth, conf model.DatabaseConfig) FileStore {
 	return FileStore{
 		auth: auth,
 		conf: conf,

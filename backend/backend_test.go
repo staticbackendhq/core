@@ -18,7 +18,7 @@ var (
 	adminAuth     model.Auth
 	jwtToken      string
 
-	base model.BaseConfig
+	base model.DatabaseConfig
 )
 
 func TestMain(t *testing.M) {
@@ -52,24 +52,24 @@ func setup() {
 }
 
 func createTenantAndDatabase() error {
-	cus := model.Customer{
+	cus := model.Tenant{
 		Email:    adminEmail,
 		IsActive: true,
 		Created:  time.Now(),
 	}
 
-	cus, err := backend.DB.CreateCustomer(cus)
+	cus, err := backend.DB.CreateTenant(cus)
 	if err != nil {
 		return err
 	}
 
-	base = model.BaseConfig{
-		CustomerID: cus.ID,
-		Name:       "dev-memory-pk",
-		IsActive:   true,
+	base = model.DatabaseConfig{
+		TenantID: cus.ID,
+		Name:     "dev-memory-pk",
+		IsActive: true,
 	}
 
-	base, err = backend.DB.CreateBase(base)
+	base, err = backend.DB.CreateDatabase(base)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func createUser() error {
 		return err
 	}
 
-	tok := model.Token{
+	tok := model.User{
 		ID:        userID,
 		AccountID: id,
 		Email:     adminEmail,

@@ -102,7 +102,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	// create the account
 
-	cust := model.Customer{
+	cust := model.Tenant{
 		ID:             "cust-local-dev", // easier for CLI/memory flow
 		Email:          email,
 		StripeID:       stripeCustomerID,
@@ -112,7 +112,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Created:        time.Now(),
 	}
 
-	cust, err = backend.DB.CreateCustomer(cust)
+	cust, err = backend.DB.CreateTenant(cust)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -137,15 +137,15 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		break
 	}
 
-	base := model.BaseConfig{
+	base := model.DatabaseConfig{
 		ID:            dbName, // easier for CLI/memory flow
-		CustomerID:    cust.ID,
+		TenantID:      cust.ID,
 		Name:          dbName,
 		IsActive:      active,
 		AllowedDomain: []string{"localhost"},
 	}
 
-	bc, err := backend.DB.CreateBase(base)
+	bc, err := backend.DB.CreateDatabase(base)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -178,7 +178,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		signUpURL = s.URL
 	}
 
-	token, err := backend.DB.FindTokenByEmail(dbName, email)
+	token, err := backend.DB.FindUserByEmail(dbName, email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -283,7 +283,7 @@ func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := getStripePortalURL(conf.CustomerID)
+	url, err := getStripePortalURL(conf.TenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -293,7 +293,7 @@ func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 }
 
 func getStripePortalURL(customerID string) (string, error) {
-	cus, err := backend.DB.FindAccount(customerID)
+	cus, err := backend.DB.FindTenant(customerID)
 	if err != nil {
 		return "", err
 	}

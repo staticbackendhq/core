@@ -77,10 +77,10 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, string(jwtBytes))
 }
 
-func (m *membership) validateUserPassword(dbName, email, password string) (tok model.Token, err error) {
+func (m *membership) validateUserPassword(dbName, email, password string) (tok model.User, err error) {
 	email = strings.ToLower(email)
 
-	tok, err = backend.DB.FindTokenByEmail(dbName, email)
+	tok, err = backend.DB.FindUserByEmail(dbName, email)
 	if err != nil {
 		return
 	}
@@ -145,7 +145,7 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, token)
 }
 
-func (m *membership) getAuthToken(tok model.Token, conf model.BaseConfig) (jwtBytes []byte, err error) {
+func (m *membership) getAuthToken(tok model.User, conf model.DatabaseConfig) (jwtBytes []byte, err error) {
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
 	// get their JWT
@@ -174,26 +174,26 @@ func (m *membership) getAuthToken(tok model.Token, conf model.BaseConfig) (jwtBy
 	return
 }
 
-func (m *membership) createAccountAndUser(dbName, email, password string, role int) ([]byte, model.Token, error) {
-	acctID, err := backend.DB.CreateUserAccount(dbName, email)
+func (m *membership) createAccountAndUser(dbName, email, password string, role int) ([]byte, model.User, error) {
+	acctID, err := backend.DB.CreateAccount(dbName, email)
 	if err != nil {
-		return nil, model.Token{}, err
+		return nil, model.User{}, err
 	}
 
 	jwtBytes, tok, err := m.createUser(dbName, acctID, email, password, role)
 	if err != nil {
-		return nil, model.Token{}, err
+		return nil, model.User{}, err
 	}
 	return jwtBytes, tok, nil
 }
 
-func (m *membership) createUser(dbName, accountID, email, password string, role int) ([]byte, model.Token, error) {
+func (m *membership) createUser(dbName, accountID, email, password string, role int) ([]byte, model.User, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, model.Token{}, err
+		return nil, model.User{}, err
 	}
 
-	tok := model.Token{
+	tok := model.User{
 		AccountID: accountID,
 		Email:     email,
 		Token:     backend.DB.NewID(),
@@ -201,9 +201,9 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 		Role:      role,
 	}
 
-	tokID, err := backend.DB.CreateUserToken(dbName, tok)
+	tokID, err := backend.DB.CreateUser(dbName, tok)
 	if err != nil {
-		return nil, model.Token{}, err
+		return nil, model.User{}, err
 	}
 
 	tok.ID = tokID
@@ -245,7 +245,7 @@ func (m *membership) setResetCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok, err := backend.DB.FindTokenByEmail(conf.Name, email)
+	tok, err := backend.DB.FindUserByEmail(conf.Name, email)
 	if err != nil {
 		http.Error(w, "email not found", http.StatusNotFound)
 		return
@@ -367,7 +367,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	id, r.URL.Path = ShiftPath(r.URL.Path)
 
-	tok, err := backend.DB.GetFirstTokenFromAccountID(conf.Name, id)
+	tok, err := backend.DB.GetFirstUserFromAccountID(conf.Name, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -449,7 +449,7 @@ func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
 
 		// they got the right code, return a session token
 
-		tok, err := backend.DB.FindTokenByEmail(conf.Name, email)
+		tok, err := backend.DB.FindUserByEmail(conf.Name, email)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

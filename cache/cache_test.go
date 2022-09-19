@@ -14,7 +14,7 @@ import (
 var (
 	redisCache *Cache
 	devCache   *CacheDev
-	adminToken model.Token
+	adminToken model.User
 	adminAuth  model.Auth
 	document   string
 )

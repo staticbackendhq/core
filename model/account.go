@@ -49,7 +49,7 @@ type Account struct {
 	Created time.Time `json:"created"`
 }
 
-type Token struct {
+type User struct {
 	ID        string    `json:"id"`
 	AccountID string    `json:"accountId"`
 	Token     string    `json:"token"`
@@ -73,7 +73,7 @@ const (
 	PlanGrowth
 )
 
-type Customer struct {
+type Tenant struct {
 	ID               string    `bson:"_id" json:"id"`
 	Email            string    `bson:"email" json:"email"`
 	StripeID         string    `bson:"stripeId" json:"stripeId"`
@@ -111,7 +111,7 @@ func EncryptExternalLogins(tokens map[string]OAuthConfig) ([]byte, error) {
 	return gcm.Seal(nonce, nonce, b, nil), nil
 }
 
-func (cus *Customer) GetExternalLogins() (map[string]OAuthConfig, error) {
+func (cus *Tenant) GetExternalLogins() (map[string]OAuthConfig, error) {
 	key := []byte(config.Current.AppSecret)
 
 	ciphertext := cus.ExternalLogins
@@ -148,7 +148,7 @@ func (cus *Customer) GetExternalLogins() (map[string]OAuthConfig, error) {
 	return m, nil
 }
 
-func (cus *Customer) GetProvider(provider string) (cfg OAuthConfig, ok bool) {
+func (cus *Tenant) GetProvider(provider string) (cfg OAuthConfig, ok bool) {
 	logins, err := cus.GetExternalLogins()
 	if err != nil {
 		return

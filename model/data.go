@@ -11,9 +11,9 @@ import (
 	"github.com/staticbackendhq/core/config"
 )
 
-type BaseConfig struct {
+type DatabaseConfig struct {
 	ID               string    `json:"id"`
-	CustomerID       string    `json:"customerId"`
+	TenantID         string    `json:"customerId"`
 	Name             string    `json:"name"`
 	AllowedDomain    []string  `json:"whitelist"`
 	IsActive         bool      `json:"-"`
@@ -36,8 +36,6 @@ type ListParams struct {
 }
 
 var (
-	//Tokens     map[string]Auth       = make(map[string]Auth)
-	//Bases      map[string]BaseConfig = make(map[string]BaseConfig)
 	HashSecret *jwt.HMACSHA
 )
 

@@ -7,12 +7,12 @@ import (
 	"github.com/staticbackendhq/core/model"
 )
 
-func (m *Memory) CreateCustomer(customer model.Customer) (model.Customer, error) {
+func (m *Memory) CreateTenant(customer model.Tenant) (model.Tenant, error) {
 	err := create(m, "sb", "customers", customer.ID, customer)
 	return customer, err
 }
 
-func (m *Memory) CreateBase(base model.BaseConfig) (model.BaseConfig, error) {
+func (m *Memory) CreateDatabase(base model.DatabaseConfig) (model.DatabaseConfig, error) {
 	if err := create(m, "sb", "apps", base.ID, base); err != nil {
 		return base, err
 	}
@@ -29,12 +29,12 @@ func (m *Memory) CreateBase(base model.BaseConfig) (model.BaseConfig, error) {
 }
 
 func (m *Memory) EmailExists(email string) (exists bool, err error) {
-	list, err := all[model.Customer](m, "sb", "customers")
+	list, err := all[model.Tenant](m, "sb", "customers")
 	if err != nil {
 		return
 	}
 
-	results := filter(list, func(x model.Customer) bool {
+	results := filter(list, func(x model.Tenant) bool {
 		return strings.EqualFold(x.Email, email)
 	})
 
@@ -46,23 +46,23 @@ func (m *Memory) EmailExists(email string) (exists bool, err error) {
 	return
 }
 
-func (m *Memory) FindAccount(customerID string) (cus model.Customer, err error) {
-	err = getByID(m, "sb", "customers", customerID, &cus)
+func (m *Memory) FindTenant(tenantID string) (cus model.Tenant, err error) {
+	err = getByID(m, "sb", "customers", tenantID, &cus)
 	return
 }
 
-func (m *Memory) FindDatabase(baseID string) (base model.BaseConfig, err error) {
+func (m *Memory) FindDatabase(baseID string) (base model.DatabaseConfig, err error) {
 	err = getByID(m, "sb", "apps", baseID, &base)
 	return
 }
 
 func (m *Memory) DatabaseExists(name string) (exists bool, err error) {
-	list, err := all[model.BaseConfig](m, "sb", "apps")
+	list, err := all[model.DatabaseConfig](m, "sb", "apps")
 	if err != nil {
 		return
 	}
 
-	results := filter(list, func(x model.BaseConfig) bool {
+	results := filter(list, func(x model.DatabaseConfig) bool {
 		return x.Name == name
 	})
 
@@ -70,8 +70,8 @@ func (m *Memory) DatabaseExists(name string) (exists bool, err error) {
 	return
 }
 
-func (m *Memory) ListDatabases() (results []model.BaseConfig, err error) {
-	results, err = all[model.BaseConfig](m, "sb", "apps")
+func (m *Memory) ListDatabases() (results []model.DatabaseConfig, err error) {
+	results, err = all[model.DatabaseConfig](m, "sb", "apps")
 	return
 }
 
@@ -86,13 +86,13 @@ func (m *Memory) IncrementMonthlyEmailSent(baseID string) error {
 	return create(m, "sb", "apps", baseID, base)
 }
 
-func (m *Memory) GetCustomerByStripeID(stripeID string) (cus model.Customer, err error) {
-	list, err := all[model.Customer](m, "sb", "customers")
+func (m *Memory) GetTenantByStripeID(stripeID string) (cus model.Tenant, err error) {
+	list, err := all[model.Tenant](m, "sb", "customers")
 	if err != nil {
 		return
 	}
 
-	results := filter(list, func(x model.Customer) bool {
+	results := filter(list, func(x model.Tenant) bool {
 		return strings.EqualFold(x.StripeID, stripeID)
 	})
 
@@ -105,46 +105,46 @@ func (m *Memory) GetCustomerByStripeID(stripeID string) (cus model.Customer, err
 	return
 }
 
-func (m *Memory) ActivateCustomer(customerID string, active bool) error {
-	var cus model.Customer
-	if err := getByID(m, "sb", "customers", customerID, &cus); err != nil {
+func (m *Memory) ActivateTenant(tenantID string, active bool) error {
+	var cus model.Tenant
+	if err := getByID(m, "sb", "customers", tenantID, &cus); err != nil {
 		return err
 	}
 
 	cus.IsActive = active
 
-	if err := create(m, "sb", "customers", customerID, cus); err != nil {
+	if err := create(m, "sb", "customers", tenantID, cus); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m *Memory) ChangeCustomerPlan(customerID string, plan int) error {
-	cus, err := m.FindAccount(customerID)
+func (m *Memory) ChangeTenantPlan(tenantID string, plan int) error {
+	cus, err := m.FindTenant(tenantID)
 	if err != nil {
 		return err
 	}
 
 	cus.Plan = plan
-	return create(m, "sb", "customers", customerID, cus)
+	return create(m, "sb", "customers", tenantID, cus)
 }
 
-func (m *Memory) EnableExternalLogin(customerID string, config map[string]model.OAuthConfig) error {
+func (m *Memory) EnableExternalLogin(tenantID string, config map[string]model.OAuthConfig) error {
 	b, err := model.EncryptExternalLogins(config)
 	if err != nil {
 		return err
 	}
 
-	cus, err := m.FindAccount(customerID)
+	cus, err := m.FindTenant(tenantID)
 	if err != nil {
 		return err
 	}
 
 	cus.ExternalLogins = b
-	return create(m, "sb", "customers", customerID, cus)
+	return create(m, "sb", "customers", tenantID, cus)
 }
 
-func (m *Memory) DeleteCustomer(dbName, email string) error {
+func (m *Memory) DeleteTenant(dbName, email string) error {
 	return nil
 }

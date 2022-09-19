@@ -6,33 +6,33 @@ import (
 	"github.com/staticbackendhq/core/model"
 )
 
-func (pg *PostgreSQL) FindToken(dbName, tokenID, token string) (tok model.Token, err error) {
+func (pg *PostgreSQL) FindUser(dbName, userID, token string) (tok model.User, err error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
 	WHERE id = $1 AND token = $2
 `, dbName)
 
-	row := pg.DB.QueryRow(qry, tokenID, token)
+	row := pg.DB.QueryRow(qry, userID, token)
 
 	err = scanToken(row, &tok)
 	return
 }
 
-func (pg *PostgreSQL) FindRootToken(dbName, tokenID, accountID, token string) (tok model.Token, err error) {
+func (pg *PostgreSQL) FindRootUser(dbName, userID, accountID, token string) (tok model.User, err error) {
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s.sb_tokens
 		WHERE id = $1 AND account_id = $2 AND token = $3
 `, dbName)
 
-	row := pg.DB.QueryRow(qry, tokenID, accountID, token)
+	row := pg.DB.QueryRow(qry, userID, accountID, token)
 
 	err = scanToken(row, &tok)
 	return
 }
 
-func (pg *PostgreSQL) GetRootForBase(dbName string) (tok model.Token, err error) {
+func (pg *PostgreSQL) GetRootForBase(dbName string) (tok model.User, err error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
@@ -45,7 +45,7 @@ func (pg *PostgreSQL) GetRootForBase(dbName string) (tok model.Token, err error)
 	return
 }
 
-func (pg *PostgreSQL) FindTokenByEmail(dbName, email string) (tok model.Token, err error) {
+func (pg *PostgreSQL) FindUserByEmail(dbName, email string) (tok model.User, err error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
@@ -58,7 +58,7 @@ func (pg *PostgreSQL) FindTokenByEmail(dbName, email string) (tok model.Token, e
 	return
 }
 
-func scanToken(rows Scanner, tok *model.Token) error {
+func scanToken(rows Scanner, tok *model.User) error {
 	return rows.Scan(
 		&tok.ID,
 		&tok.AccountID,

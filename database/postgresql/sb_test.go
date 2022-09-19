@@ -8,11 +8,11 @@ import (
 )
 
 func TestFindAccount(t *testing.T) {
-	cus, err := datastore.FindAccount(dbTest.CustomerID)
+	cus, err := datastore.FindTenant(dbTest.TenantID)
 	if err != nil {
 		t.Fatal(err)
-	} else if cus.ID != dbTest.CustomerID {
-		t.Errorf("expected customer id to be %s got %s", dbTest.CustomerID, cus.ID)
+	} else if cus.ID != dbTest.TenantID {
+		t.Errorf("expected customer id to be %s got %s", dbTest.TenantID, cus.ID)
 	}
 }
 
@@ -69,20 +69,20 @@ func TestIncrementMonthlyEmailSent(t *testing.T) {
 }
 
 func TestGetCustomerByStripeID(t *testing.T) {
-	cus, err := datastore.GetCustomerByStripeID(adminEmail)
+	cus, err := datastore.GetTenantByStripeID(adminEmail)
 	if err != nil {
 		t.Fatal(err)
-	} else if cus.ID != dbTest.CustomerID {
-		t.Errorf("exepected cus to have id %s got %s", dbTest.CustomerID, cus.ID)
+	} else if cus.ID != dbTest.TenantID {
+		t.Errorf("exepected cus to have id %s got %s", dbTest.TenantID, cus.ID)
 	}
 }
 
 func TestActivateCustomer(t *testing.T) {
-	if err := datastore.ActivateCustomer(dbTest.CustomerID, true); err != nil {
+	if err := datastore.ActivateTenant(dbTest.TenantID, true); err != nil {
 		t.Fatal(err)
 	}
 
-	cus, err := datastore.FindAccount(dbTest.CustomerID)
+	cus, err := datastore.FindTenant(dbTest.TenantID)
 	if err != nil {
 		t.Fatal(err)
 	} else if !cus.IsActive {
@@ -91,11 +91,11 @@ func TestActivateCustomer(t *testing.T) {
 }
 
 func TestChangeCustomerPlan(t *testing.T) {
-	if err := datastore.ChangeCustomerPlan(dbTest.CustomerID, model.PlanTraction); err != nil {
+	if err := datastore.ChangeTenantPlan(dbTest.TenantID, model.PlanTraction); err != nil {
 		t.Fatal(err)
 	}
 
-	cus, err := datastore.FindAccount(dbTest.CustomerID)
+	cus, err := datastore.FindTenant(dbTest.TenantID)
 	if err != nil {
 		t.Fatal(err)
 	} else if cus.Plan != model.PlanTraction {
@@ -118,11 +118,11 @@ func TestEnableExternalLogins(t *testing.T) {
 	m := make(map[string]model.OAuthConfig)
 	m["twitter"] = model.OAuthConfig{ConsumerKey: "key", ConsumerSecret: "secret"}
 
-	if err := datastore.EnableExternalLogin(dbTest.CustomerID, m); err != nil {
+	if err := datastore.EnableExternalLogin(dbTest.TenantID, m); err != nil {
 		t.Fatal(err)
 	}
 
-	cus, err := datastore.FindAccount(dbTest.CustomerID)
+	cus, err := datastore.FindTenant(dbTest.TenantID)
 	if err != nil {
 		t.Fatal(err)
 	}

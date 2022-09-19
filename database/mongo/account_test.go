@@ -3,7 +3,7 @@ package mongo
 import "testing"
 
 func TestFindToken(t *testing.T) {
-	tok, err := datastore.FindToken(confDBName, adminToken.ID, adminToken.Token)
+	tok, err := datastore.FindUser(confDBName, adminToken.ID, adminToken.Token)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok.ID != adminToken.ID {
@@ -12,7 +12,7 @@ func TestFindToken(t *testing.T) {
 }
 
 func TestFindRootToken(t *testing.T) {
-	tok, err := datastore.FindRootToken(confDBName, adminToken.ID, adminToken.AccountID, adminToken.Token)
+	tok, err := datastore.FindRootUser(confDBName, adminToken.ID, adminToken.AccountID, adminToken.Token)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok.ID != adminToken.ID {
@@ -30,7 +30,7 @@ func TestGetRootForBase(t *testing.T) {
 }
 
 func TestFindTokenByEmail(t *testing.T) {
-	tok, err := datastore.FindTokenByEmail(confDBName, adminEmail)
+	tok, err := datastore.FindUserByEmail(confDBName, adminEmail)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok.ID != adminToken.ID {

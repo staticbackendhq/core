@@ -28,7 +28,7 @@ import (
 
 type Backend struct {
 	User func(baseID string) User
-	File func(model.Auth, model.BaseConfig) FileStore
+	File func(model.Auth, model.DatabaseConfig) FileStore
 }
 
 var (
@@ -97,7 +97,7 @@ func New(cfg config.AppConfig) Backend {
 	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
 		var exe function.ExecutionEnvironment
 
-		var conf model.BaseConfig
+		var conf model.DatabaseConfig
 		// for public websocket (experimental)
 		if strings.HasPrefix(token, "__tmp__experimental_public") {
 			pk := strings.Replace(token, "__tmp__experimental_public_", "", -1)
@@ -178,8 +178,8 @@ func findAuth(token string) model.Auth {
 	return auth
 }
 
-func findBase(baseID string) model.BaseConfig {
-	var conf model.BaseConfig
+func findBase(baseID string) model.DatabaseConfig {
+	var conf model.DatabaseConfig
 	if err := Cache.GetTyped(baseID, &conf); err != nil {
 		db, err := DB.FindDatabase(baseID)
 		if err != nil {

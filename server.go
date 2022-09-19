@@ -90,7 +90,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		}
 
 		// set base:token useful when executing pubsub event message / function
-		conf, ok := ctx.Value(middleware.ContextBase).(model.BaseConfig)
+		conf, ok := ctx.Value(middleware.ContextBase).(model.DatabaseConfig)
 		if !ok {
 			return "", errors.New("could not find base config")
 		}

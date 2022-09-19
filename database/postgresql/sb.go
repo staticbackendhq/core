@@ -8,7 +8,7 @@ import (
 	"github.com/staticbackendhq/core/model"
 )
 
-func (pg *PostgreSQL) CreateCustomer(customer model.Customer) (c model.Customer, err error) {
+func (pg *PostgreSQL) CreateTenant(customer model.Tenant) (c model.Tenant, err error) {
 	var id string
 	c = customer
 
@@ -30,7 +30,7 @@ func (pg *PostgreSQL) CreateCustomer(customer model.Customer) (c model.Customer,
 	return
 }
 
-func (pg *PostgreSQL) CreateBase(base model.BaseConfig) (b model.BaseConfig, err error) {
+func (pg *PostgreSQL) CreateDatabase(base model.DatabaseConfig) (b model.DatabaseConfig, err error) {
 	b = base
 
 	_, err = pg.DB.Exec(fmt.Sprintf("CREATE SCHEMA %s;", b.Name))
@@ -43,7 +43,7 @@ func (pg *PostgreSQL) CreateBase(base model.BaseConfig) (b model.BaseConfig, err
 	INSERT INTO sb.apps(customer_id, name, allowed_domain, is_active, monthly_email_sent, created)
 	VALUES($1, $2, $3, $4, $5, $6)
 	RETURNING id;
-	`, base.CustomerID,
+	`, base.TenantID,
 		base.Name,
 		pq.Array(base.AllowedDomain),
 		base.IsActive,
@@ -147,18 +147,18 @@ func (pg *PostgreSQL) EmailExists(email string) (bool, error) {
 	return count > 0, nil
 }
 
-func (pg *PostgreSQL) FindAccount(customerID string) (customer model.Customer, err error) {
+func (pg *PostgreSQL) FindTenant(tenantID string) (customer model.Tenant, err error) {
 	row := pg.DB.QueryRow(`
 		SELECT * 
 		FROM sb.customers
 		WHERE id = $1
-	`, customerID)
+	`, tenantID)
 
 	err = scanCustomer(row, &customer)
 	return
 }
 
-func (pg *PostgreSQL) FindDatabase(baseID string) (base model.BaseConfig, err error) {
+func (pg *PostgreSQL) FindDatabase(baseID string) (base model.DatabaseConfig, err error) {
 	row := pg.DB.QueryRow(`
 		SELECT * 
 		FROM sb.apps 
@@ -181,7 +181,7 @@ func (pg *PostgreSQL) DatabaseExists(name string) (exists bool, err error) {
 	return
 }
 
-func (pg *PostgreSQL) ListDatabases() (results []model.BaseConfig, err error) {
+func (pg *PostgreSQL) ListDatabases() (results []model.DatabaseConfig, err error) {
 	rows, err := pg.DB.Query(`
 		SELECT * 
 		FROM sb.apps 
@@ -193,7 +193,7 @@ func (pg *PostgreSQL) ListDatabases() (results []model.BaseConfig, err error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var base model.BaseConfig
+		var base model.DatabaseConfig
 		if err = scanBase(rows, &base); err != nil {
 			return
 		}
@@ -214,7 +214,7 @@ func (pg *PostgreSQL) IncrementMonthlyEmailSent(baseID string) error {
 	return err
 }
 
-func (pg *PostgreSQL) GetCustomerByStripeID(stripeID string) (cus model.Customer, err error) {
+func (pg *PostgreSQL) GetTenantByStripeID(stripeID string) (cus model.Tenant, err error) {
 	row := pg.DB.QueryRow(`
 		SELECT * 
 		FROM sb.customers 
@@ -225,37 +225,37 @@ func (pg *PostgreSQL) GetCustomerByStripeID(stripeID string) (cus model.Customer
 	return
 }
 
-func (pg *PostgreSQL) ActivateCustomer(customerID string, active bool) error {
+func (pg *PostgreSQL) ActivateTenant(tenantID string, active bool) error {
 	tx, err := pg.DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	if _, err := tx.Exec(`UPDATE sb.customers SET is_active = $2 WHERE id = $1;`, customerID, active); err != nil {
+	if _, err := tx.Exec(`UPDATE sb.customers SET is_active = $2 WHERE id = $1;`, tenantID, active); err != nil {
 		return err
 	}
 
-	if _, err := tx.Exec(`UPDATE sb.apps SET is_active = $2 WHERE customer_id = $1;`, customerID, active); err != nil {
+	if _, err := tx.Exec(`UPDATE sb.apps SET is_active = $2 WHERE customer_id = $1;`, tenantID, active); err != nil {
 		return err
 	}
 
 	return tx.Commit()
 }
 
-func (pg *PostgreSQL) ChangeCustomerPlan(customerID string, plan int) error {
-	if _, err := pg.DB.Exec(`UPDATE sb.customers SET plan = $2 WHERE id = $1`, customerID, plan); err != nil {
+func (pg *PostgreSQL) ChangeTenantPlan(tenantID string, plan int) error {
+	if _, err := pg.DB.Exec(`UPDATE sb.customers SET plan = $2 WHERE id = $1`, tenantID, plan); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (pg *PostgreSQL) EnableExternalLogin(customerID string, config map[string]model.OAuthConfig) error {
+func (pg *PostgreSQL) EnableExternalLogin(tenantID string, config map[string]model.OAuthConfig) error {
 	b, err := model.EncryptExternalLogins(config)
 	if err != nil {
 		return err
 	}
 
-	if _, err := pg.DB.Exec(`UPDATE sb.customers SET external_logins = $2 WHERE id = $1`, customerID, b); err != nil {
+	if _, err := pg.DB.Exec(`UPDATE sb.customers SET external_logins = $2 WHERE id = $1`, tenantID, b); err != nil {
 		return err
 	}
 	return nil
@@ -270,7 +270,7 @@ func (pg *PostgreSQL) NewID() string {
 	return id
 }
 
-func (pg *PostgreSQL) DeleteCustomer(dbName, email string) error {
+func (pg *PostgreSQL) DeleteTenant(dbName, email string) error {
 	_, err := pg.DB.Exec(fmt.Sprintf(`DROP SCHEMA IF EXISTS %s CASCADE;`, dbName))
 	if err != nil {
 		return err
@@ -283,7 +283,7 @@ func (pg *PostgreSQL) DeleteCustomer(dbName, email string) error {
 	return err
 }
 
-func scanCustomer(rows Scanner, c *model.Customer) error {
+func scanCustomer(rows Scanner, c *model.Tenant) error {
 	return rows.Scan(
 		&c.ID,
 		&c.Email,
@@ -296,10 +296,10 @@ func scanCustomer(rows Scanner, c *model.Customer) error {
 	)
 }
 
-func scanBase(rows Scanner, b *model.BaseConfig) error {
+func scanBase(rows Scanner, b *model.DatabaseConfig) error {
 	return rows.Scan(
 		&b.ID,
-		&b.CustomerID,
+		&b.TenantID,
 		&b.Name,
 		pq.Array(&b.AllowedDomain),
 		&b.IsActive,

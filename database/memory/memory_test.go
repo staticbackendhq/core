@@ -20,9 +20,9 @@ const (
 
 var (
 	datastore    *Memory
-	dbTest       model.BaseConfig
+	dbTest       model.DatabaseConfig
 	adminAccount model.Account
-	adminToken   model.Token
+	adminToken   model.User
 	adminAuth    model.Auth
 )
 
@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	if err := datastore.DeleteCustomer(confDBName, adminEmail); err != nil {
+	if err := datastore.DeleteTenant(confDBName, adminEmail); err != nil {
 		log.Fatal(err)
 	}
 
@@ -67,7 +67,7 @@ func createCustomerAndSchema() error {
 		return errors.New("admin email exists, should not")
 	}
 
-	cus := model.Customer{
+	cus := model.Tenant{
 		Email:          adminEmail,
 		StripeID:       adminEmail,
 		SubscriptionID: adminEmail,
@@ -75,13 +75,13 @@ func createCustomerAndSchema() error {
 		Created:        time.Now(),
 	}
 
-	cus, err = datastore.CreateCustomer(cus)
+	cus, err = datastore.CreateTenant(cus)
 	if err != nil {
 		return err
 	}
 
-	base := model.BaseConfig{
-		CustomerID:    cus.ID,
+	base := model.DatabaseConfig{
+		TenantID:      cus.ID,
 		Name:          confDBName,
 		AllowedDomain: []string{"localhost"},
 		IsActive:      true,
@@ -97,7 +97,7 @@ func createCustomerAndSchema() error {
 		return errors.New("testdb schema exists")
 	}
 
-	base, err = datastore.CreateBase(base)
+	base, err = datastore.CreateDatabase(base)
 	if err != nil {
 		return err
 	}
@@ -108,14 +108,14 @@ func createCustomerAndSchema() error {
 }
 
 func createAdminAccountAndToken() error {
-	acctID, err := datastore.CreateUserAccount(confDBName, adminEmail)
+	acctID, err := datastore.CreateAccount(confDBName, adminEmail)
 	if err != nil {
 		return err
 	}
 
 	adminAccount = model.Account{ID: acctID, Email: adminEmail}
 
-	adminToken = model.Token{
+	adminToken = model.User{
 		AccountID: adminAccount.ID,
 		Token:     adminEmail,
 		Email:     adminEmail,
@@ -124,7 +124,7 @@ func createAdminAccountAndToken() error {
 		Created:   time.Now(),
 	}
 
-	tokID, err := datastore.CreateUserToken(confDBName, adminToken)
+	tokID, err := datastore.CreateUser(confDBName, adminToken)
 	if err != nil {
 		return err
 	}

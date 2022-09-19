@@ -14,7 +14,7 @@ import (
 
 // User handles everything related to accounts and users inside a database
 type User struct {
-	conf model.BaseConfig
+	conf model.DatabaseConfig
 }
 
 func newUser(baseID string) User {
@@ -30,7 +30,7 @@ func (u User) CreateAccount(email string) (string, error) {
 		return "", errors.New("email not available")
 	}
 
-	return DB.CreateUserAccount(u.conf.Name, email)
+	return DB.CreateAccount(u.conf.Name, email)
 }
 
 // CreateUserToken creates a user token (login) for a specific account in a database
@@ -40,7 +40,7 @@ func (u User) CreateUserToken(accountID, email, password string, role int) (stri
 		return "", err
 	}
 
-	tok := model.Token{
+	tok := model.User{
 		AccountID: accountID,
 		Email:     email,
 		Password:  string(b),
@@ -48,12 +48,12 @@ func (u User) CreateUserToken(accountID, email, password string, role int) (stri
 		Role:      role,
 		Created:   time.Now(),
 	}
-	return DB.CreateUserToken(u.conf.Name, tok)
+	return DB.CreateUser(u.conf.Name, tok)
 }
 
 // Authenticate tries to authenticate an email/password and return a session token
 func (u User) Authenticate(email, password string) (string, error) {
-	tok, err := DB.FindTokenByEmail(u.conf.Name, email)
+	tok, err := DB.FindUserByEmail(u.conf.Name, email)
 	if err != nil {
 		return "", err
 	}

@@ -14,7 +14,7 @@ type LocalAccount struct {
 	Email string             `bson:"email" json:"email"`
 }
 
-func (mg *Mongo) CreateUserAccount(dbName, email string) (id string, err error) {
+func (mg *Mongo) CreateAccount(dbName, email string) (id string, err error) {
 	db := mg.Client.Database(dbName)
 
 	a := LocalAccount{
@@ -31,7 +31,7 @@ func (mg *Mongo) CreateUserAccount(dbName, email string) (id string, err error) 
 	return
 }
 
-func (mg *Mongo) CreateUserToken(dbName string, tok model.Token) (id string, err error) {
+func (mg *Mongo) CreateUser(dbName string, tok model.User) (id string, err error) {
 	db := mg.Client.Database(dbName)
 
 	tok.ID = primitive.NewObjectID().Hex()
@@ -86,7 +86,7 @@ func (mg *Mongo) UserSetPassword(dbName, tokenID, password string) error {
 	return nil
 }
 
-func (mg *Mongo) GetFirstTokenFromAccountID(dbName, accountID string) (tok model.Token, err error) {
+func (mg *Mongo) GetFirstUserFromAccountID(dbName, accountID string) (tok model.User, err error) {
 	db := mg.Client.Database(dbName)
 
 	oid, err := primitive.ObjectIDFromHex(accountID)

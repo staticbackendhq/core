@@ -8,12 +8,12 @@ import (
 )
 
 func TestCreateUserAccountAndToken(t *testing.T) {
-	acctID, err := datastore.CreateUserAccount(confDBName, "unit@test.com")
+	acctID, err := datastore.CreateAccount(confDBName, "unit@test.com")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tok := model.Token{
+	tok := model.User{
 		AccountID: acctID,
 		Token:     "123",
 		Email:     "unit@test.com",
@@ -22,7 +22,7 @@ func TestCreateUserAccountAndToken(t *testing.T) {
 		Created:   time.Now(),
 	}
 
-	tokID, err := datastore.CreateUserToken(confDBName, tok)
+	tokID, err := datastore.CreateUser(confDBName, tok)
 	if err != nil {
 		t.Fatal(err)
 	} else if len(tokID) < 10 {
@@ -31,7 +31,7 @@ func TestCreateUserAccountAndToken(t *testing.T) {
 }
 
 func TestGetFirstTokenFromAccountID(t *testing.T) {
-	tok, err := datastore.GetFirstTokenFromAccountID(confDBName, adminToken.AccountID)
+	tok, err := datastore.GetFirstUserFromAccountID(confDBName, adminToken.AccountID)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok.ID != adminToken.ID {
@@ -46,7 +46,7 @@ func TestSetPasswordResetCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tok, err := datastore.FindToken(confDBName, adminToken.ID, adminToken.Token)
+	tok, err := datastore.FindUser(confDBName, adminToken.ID, adminToken.Token)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok.ResetCode != expected {
@@ -58,7 +58,7 @@ func TestSetPasswordResetCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tok2, err := datastore.FindToken(confDBName, adminToken.ID, adminToken.Token)
+	tok2, err := datastore.FindUser(confDBName, adminToken.ID, adminToken.Token)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok2.Password != newpw {
@@ -67,7 +67,7 @@ func TestSetPasswordResetCode(t *testing.T) {
 }
 
 func TestSetUserRole(t *testing.T) {
-	newTok := model.Token{
+	newTok := model.User{
 		AccountID: adminAccount.ID,
 		Token:     "normal-user-token",
 		Email:     "normal@test.com",
@@ -77,7 +77,7 @@ func TestSetUserRole(t *testing.T) {
 		Created:   time.Now(),
 	}
 
-	newID, err := datastore.CreateUserToken(confDBName, newTok)
+	newID, err := datastore.CreateUser(confDBName, newTok)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestSetUserRole(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tok, err := datastore.FindToken(confDBName, newID, newTok.Token)
+	tok, err := datastore.FindUser(confDBName, newID, newTok.Token)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok.Role != 90 {
@@ -100,7 +100,7 @@ func TestUserSetPassword(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tok, err := datastore.FindToken(confDBName, adminToken.ID, adminToken.Token)
+	tok, err := datastore.FindUser(confDBName, adminToken.ID, adminToken.Token)
 	if err != nil {
 		t.Fatal(err)
 	} else if tok.Password != expected {

@@ -88,7 +88,7 @@ func (x ui) logins(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cus, err := backend.DB.FindAccount(conf.CustomerID)
+	cus, err := backend.DB.FindTenant(conf.TenantID)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -110,7 +110,7 @@ func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cus, err := backend.DB.FindAccount(conf.CustomerID)
+	cus, err := backend.DB.FindTenant(conf.TenantID)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return

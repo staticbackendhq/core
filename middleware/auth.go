@@ -76,7 +76,7 @@ func ValidateAuthKey(datastore database.Persister, volatile cache.Volatilizer, c
 		return a, fmt.Errorf("could not verify your authentication token: %s", err.Error())
 	}
 
-	conf, ok := ctx.Value(ContextBase).(model.BaseConfig)
+	conf, ok := ctx.Value(ContextBase).(model.DatabaseConfig)
 	if !ok {
 		return a, fmt.Errorf("invalid StaticBackend public token")
 	}
@@ -91,12 +91,17 @@ func ValidateAuthKey(datastore database.Persister, volatile cache.Volatilizer, c
 		return a, fmt.Errorf("invalid authentication token")
 	}
 
-	token, err := datastore.FindToken(conf.Name, parts[0], parts[1])
+	token, err := datastore.FindUser(conf.Name, parts[0], parts[1])
 	if err != nil {
 		return a, fmt.Errorf("error retrieving your token: %s", err.Error())
 	}
 
-	cus, err := datastore.FindAccount(token.AccountID)
+	// TODO: This was datastore.FindAccount(token.AccountID) before the
+	// backend refactor, this is very strange and should not have worked.....
+	// I changed it to use the tenant's ID from current database, which was what
+	// would have made sense.  can't explain why the previous datastore.FindAccount
+	// could find the "customer" via the user's Account ID, does not make ANY sense
+	cus, err := datastore.FindTenant(conf.TenantID)
 	if err != nil {
 		return a, fmt.Errorf("error retrieving your customer account: %v", err)
 	}
@@ -164,7 +169,7 @@ func RequireRoot(datastore database.Persister, volatile cache.Volatilizer) Middl
 			}
 
 			ctx := r.Context()
-			conf, ok := ctx.Value(ContextBase).(model.BaseConfig)
+			conf, ok := ctx.Value(ContextBase).(model.DatabaseConfig)
 			if !ok {
 				http.Error(w, "invalid StaticBackend public key", http.StatusBadRequest)
 				return
@@ -191,8 +196,8 @@ func RequireRoot(datastore database.Persister, volatile cache.Volatilizer) Middl
 	}
 }
 
-func ValidateRootToken(datastore database.Persister, base, token string) (model.Token, error) {
-	tok := model.Token{}
+func ValidateRootToken(datastore database.Persister, base, token string) (model.User, error) {
+	tok := model.User{}
 
 	parts := strings.Split(token, "|")
 	if len(parts) != 3 {
@@ -203,7 +208,7 @@ func ValidateRootToken(datastore database.Persister, base, token string) (model.
 	acctID := parts[1]
 	token = parts[2]
 
-	tok, err := datastore.FindRootToken(base, id, acctID, token)
+	tok, err := datastore.FindRootUser(base, id, acctID, token)
 	if err != nil {
 		return tok, err
 	} else if tok.Role < RootRole {
