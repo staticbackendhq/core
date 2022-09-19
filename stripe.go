@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
@@ -85,7 +86,7 @@ func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
 	wh.log.Info().Msgf("[Sub Changed]: for StripeID: %d", stripeID)
 
 	// find the customer
-	cus, err := datastore.GetCustomerByStripeID(stripeID)
+	cus, err := backend.DB.GetCustomerByStripeID(stripeID)
 	if err != nil {
 		wh.log.Error().Err(err).Msg("STRIPE ERROR (find cus by stripe id)")
 		return
@@ -99,7 +100,7 @@ func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
 		priceID := sub.Items.Data[0].Price.ID
 		newLevel := wh.priceToLevel(priceID)
 
-		if err := datastore.ChangeCustomerPlan(cus.ID, newLevel); err != nil {
+		if err := backend.DB.ChangeCustomerPlan(cus.ID, newLevel); err != nil {
 			wh.log.Error().Err(err).Msg("STRIPE ERROR (update cus plan)")
 			return
 		}
@@ -112,13 +113,13 @@ func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
 
 	stripeID := sub.Customer.ID
 
-	cus, err := datastore.GetCustomerByStripeID(stripeID)
+	cus, err := backend.DB.GetCustomerByStripeID(stripeID)
 	if err != nil {
 		wh.log.Error().Err(err).Msg("STRIPE ERROR (find cus by id)")
 		return
 	}
 
-	if err := datastore.ChangeCustomerPlan(cus.ID, model.PlanIdea); err != nil {
+	if err := backend.DB.ChangeCustomerPlan(cus.ID, model.PlanIdea); err != nil {
 		wh.log.Error().Err(err).Msg("STRIPE ERROR (update cus plan)")
 	}
 }
@@ -126,7 +127,7 @@ func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
 func (wh *stripeWebhook) handlePaymentMethodAttached(pm stripe.PaymentMethod) {
 	stripeID := pm.Customer.ID
 
-	cus, err := datastore.GetCustomerByStripeID(stripeID)
+	cus, err := backend.DB.GetCustomerByStripeID(stripeID)
 	if err != nil {
 		wh.log.Error().Err(err).Msg("STRIPE ERROR (get cus by stripe id)")
 		return
@@ -136,7 +137,7 @@ func (wh *stripeWebhook) handlePaymentMethodAttached(pm stripe.PaymentMethod) {
 		return
 	}
 
-	if err := datastore.ActivateCustomer(cus.ID, true); err != nil {
+	if err := backend.DB.ActivateCustomer(cus.ID, true); err != nil {
 		wh.log.Error().Err(err).Msgf("STRIPE ERROR (activate cus): %d", stripeID)
 	}
 }

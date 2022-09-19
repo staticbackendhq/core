@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/middleware"
 )
 
@@ -43,7 +44,7 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 		doc[k] = strings.Join(v, ", ")
 	}
 
-	if err := datastore.AddFormSubmission(conf.Name, form, doc); err != nil {
+	if err := backend.DB.AddFormSubmission(conf.Name, form, doc); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -60,7 +61,7 @@ func listForm(w http.ResponseWriter, r *http.Request) {
 
 	formName := r.URL.Query().Get("name")
 
-	results, err := datastore.ListFormSubmissions(conf.Name, formName)
+	results, err := backend.DB.ListFormSubmissions(conf.Name, formName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

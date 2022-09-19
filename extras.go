@@ -11,6 +11,7 @@ import (
 
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/extra"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
@@ -83,7 +84,7 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 
 	ex.log.Info().Msgf("resized bytes: %d", len(resizedBytes))
 	upData := model.UploadFileData{FileKey: fileKey, File: bytes.NewReader(resizedBytes)}
-	url, err := storer.Save(upData)
+	url, err := backend.Filestore.Save(upData)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -97,7 +98,7 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 		Uploaded:  time.Now(),
 	}
 
-	newID, err := datastore.AddFile(config.Name, f)
+	newID, err := backend.DB.AddFile(config.Name, f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -182,7 +183,7 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 		FileKey: fileKey,
 		File:    bytes.NewReader(buf),
 	}
-	fileURL, err := storer.Save(ufd)
+	fileURL, err := backend.Filestore.Save(ufd)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -196,7 +197,7 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 		Uploaded:  time.Now(),
 	}
 
-	newID, err := datastore.AddFile(config.Name, f)
+	newID, err := backend.DB.AddFile(config.Name, f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

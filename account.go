@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	emailFuncs "github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
@@ -55,7 +56,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := datastore.EmailExists(email)
+	exists, err := backend.DB.EmailExists(email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -111,7 +112,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		Created:        time.Now(),
 	}
 
-	cust, err = datastore.CreateCustomer(cust)
+	cust, err = backend.DB.CreateCustomer(cust)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -124,7 +125,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		dbName = "dev-memory-pk"
 	}
 	for {
-		exists, err = datastore.DatabaseExists(dbName)
+		exists, err = backend.DB.DatabaseExists(dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -144,7 +145,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		AllowedDomain: []string{"localhost"},
 	}
 
-	bc, err := datastore.CreateBase(base)
+	bc, err := backend.DB.CreateBase(base)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -177,7 +178,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		signUpURL = s.URL
 	}
 
-	token, err := datastore.FindTokenByEmail(dbName, email)
+	token, err := backend.DB.FindTokenByEmail(dbName, email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -240,9 +241,9 @@ Refer to the documentation at https://staticbackend.com/docs\n
 		// cache the root token so caller can always use
 		// "safe-to-use-in-dev-root-token" as root token instead of
 		// the changing one across CLI start/stop
-		volatile.Set("dev-root-token", rootToken)
+		backend.Cache.Set("dev-root-token", rootToken)
 	} else {
-		err = emailer.Send(ed)
+		err = backend.Emailer.Send(ed)
 		if err != nil {
 			a.log.Error().Err(err).Msg("error sending email")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -292,7 +293,7 @@ func (a *accounts) portal(w http.ResponseWriter, r *http.Request) {
 }
 
 func getStripePortalURL(customerID string) (string, error) {
-	cus, err := datastore.FindAccount(customerID)
+	cus, err := backend.DB.FindAccount(customerID)
 	if err != nil {
 		return "", err
 	}

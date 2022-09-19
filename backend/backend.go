@@ -27,13 +27,12 @@ import (
 )
 
 type Backend struct {
-	DB   database.Persister
 	User func(baseID string) User
 	File func(model.Auth, model.BaseConfig) FileStore
 }
 
 var (
-	datastore database.Persister
+	DB database.Persister
 
 	// Emailer sends email
 	Emailer email.Mailer
@@ -63,20 +62,20 @@ func New(cfg config.AppConfig) Backend {
 
 	persister := config.Current.DataStore
 	if strings.EqualFold(cfg.DatabaseURL, "mem") {
-		datastore = memory.New(Cache.PublishDocument)
+		DB = memory.New(Cache.PublishDocument)
 	} else if strings.EqualFold(persister, "mongo") {
 		cl, err := openMongoDatabase(cfg.DatabaseURL)
 		if err != nil {
 			Log.Fatal().Err(err).Msg("failed to create connection with mongodb")
 		}
-		datastore = mongo.New(cl, Cache.PublishDocument, Log)
+		DB = mongo.New(cl, Cache.PublishDocument, Log)
 	} else {
 		cl, err := openPGDatabase(cfg.DatabaseURL)
 		if err != nil {
 			Log.Fatal().Err(err).Msg("failed to create connection with postgres")
 		}
 
-		datastore = postgresql.New(cl, Cache.PublishDocument, "./sql/", Log)
+		DB = postgresql.New(cl, Cache.PublishDocument, "./sql/", Log)
 	}
 
 	mp := cfg.MailProvider
@@ -121,7 +120,7 @@ func New(cfg config.AppConfig) Backend {
 
 		exe.Auth = auth
 		exe.BaseName = conf.Name
-		exe.DataStore = datastore
+		exe.DataStore = DB
 		exe.Volatile = Cache
 
 		return exe, nil
@@ -131,7 +130,6 @@ func New(cfg config.AppConfig) Backend {
 	go sub.Start()
 
 	return Backend{
-		DB:   datastore,
 		User: newUser,
 		File: newFile,
 	}
@@ -169,11 +167,11 @@ func openPGDatabase(dbHost string) (*sql.DB, error) {
 
 // NewID generates a new unique identifier
 func NewID() string {
-	return datastore.NewID()
+	return DB.NewID()
 }
 
 func findAuth(token string) model.Auth {
-	auth, err := middleware.ValidateAuthKey(datastore, Cache, context.Background(), token)
+	auth, err := middleware.ValidateAuthKey(DB, Cache, context.Background(), token)
 	if err != nil {
 		return model.Auth{}
 	}
@@ -183,7 +181,7 @@ func findAuth(token string) model.Auth {
 func findBase(baseID string) model.BaseConfig {
 	var conf model.BaseConfig
 	if err := Cache.GetTyped(baseID, &conf); err != nil {
-		db, err := datastore.FindDatabase(baseID)
+		db, err := DB.FindDatabase(baseID)
 		if err != nil {
 			return conf
 		}

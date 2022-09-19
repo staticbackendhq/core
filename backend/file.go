@@ -56,7 +56,7 @@ func (f FileStore) Save(filename, name string, file io.ReadSeeker, size int64) (
 		Uploaded:  time.Now(),
 	}
 
-	newID, err := datastore.AddFile(f.conf.Name, sbFile)
+	newID, err := DB.AddFile(f.conf.Name, sbFile)
 	if err != nil {
 		return
 	}
@@ -68,7 +68,7 @@ func (f FileStore) Save(filename, name string, file io.ReadSeeker, size int64) (
 }
 
 func (f FileStore) Delete(fileID string) error {
-	file, err := datastore.GetFileByID(f.conf.Name, fileID)
+	file, err := DB.GetFileByID(f.conf.Name, fileID)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (f FileStore) Delete(fileID string) error {
 		return err
 	}
 
-	if err := datastore.DeleteFile(f.conf.Name, file.ID); err != nil {
+	if err := DB.DeleteFile(f.conf.Name, file.ID); err != nil {
 		return err
 	}
 	return nil

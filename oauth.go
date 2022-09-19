@@ -54,12 +54,12 @@ func (el *ExternalLogins) login() http.Handler {
 			return
 		}
 
-		if err := volatile.SetTyped("oauth_"+reqID, conf); err != nil {
+		if err := backend.Cache.SetTyped("oauth_"+reqID, conf); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		customer, err := datastore.FindAccount(conf.CustomerID)
+		customer, err := backend.DB.FindAccount(conf.CustomerID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -91,7 +91,7 @@ func (el *ExternalLogins) login() http.Handler {
 				return
 			}
 
-			if err := volatile.SetTyped(reqID+"_session", sess.Marshal()); err != nil {
+			if err := backend.Cache.SetTyped(reqID+"_session", sess.Marshal()); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -108,7 +108,7 @@ func (el *ExternalLogins) callback() http.Handler {
 		provider, reqID, baseID := el.fromState(el.getState(r))
 
 		var conf model.BaseConfig
-		if err := volatile.GetTyped("oauth_"+reqID, &conf); err != nil {
+		if err := backend.Cache.GetTyped("oauth_"+reqID, &conf); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if conf.ID != baseID {
@@ -116,7 +116,7 @@ func (el *ExternalLogins) callback() http.Handler {
 			return
 		}
 
-		customer, err := datastore.FindAccount(conf.CustomerID)
+		customer, err := backend.DB.FindAccount(conf.CustomerID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -136,13 +136,13 @@ func (el *ExternalLogins) callback() http.Handler {
 		}
 
 		var value string
-		if err := volatile.GetTyped(reqID+"_session", &value); err != nil {
+		if err := backend.Cache.GetTyped(reqID+"_session", &value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		sess, err := p.UnmarshalSession(value)
-		if err := volatile.GetTyped(reqID+"_session", &value); err != nil {
+		if err := backend.Cache.GetTyped(reqID+"_session", &value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -183,7 +183,7 @@ func (el *ExternalLogins) callback() http.Handler {
 				AvatarURL: user.AvatarURL,
 			}
 
-			if err := volatile.SetTyped("extuser_"+reqID, extuser); err != nil {
+			if err := backend.Cache.SetTyped("extuser_"+reqID, extuser); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -199,7 +199,7 @@ func (*ExternalLogins) getUser(w http.ResponseWriter, r *http.Request) {
 	reqID := r.URL.Query().Get("reqid")
 
 	var extuser ExternalUser
-	if err := volatile.GetTyped("extuser_"+reqID, &extuser); err != nil {
+	if err := backend.Cache.GetTyped("extuser_"+reqID, &extuser); err != nil {
 		respond(w, http.StatusOK, false)
 		return
 	}
@@ -210,7 +210,7 @@ func (*ExternalLogins) getUser(w http.ResponseWriter, r *http.Request) {
 func (el *ExternalLogins) registerOrLogin(dbName, provider, email, accessToken string) (sessionToken string, err error) {
 	email = strings.ToLower(email)
 
-	exists, err := datastore.UserEmailExists(dbName, email)
+	exists, err := backend.DB.UserEmailExists(dbName, email)
 	if err != nil {
 		return
 	}
@@ -223,7 +223,7 @@ func (el *ExternalLogins) registerOrLogin(dbName, provider, email, accessToken s
 }
 
 func (el *ExternalLogins) signIn(dbName, email string) (sessionToken string, err error) {
-	tok, err := datastore.FindTokenByEmail(dbName, email)
+	tok, err := backend.DB.FindTokenByEmail(dbName, email)
 	if err != nil {
 		return
 	}

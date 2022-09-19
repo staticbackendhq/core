@@ -58,7 +58,7 @@ func createTenantAndDatabase() error {
 		Created:  time.Now(),
 	}
 
-	cus, err := bkn.DB.CreateCustomer(cus)
+	cus, err := backend.DB.CreateCustomer(cus)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func createTenantAndDatabase() error {
 		IsActive:   true,
 	}
 
-	base, err = bkn.DB.CreateBase(base)
+	base, err = backend.DB.CreateBase(base)
 	if err != nil {
 		return err
 	}

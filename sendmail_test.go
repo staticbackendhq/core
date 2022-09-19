@@ -3,6 +3,7 @@ package staticbackend
 import (
 	"testing"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/email"
 )
@@ -18,7 +19,7 @@ func Test_Sendmail(t *testing.T) {
 		TextBody: "Hello\nworking",
 		ReplyTo:  config.Current.FromEmail,
 	}
-	if err := emailer.Send(data); err != nil {
+	if err := backend.Emailer.Send(data); err != nil {
 		t.Error(err)
 	}
 }

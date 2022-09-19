@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
@@ -59,8 +60,8 @@ func TestUploadAndResizeImage(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", adminToken))
 
 	stdAuth := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireAuth(datastore, volatile),
+		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
+		middleware.RequireAuth(backend.DB, backend.Cache),
 	}
 
 	extexec.log = logger.Get(config.Current)

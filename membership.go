@@ -38,7 +38,7 @@ func (m *membership) emailExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := datastore.UserEmailExists(conf.Name, email)
+	exists, err := backend.DB.UserEmailExists(conf.Name, email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -80,7 +80,7 @@ func (m *membership) login(w http.ResponseWriter, r *http.Request) {
 func (m *membership) validateUserPassword(dbName, email, password string) (tok model.Token, err error) {
 	email = strings.ToLower(email)
 
-	tok, err = datastore.FindTokenByEmail(dbName, email)
+	tok, err = backend.DB.FindTokenByEmail(dbName, email)
 	if err != nil {
 		return
 	}
@@ -108,7 +108,7 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 
 	l.Email = strings.ToLower(l.Email)
 
-	exists, err := datastore.UserEmailExists(conf.Name, l.Email)
+	exists, err := backend.DB.UserEmailExists(conf.Name, l.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -133,11 +133,11 @@ func (m *membership) register(w http.ResponseWriter, r *http.Request) {
 		Token:     tok.Token,
 	}
 
-	if err := volatile.SetTyped(token, auth); err != nil {
+	if err := backend.Cache.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := volatile.SetTyped("base:"+token, conf); err != nil {
+	if err := backend.Cache.SetTyped("base:"+token, conf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -164,10 +164,10 @@ func (m *membership) getAuthToken(tok model.Token, conf model.BaseConfig) (jwtBy
 
 	//TODO: find a good way to find all occurences of those two
 	// and make them easily callable via a shared function
-	if err = volatile.SetTyped(token, auth); err != nil {
+	if err = backend.Cache.SetTyped(token, auth); err != nil {
 		return
 	}
-	if err = volatile.SetTyped("base:"+token, conf); err != nil {
+	if err = backend.Cache.SetTyped("base:"+token, conf); err != nil {
 		return
 	}
 
@@ -175,7 +175,7 @@ func (m *membership) getAuthToken(tok model.Token, conf model.BaseConfig) (jwtBy
 }
 
 func (m *membership) createAccountAndUser(dbName, email, password string, role int) ([]byte, model.Token, error) {
-	acctID, err := datastore.CreateUserAccount(dbName, email)
+	acctID, err := backend.DB.CreateUserAccount(dbName, email)
 	if err != nil {
 		return nil, model.Token{}, err
 	}
@@ -196,12 +196,12 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 	tok := model.Token{
 		AccountID: accountID,
 		Email:     email,
-		Token:     datastore.NewID(),
+		Token:     backend.DB.NewID(),
 		Password:  string(b),
 		Role:      role,
 	}
 
-	tokID, err := datastore.CreateUserToken(dbName, tok)
+	tokID, err := backend.DB.CreateUserToken(dbName, tok)
 	if err != nil {
 		return nil, model.Token{}, err
 	}
@@ -223,7 +223,7 @@ func (m *membership) createUser(dbName, accountID, email, password string, role 
 		Role:      role,
 		Token:     tok.Token,
 	}
-	if err := volatile.SetTyped(token, auth); err != nil {
+	if err := backend.Cache.SetTyped(token, auth); err != nil {
 		return nil, tok, err
 	}
 
@@ -245,13 +245,13 @@ func (m *membership) setResetCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok, err := datastore.FindTokenByEmail(conf.Name, email)
+	tok, err := backend.DB.FindTokenByEmail(conf.Name, email)
 	if err != nil {
 		http.Error(w, "email not found", http.StatusNotFound)
 		return
 	}
 
-	if err := datastore.SetPasswordResetCode(conf.Name, tok.ID, code); err != nil {
+	if err := backend.DB.SetPasswordResetCode(conf.Name, tok.ID, code); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -284,7 +284,7 @@ func (m *membership) resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := datastore.ResetPassword(conf.Name, data.Email, data.Code, string(b)); err != nil {
+	if err := backend.DB.ResetPassword(conf.Name, data.Email, data.Code, string(b)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -310,7 +310,7 @@ func (m *membership) setRole(w http.ResponseWriter, r *http.Request) {
 
 	data.Email = strings.ToLower(data.Email)
 
-	if err := datastore.SetUserRole(conf.Name, data.Email, data.Role); err != nil {
+	if err := backend.DB.SetUserRole(conf.Name, data.Email, data.Role); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -347,7 +347,7 @@ func (m *membership) setPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := datastore.UserSetPassword(conf.Name, tok.ID, string(newpw)); err != nil {
+	if err := backend.DB.UserSetPassword(conf.Name, tok.ID, string(newpw)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -367,7 +367,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	id, r.URL.Path = ShiftPath(r.URL.Path)
 
-	tok, err := datastore.GetFirstTokenFromAccountID(conf.Name, id)
+	tok, err := backend.DB.GetFirstTokenFromAccountID(conf.Name, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -388,7 +388,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 		Role:      tok.Role,
 		Token:     tok.Token,
 	}
-	if err := volatile.SetTyped(token, auth); err != nil {
+	if err := backend.Cache.SetTyped(token, auth); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -418,7 +418,7 @@ func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
 		email := r.URL.Query().Get("email")
 		code := r.URL.Query().Get("code")
 
-		val, err := volatile.Get("ml-" + email)
+		val, err := backend.Cache.Get("ml-" + email)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -438,7 +438,7 @@ func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if err := volatile.Set("ml-"+email, val+"a"); err != nil {
+			if err := backend.Cache.Set("ml-"+email, val+"a"); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -449,7 +449,7 @@ func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
 
 		// they got the right code, return a session token
 
-		tok, err := datastore.FindTokenByEmail(conf.Name, email)
+		tok, err := backend.DB.FindTokenByEmail(conf.Name, email)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -485,7 +485,7 @@ func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
 	}
 	data.MagicLink += fmt.Sprintf("?code=%d&email=%s", code, data.Email)
 
-	if err := volatile.Set("ml-"+data.Email, fmt.Sprintf("%d a", code)); err != nil {
+	if err := backend.Cache.Set("ml-"+data.Email, fmt.Sprintf("%d a", code)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -497,7 +497,7 @@ func (m *membership) magicLink(w http.ResponseWriter, r *http.Request) {
 		Subject:  data.Subject,
 		HTMLBody: strings.Replace(data.Body, "[link]", data.MagicLink, -1),
 	}
-	if err := emailer.Send(mail); err != nil {
+	if err := backend.Emailer.Send(mail); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

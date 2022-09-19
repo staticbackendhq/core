@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
@@ -64,13 +65,13 @@ func dbReq(t *testing.T, hf func(http.ResponseWriter, *http.Request), method, pa
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tok))
 
 	stdAuth := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireAuth(datastore, volatile),
+		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
+		middleware.RequireAuth(backend.DB, backend.Cache),
 	}
 	if params[0] {
 		stdAuth = []middleware.Middleware{
-			middleware.WithDB(datastore, volatile, getStripePortalURL),
-			middleware.RequireRoot(datastore, volatile),
+			middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
+			middleware.RequireRoot(backend.DB, backend.Cache),
 		}
 	}
 	h := middleware.Chain(http.HandlerFunc(hf), stdAuth...)
@@ -154,8 +155,8 @@ func TestDBListCollections(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireRoot(datastore, volatile),
+		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
+		middleware.RequireRoot(backend.DB, backend.Cache),
 	}
 	h := middleware.Chain(http.HandlerFunc(db.listCollections), stdRoot...)
 
@@ -189,8 +190,8 @@ func TestListDocumentsInvalidDB(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireRoot(datastore, volatile),
+		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
+		middleware.RequireRoot(backend.DB, backend.Cache),
 	}
 	h := middleware.Chain(http.HandlerFunc(db.list), stdRoot...)
 
@@ -312,8 +313,8 @@ func TestDBCreateIndex(t *testing.T) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", rootToken))
 
 	stdRoot := []middleware.Middleware{
-		middleware.WithDB(datastore, volatile, getStripePortalURL),
-		middleware.RequireRoot(datastore, volatile),
+		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
+		middleware.RequireRoot(backend.DB, backend.Cache),
 	}
 	h := middleware.Chain(http.HandlerFunc(db.index), stdRoot...)
 

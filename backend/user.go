@@ -24,13 +24,13 @@ func newUser(baseID string) User {
 // CreateAccount creates a new account in this database
 func (u User) CreateAccount(email string) (string, error) {
 	email = strings.ToLower(email)
-	if exists, err := datastore.UserEmailExists(u.conf.Name, email); err != nil {
+	if exists, err := DB.UserEmailExists(u.conf.Name, email); err != nil {
 		return "", err
 	} else if exists {
 		return "", errors.New("email not available")
 	}
 
-	return datastore.CreateUserAccount(u.conf.Name, email)
+	return DB.CreateUserAccount(u.conf.Name, email)
 }
 
 // CreateUserToken creates a user token (login) for a specific account in a database
@@ -44,16 +44,16 @@ func (u User) CreateUserToken(accountID, email, password string, role int) (stri
 		AccountID: accountID,
 		Email:     email,
 		Password:  string(b),
-		Token:     datastore.NewID(),
+		Token:     DB.NewID(),
 		Role:      role,
 		Created:   time.Now(),
 	}
-	return datastore.CreateUserToken(u.conf.Name, tok)
+	return DB.CreateUserToken(u.conf.Name, tok)
 }
 
 // Authenticate tries to authenticate an email/password and return a session token
 func (u User) Authenticate(email, password string) (string, error) {
-	tok, err := datastore.FindTokenByEmail(u.conf.Name, email)
+	tok, err := DB.FindTokenByEmail(u.conf.Name, email)
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +91,7 @@ func (u User) Authenticate(email, password string) (string, error) {
 
 // SetPasswordResetCode sets the password forget code for a user
 func (u User) SetPasswordResetCode(tokenID, code string) error {
-	return datastore.SetPasswordResetCode(u.conf.Name, tokenID, code)
+	return DB.SetPasswordResetCode(u.conf.Name, tokenID, code)
 }
 
 // ResetPassword resets the password of a matching email/code for a user
@@ -101,12 +101,12 @@ func (u User) ResetPassword(email, code, password string) error {
 		return err
 	}
 
-	return datastore.ResetPassword(u.conf.Name, email, code, string(b))
+	return DB.ResetPassword(u.conf.Name, email, code, string(b))
 }
 
 // SetUserRole changes the role of a user
 func (u User) SetUserRole(email string, role int) error {
-	return datastore.SetUserRole(u.conf.Name, email, role)
+	return DB.SetUserRole(u.conf.Name, email, role)
 }
 
 // UserSetPassword password changes initiated by the user
@@ -116,7 +116,7 @@ func (u User) UserSetPassword(tokenID, password string) error {
 		return err
 	}
 
-	return datastore.UserSetPassword(u.conf.Name, tokenID, string(b))
+	return DB.UserSetPassword(u.conf.Name, tokenID, string(b))
 }
 
 func GetJWT(token string) ([]byte, error) {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
@@ -31,7 +32,7 @@ func (ui) createApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := datastore.EmailExists(email)
+	exists, err := backend.DB.EmailExists(email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -48,13 +49,13 @@ func (x ui) auth(w http.ResponseWriter, r *http.Request) {
 	pk := r.Form.Get("pk")
 	token := r.Form.Get("token")
 
-	conf, err := datastore.FindDatabase(pk)
+	conf, err := backend.DB.FindDatabase(pk)
 	if err != nil {
 		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "This app does not exists"}, x.log)
 		return
 	}
 
-	if _, err := middleware.ValidateRootToken(datastore, conf.Name, token); err != nil {
+	if _, err := middleware.ValidateRootToken(backend.DB, conf.Name, token); err != nil {
 		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "invalid public key / token"}, x.log)
 		return
 	}
@@ -87,7 +88,7 @@ func (x ui) logins(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cus, err := datastore.FindAccount(conf.CustomerID)
+	cus, err := backend.DB.FindAccount(conf.CustomerID)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -109,7 +110,7 @@ func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cus, err := datastore.FindAccount(conf.CustomerID)
+	cus, err := backend.DB.FindAccount(conf.CustomerID)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -136,7 +137,7 @@ func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 
 	logins[provider] = keys
 
-	if err := datastore.EnableExternalLogin(cus.ID, logins); err != nil {
+	if err := backend.DB.EnableExternalLogin(cus.ID, logins); err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
@@ -163,7 +164,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		Query          string
 	})
 
-	allNames, err := datastore.ListCollections(conf.Name)
+	allNames, err := backend.DB.ListCollections(conf.Name)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -213,7 +214,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			filter, err = datastore.ParseQuery(clauses)
+			filter, err = backend.DB.ParseQuery(clauses)
 			if err != nil {
 				renderErr(w, r, err, x.log)
 				return
@@ -224,13 +225,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	var list model.PagedResult
 	if !strings.HasPrefix(col, "sb_") {
 		if len(filter) == 0 {
-			list, err = datastore.ListDocuments(auth, conf.Name, col, params)
+			list, err = backend.DB.ListDocuments(auth, conf.Name, col, params)
 			if err != nil {
 				renderErr(w, r, err, x.log)
 				return
 			}
 		} else {
-			list, err = datastore.QueryDocuments(auth, conf.Name, col, filter, params)
+			list, err = backend.DB.QueryDocuments(auth, conf.Name, col, filter, params)
 			if err != nil {
 				renderErr(w, r, err, x.log)
 				return
@@ -264,7 +265,7 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 	col := r.URL.Query().Get("col")
 	id := getURLPart(r.URL.Path, 3)
 
-	doc, err := datastore.GetDocumentByID(auth, conf.Name, col, id)
+	doc, err := backend.DB.GetDocumentByID(auth, conf.Name, col, id)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -325,7 +326,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 		update[field] = value
 	}
 
-	if _, err := datastore.UpdateDocument(auth, conf.Name, col, id, update); err != nil {
+	if _, err := backend.DB.UpdateDocument(auth, conf.Name, col, id, update); err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
@@ -344,7 +345,7 @@ func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 	col := r.URL.Query().Get("col")
 	id := getURLPart(r.URL.Path, 4)
 
-	if _, err := datastore.DeleteDocument(auth, conf.Name, col, id); err != nil {
+	if _, err := backend.DB.DeleteDocument(auth, conf.Name, col, id); err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
@@ -385,13 +386,13 @@ func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 
 	formName := r.URL.Query().Get("fn")
 
-	forms, err := datastore.GetForms(conf.Name)
+	forms, err := backend.DB.GetForms(conf.Name)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
 
-	entries, err := datastore.ListFormSubmissions(conf.Name, formName)
+	entries, err := backend.DB.ListFormSubmissions(conf.Name, formName)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -419,7 +420,7 @@ func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
 
 	id := getURLPart(r.URL.Path, 4)
 
-	if _, err := datastore.DeleteDocument(auth, conf.Name, "sb_forms", id); err != nil {
+	if _, err := backend.DB.DeleteDocument(auth, conf.Name, "sb_forms", id); err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
@@ -434,7 +435,7 @@ func (x ui) fnList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := datastore.ListFunctions(conf.Name)
+	results, err := backend.DB.ListFunctions(conf.Name)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -457,7 +458,7 @@ func (x *ui) fnEdit(w http.ResponseWriter, r *http.Request) {
 
 	id := getURLPart(r.URL.Path, 3)
 
-	fn, err := datastore.GetFunctionByID(conf.Name, id)
+	fn, err := backend.DB.GetFunctionByID(conf.Name, id)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -486,7 +487,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 			Code:         code,
 			TriggerTopic: trigger,
 		}
-		newID, err := datastore.AddFunction(conf.Name, fn)
+		newID, err := backend.DB.AddFunction(conf.Name, fn)
 		if err != nil {
 			renderErr(w, r, err, x.log)
 			return
@@ -496,7 +497,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := datastore.UpdateFunction(conf.Name, id, code, trigger); err != nil {
+	if err := backend.DB.UpdateFunction(conf.Name, id, code, trigger); err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
@@ -511,7 +512,7 @@ func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := getURLPart(r.URL.Path, 4)
-	if err := datastore.DeleteFunction(conf.Name, name); err != nil {
+	if err := backend.DB.DeleteFunction(conf.Name, name); err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}
@@ -528,7 +529,7 @@ func (x *ui) fsList(w http.ResponseWriter, r *http.Request) {
 
 	accountID := r.URL.Query().Get("id")
 
-	results, err := datastore.ListAllFiles(conf.Name, accountID)
+	results, err := backend.DB.ListAllFiles(conf.Name, accountID)
 	if err != nil {
 		renderErr(w, r, err, x.log)
 		return
@@ -546,7 +547,7 @@ func (x *ui) fsDel(w http.ResponseWriter, r *http.Request) {
 
 	fileID := getURLPart(r.URL.Path, 4)
 
-	if err := datastore.DeleteFile(conf.Name, fileID); err != nil {
+	if err := backend.DB.DeleteFile(conf.Name, fileID); err != nil {
 		renderErr(w, r, err, x.log)
 		return
 	}

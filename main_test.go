@@ -10,14 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/database/mongo"
-	"github.com/staticbackendhq/core/database/postgresql"
-	"github.com/staticbackendhq/core/email"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
-	"github.com/staticbackendhq/core/storage"
 )
 
 const (
@@ -44,52 +39,25 @@ var (
 func TestMain(m *testing.M) {
 	config.Current = config.LoadConfig()
 
-	logz := logger.Get(config.Current)
+	bkn = backend.New(config.Current)
 
-	volatile = cache.NewCache(logz)
+	db = &Database{cache: backend.Cache, log: backend.Log}
 
-	storer = storage.Local{}
-
-	if strings.EqualFold(config.Current.DataStore, "mongo") {
-		cl, err := openMongoDatabase("mongodb://localhost:27017")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		datastore = mongo.New(cl, volatile.PublishDocument, logz)
-	} else {
-		dbConn, err := openPGDatabase("user=postgres password=postgres dbname=postgres sslmode=disable")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		datastore = postgresql.New(dbConn, volatile.PublishDocument, "./sql/", logz)
-	}
-
-	db = &Database{cache: volatile, log: logz}
-
-	mship = &membership{log: logz}
-
-	mp := config.Current.MailProvider
-	if strings.EqualFold(mp, email.MailProviderSES) {
-		emailer = email.AWSSES{}
-	} else {
-		emailer = email.Dev{}
-	}
+	mship = &membership{log: backend.Log}
 
 	deleteAndSetupTestAccount()
 
-	hub := newHub(volatile)
+	hub := newHub(backend.Cache)
 	go hub.run()
 
 	ws := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		serveWs(logz, hub, w, r)
+		serveWs(backend.Log, hub, w, r)
 	}))
 	defer ws.Close()
 
 	wsURL = "ws" + strings.TrimPrefix(ws.URL, "http")
 
-	funexec = &functions{datastore: datastore, dbName: dbName}
+	funexec = &functions{datastore: backend.DB, dbName: dbName}
 
 	extexec = &extras{}
 
@@ -97,14 +65,14 @@ func TestMain(m *testing.M) {
 }
 
 func deleteAndSetupTestAccount() {
-	if err := datastore.DeleteCustomer(dbName, admEmail); err != nil {
+	if err := backend.DB.DeleteCustomer(dbName, admEmail); err != nil {
 		log.Fatal(err)
 	}
 
 	cus := model.Customer{
 		Email: admEmail,
 	}
-	cus, err := datastore.CreateCustomer(cus)
+	cus, err := backend.DB.CreateCustomer(cus)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +85,7 @@ func deleteAndSetupTestAccount() {
 		Created:       time.Now(),
 	}
 
-	base, err = datastore.CreateBase(base)
+	base, err = backend.DB.CreateBase(base)
 	if err != nil {
 		log.Fatal(err)
 	}

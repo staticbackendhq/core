@@ -6,6 +6,7 @@ import (
 
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gorilla/websocket"
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/model"
 )
@@ -107,7 +108,7 @@ func (h *Hub) getTargets(msg model.Command) (sockets []*Socket, payload model.Co
 		}
 
 		var a model.Auth
-		if err := volatile.GetTyped(pl.Token, &a); err != nil {
+		if err := backend.Cache.GetTyped(pl.Token, &a); err != nil {
 			payload = model.Command{Type: model.MsgTypeError, Data: "invalid token"}
 		} else {
 			payload = model.Command{Type: model.MsgTypeToken, Data: pl.Token}
