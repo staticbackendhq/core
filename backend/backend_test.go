@@ -11,8 +11,6 @@ import (
 )
 
 var (
-	bkn backend.Backend
-
 	adminEmail    string
 	adminPassword string
 	adminAuth     model.Auth
@@ -34,7 +32,8 @@ func TestMain(t *testing.M) {
 		LocalStorageURL: "http://localhost:8099",
 	}
 
-	bkn = backend.New(cfg)
+	// initializes all core services basesd on config
+	backend.Setup(cfg)
 
 	setup()
 
@@ -77,36 +76,21 @@ func createTenantAndDatabase() error {
 }
 
 func createUser() error {
-	id, err := bkn.User(base.ID).CreateAccount(adminEmail)
+	mship := backend.Membership(base)
+	jwt, user, err := mship.CreateAccountAndUser(adminEmail, adminPassword, 100)
 	if err != nil {
 		return err
-	}
-
-	userID, err := bkn.User(base.ID).CreateUserToken(id, adminEmail, adminPassword, 100)
-	if err != nil {
-		return err
-	}
-
-	tok := model.User{
-		ID:        userID,
-		AccountID: id,
-		Email:     adminEmail,
-		Role:      100,
-		Created:   time.Now(),
 	}
 
 	adminAuth = model.Auth{
-		AccountID: id,
-		UserID:    userID,
+		AccountID: user.AccountID,
+		UserID:    user.ID,
 		Email:     adminEmail,
 		Role:      100,
-		Token:     tok.Token,
+		Token:     user.Token,
 	}
 
-	jwtToken, err = bkn.User(base.ID).Authenticate(adminEmail, adminPassword)
-	if err != nil {
-		return err
-	}
+	jwtToken = string(jwt)
 
 	return nil
 }

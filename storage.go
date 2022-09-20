@@ -3,6 +3,7 @@ package staticbackend
 import (
 	"net/http"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/middleware"
 )
 
@@ -33,7 +34,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 	name := r.Form.Get("name")
 
-	fileSvc := bkn.File(auth, conf)
+	fileSvc := backend.Storage(auth, conf)
 	savedFile, err := fileSvc.Save(h.Filename, name, file, h.Size)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,7 +53,7 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	fileID := r.URL.Query().Get("id")
 
-	fileSvc := bkn.File(auth, conf)
+	fileSvc := backend.Storage(auth, conf)
 	if err := fileSvc.Delete(fileID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

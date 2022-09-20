@@ -21,8 +21,7 @@ import (
 )
 
 type accounts struct {
-	membership *membership
-	log        *logger.Logger
+	log *logger.Logger
 }
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +157,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		pw = "devpw1234"
 	}
 
-	if _, _, err := a.membership.createAccountAndUser(dbName, email, pw, 100); err != nil {
+	mship := backend.Membership(base)
+	if _, _, err := mship.CreateAccountAndUser(email, pw, 100); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

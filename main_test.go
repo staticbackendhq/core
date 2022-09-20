@@ -39,7 +39,7 @@ var (
 func TestMain(m *testing.M) {
 	config.Current = config.LoadConfig()
 
-	bkn = backend.New(config.Current)
+	backend.Setup(config.Current)
 
 	db = &Database{cache: backend.Cache, log: backend.Log}
 
@@ -92,7 +92,8 @@ func deleteAndSetupTestAccount() {
 
 	pubKey = base.ID
 
-	token, dbToken, err := mship.createAccountAndUser(dbName, admEmail, password, 100)
+	usrSvc := backend.Membership(base)
+	token, dbToken, err := usrSvc.CreateAccountAndUser(admEmail, password, 100)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -101,7 +102,7 @@ func deleteAndSetupTestAccount() {
 
 	rootToken = fmt.Sprintf("%s|%s|%s", dbToken.ID, dbToken.AccountID, dbToken.Token)
 
-	token, _, err = mship.createUser(dbName, dbToken.AccountID, userEmail, userPassword, 0)
+	token, _, err = usrSvc.CreateUser(dbToken.AccountID, userEmail, userPassword, 0)
 	if err != nil {
 		log.Fatal(err)
 	}

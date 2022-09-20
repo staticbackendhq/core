@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -26,31 +27,37 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Backend struct {
-	User func(baseID string) User
-	File func(model.Auth, model.DatabaseConfig) FileStore
-}
-
 var (
+	// Config reflect the configuration received on Setup
+	Config config.AppConfig
+
+	// DB initialized Persister data store
 	DB database.Persister
-
-	// Emailer sends email
+	// Emailer initialized Mailer for sending emails
 	Emailer email.Mailer
-	// Filestore store/load/delete file
+	// Filestore initialized Storer for raw save/delete blob file
 	Filestore storage.Storer
-
-	// Cache exposes the cache / pub-sub functionalities
+	// Cache initialized Volatilizer for cache and pub/sub
 	Cache cache.Volatilizer
-	// Log exposes the configured logger
+	// Log initialized Logger for all logging
 	Log *logger.Logger
+
+	// Membership exposes Account and User functionalities like register, login, etc
+	// account and user functionalities.
+	Membership func(model.DatabaseConfig) User
+
+	// Storage exposes file storage functionalities. It wraps the blob
+	// storage as well as the database storage.
+	Storage func(model.Auth, model.DatabaseConfig) FileStore
 )
 
-// New prepared the core services based on the configuration received.
-// It returns a Backend struct that wraps the Persister interface.
-func New(cfg config.AppConfig) Backend {
-	//TODO: this code is an awfuly copy of the server.go init code
-	// Might be an idea to create some kind of helper in the internal package
-	// that would return a structure with all the initialized services
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+// Setup initializes the core services based on the configuration received.
+func Setup(cfg config.AppConfig) {
+	Config = cfg
 
 	Log = logger.Get(cfg)
 
@@ -129,10 +136,8 @@ func New(cfg config.AppConfig) Backend {
 	// start system events subscriber
 	go sub.Start()
 
-	return Backend{
-		User: newUser,
-		File: newFile,
-	}
+	Membership = newUser
+	Storage = newFile
 }
 
 func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {

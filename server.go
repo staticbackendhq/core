@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
@@ -32,14 +30,6 @@ const (
 	AppEnvProd = "prod"
 )
 
-var (
-	bkn backend.Backend
-)
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 // Start starts the web server and all dependencies services
 func Start(c config.AppConfig, log *logger.Logger) {
 	log.Info().Str("Addr", c.AppURL).Msg("server started")
@@ -57,7 +47,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 
 	// the backend pckage and this bkn instance holds
 	// all services like the Datastore, Filestore, Emailers, etc.
-	bkn = backend.New(c)
+	backend.Setup(c)
 
 	// websockets
 	hub := newHub(backend.Cache)
@@ -173,7 +163,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/sudo/cache", middleware.Chain(http.HandlerFunc(sudoCache), stdRoot...))
 
 	// account
-	acct := &accounts{membership: m, log: log}
+	acct := &accounts{log: log}
 	http.Handle("/account/init", middleware.Chain(http.HandlerFunc(acct.create), stdPub...))
 	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
 	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))

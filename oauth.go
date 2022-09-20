@@ -25,8 +25,7 @@ const (
 )
 
 type ExternalLogins struct {
-	membership *membership
-	log        *logger.Logger
+	log *logger.Logger
 }
 
 type ExternalUser struct {
@@ -168,7 +167,7 @@ func (el *ExternalLogins) callback() http.Handler {
 			}
 
 			accessTokens := fmt.Sprintf("%s|%s", user.AccessToken, user.AccessTokenSecret)
-			sessionToken, err := el.registerOrLogin(conf.Name, provider, user.Email, accessTokens)
+			sessionToken, err := el.registerOrLogin(conf, provider, user.Email, accessTokens)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -207,23 +206,23 @@ func (*ExternalLogins) getUser(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, extuser)
 }
 
-func (el *ExternalLogins) registerOrLogin(dbName, provider, email, accessToken string) (sessionToken string, err error) {
+func (el *ExternalLogins) registerOrLogin(conf model.DatabaseConfig, provider, email, accessToken string) (sessionToken string, err error) {
 	email = strings.ToLower(email)
 
-	exists, err := backend.DB.UserEmailExists(dbName, email)
+	exists, err := backend.DB.UserEmailExists(conf.Name, email)
 	if err != nil {
 		return
 	}
 
 	if exists {
-		return el.signIn(dbName, email)
+		return el.signIn(conf, email)
 	}
 
-	return el.signUp(dbName, provider, email, accessToken)
+	return el.signUp(conf, provider, email, accessToken)
 }
 
-func (el *ExternalLogins) signIn(dbName, email string) (sessionToken string, err error) {
-	tok, err := backend.DB.FindUserByEmail(dbName, email)
+func (el *ExternalLogins) signIn(conf model.DatabaseConfig, email string) (sessionToken string, err error) {
+	tok, err := backend.DB.FindUserByEmail(conf.Name, email)
 	if err != nil {
 		return
 	}
@@ -239,10 +238,12 @@ func (el *ExternalLogins) signIn(dbName, email string) (sessionToken string, err
 	return
 }
 
-func (el *ExternalLogins) signUp(dbName, provider, email, accessToken string) (sessionToken string, err error) {
+func (el *ExternalLogins) signUp(conf model.DatabaseConfig, provider, email, accessToken string) (sessionToken string, err error) {
 	pw := fmt.Sprintf("%s:%s", provider, accessToken)
 
-	b, _, err := el.membership.createAccountAndUser(dbName, email, pw, 0)
+	mship := backend.Membership(conf)
+
+	b, _, err := mship.CreateAccountAndUser(email, pw, 0)
 	if err != nil {
 		return
 	}
