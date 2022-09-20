@@ -324,7 +324,7 @@ func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 }
 
 func (database *Database) newID(w http.ResponseWriter, r *http.Request) {
-	id := backend.NewID()
+	id := backend.DB.NewID()
 	respond(w, http.StatusOK, id)
 }
 

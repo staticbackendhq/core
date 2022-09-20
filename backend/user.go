@@ -99,6 +99,7 @@ func (u User) Register(email, password string) (string, error) {
 	return token, nil
 }
 
+// CreateAccountAndUser creates an account with a user
 func (u User) CreateAccountAndUser(email, password string, role int) ([]byte, model.User, error) {
 	acctID, err := DB.CreateAccount(u.conf.Name, email)
 	if err != nil {
@@ -112,6 +113,7 @@ func (u User) CreateAccountAndUser(email, password string, role int) ([]byte, mo
 	return jwtBytes, tok, nil
 }
 
+// CreateUser creates a user for an Account
 func (u User) CreateUser(accountID, email, password string, role int) ([]byte, model.User, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -209,6 +211,7 @@ func (u User) UserSetPassword(email, oldpw, newpw string) error {
 	return DB.UserSetPassword(u.conf.Name, tok.ID, string(b))
 }
 
+// GetAuthToken returns a session token for a user
 func (u User) GetAuthToken(tok model.User) (jwtBytes []byte, err error) {
 	token := fmt.Sprintf("%s|%s", tok.ID, tok.Token)
 
@@ -238,6 +241,7 @@ func (u User) GetAuthToken(tok model.User) (jwtBytes []byte, err error) {
 	return
 }
 
+// GetJWT returns a session token from a token
 func GetJWT(token string) ([]byte, error) {
 	now := time.Now()
 	pl := model.JWTPayload{
@@ -255,6 +259,7 @@ func GetJWT(token string) ([]byte, error) {
 
 }
 
+// MagicLinkData magic links for no-password sign-in
 type MagicLinkData struct {
 	FromEmail string `json:"fromEmail"`
 	FromName  string `json:"fromName"`
@@ -264,6 +269,7 @@ type MagicLinkData struct {
 	MagicLink string `json:"link"`
 }
 
+// SetupMagicLink initialize a magic link and send the email to the user
 func (u User) SetupMagicLink(data MagicLinkData) error {
 	data.Email = strings.ToLower(data.Email)
 
@@ -292,6 +298,8 @@ func (u User) SetupMagicLink(data MagicLinkData) error {
 	return nil
 }
 
+// ValidateMagicLink validates a magic link code and returns a session token on
+// success
 func (u User) ValidateMagicLink(email, code string) (string, error) {
 	email = strings.ToLower(email)
 

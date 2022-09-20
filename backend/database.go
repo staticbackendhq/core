@@ -7,17 +7,17 @@ import (
 	"github.com/staticbackendhq/core/model"
 )
 
-// Database enables all CRUD and querying operations on a type
+// Database enables all CRUD and querying operations on a specific type
 type Database[T any] struct {
 	auth model.Auth
 	conf model.DatabaseConfig
 }
 
-// NewDatabase returns a ready to use Database to perform operations on a type
-func NewDatabase[T any](token, baseID string) Database[T] {
+// Collection returns a ready to use Database to perform operations on a specific type
+func Collection[T any](auth model.Auth, base model.DatabaseConfig) Database[T] {
 	return Database[T]{
-		auth: findAuth(token),
-		conf: findBase(baseID),
+		auth: auth,
+		conf: base,
 	}
 }
 

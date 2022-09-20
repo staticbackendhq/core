@@ -32,7 +32,7 @@ func newTask(title string, done bool) Task {
 }
 
 func TestDatabaseCreate(t *testing.T) {
-	db := backend.NewDatabase[Task](jwtToken, base.ID)
+	db := backend.Collection[Task](adminAuth, base)
 
 	task := newTask("db create", false)
 	task, err := db.Create("tasks", task)
@@ -51,7 +51,7 @@ func TestDatabaseCreate(t *testing.T) {
 }
 
 func TestDatabaseList(t *testing.T) {
-	db := backend.NewDatabase[Task](jwtToken, base.ID)
+	db := backend.Collection[Task](adminAuth, base)
 
 	tasks := []Task{
 		newTask("t1", false),
@@ -72,7 +72,7 @@ func TestDatabaseList(t *testing.T) {
 }
 
 func TestDatabaseQuery(t *testing.T) {
-	db := backend.NewDatabase[Task](jwtToken, base.ID)
+	db := backend.Collection[Task](adminAuth, base)
 
 	tasks := []Task{
 		newTask("qry1", false),

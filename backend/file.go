@@ -10,6 +10,7 @@ import (
 	"github.com/staticbackendhq/core/model"
 )
 
+// FileStore exposes file functions
 type FileStore struct {
 	auth model.Auth
 	conf model.DatabaseConfig
@@ -22,11 +23,14 @@ func newFile(auth model.Auth, conf model.DatabaseConfig) FileStore {
 	}
 }
 
+// SavedFile when a file is saved it has an ID and an URL
 type SavedFile struct {
 	ID  string `json:"id"`
 	URL string `json:"url"`
 }
 
+// Save saves a file content to the file storage (Storer interface) and to the
+// database
 func (f FileStore) Save(filename, name string, file io.ReadSeeker, size int64) (sf SavedFile, err error) {
 	ext := filepath.Ext(name)
 
@@ -67,6 +71,7 @@ func (f FileStore) Save(filename, name string, file io.ReadSeeker, size int64) (
 	return
 }
 
+// Delete removes a file from storage and database
 func (f FileStore) Delete(fileID string) error {
 	file, err := DB.GetFileByID(f.conf.Name, fileID)
 	if err != nil {

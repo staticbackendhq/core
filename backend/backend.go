@@ -1,3 +1,42 @@
+// Package backend allows a Go program to import a standard Go package
+// instead of self-hosting the backend API.
+//
+// You need to call the Setup function to initialize all services passing
+// a config.AppConfig. You may create environment variables and load the config
+// directly from confing.LoadConfig.
+//
+// The building blocks of StaticBackend are exported as variable and can be
+// used directly accessing their interface's functions. For instance
+// to use the Volatilizer (cache and pub/sub) you'd use the Cache variable:
+//
+//    if err := backend.Cache.Set("key", "value"); err != nil {
+//      return err
+//    }
+//    val, err := backend.Cache.Get("key")
+//
+// The available services are as follow:
+// 1. Cache: caching and pub/sub
+// 2. DB: a raw Persister instance (see below for when to use it)
+// 3. Filestore: raw blob storage
+// 4. Emailer: to send emails
+// 5. Config: the config that was passed to Setup
+// 6. Log: logger
+//
+// You may see those services as raw building blocks to give you the most
+// flexibility. For easy of use, this package wraps important / commonly used
+// functionalities into more developer friendly implementation.
+//
+// For instance, the Membership function wants a model.DatabaseConfig and allow
+// the caller to create account and user as well as reseting password etc.
+//
+// To contrast, all of those can be done from your program by using the DB
+// (Persister) data store, but for convenience this package offers easier /
+// ready-made functions for common use-case.
+//
+// StaticBackend makes your Go web application multi-tenant by default.
+// For this reason you must supply a model.DatabaseConfig and sometimes a
+// model.auth (user performing the actions) to the different parts of the system
+// so the data and security are applied to the right tenant, account and user.
 package backend
 
 import (
@@ -150,7 +189,7 @@ func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {
 	}
 
 	if err := cl.Ping(ctx, readpref.Primary()); err != nil {
-		return nil, fmt.Errorf("Ping failed: %v", err)
+		return nil, fmt.Errorf("ping failed: %v", err)
 	}
 
 	return cl, nil
@@ -170,12 +209,7 @@ func openPGDatabase(dbHost string) (*sql.DB, error) {
 	return dbConn, nil
 }
 
-// NewID generates a new unique identifier
-func NewID() string {
-	return DB.NewID()
-}
-
-func findAuth(token string) model.Auth {
+func findAuthz(token string) model.Auth {
 	auth, err := middleware.ValidateAuthKey(DB, Cache, context.Background(), token)
 	if err != nil {
 		return model.Auth{}
@@ -183,7 +217,7 @@ func findAuth(token string) model.Auth {
 	return auth
 }
 
-func findBase(baseID string) model.DatabaseConfig {
+func findBasez(baseID string) model.DatabaseConfig {
 	var conf model.DatabaseConfig
 	if err := Cache.GetTyped(baseID, &conf); err != nil {
 		db, err := DB.FindDatabase(baseID)
