@@ -35,9 +35,12 @@ func (f FileStore) Save(filename, name string, file io.ReadSeeker, size int64) (
 	ext := filepath.Ext(name)
 
 	if len(name) == 0 {
-		// if no forced name is used, let's use the original name
+		// if no forced name is used, let's use the original file name
 		name = internal.CleanUpFileName(filename)
 	}
+
+	// add random char to prevent duplicate key
+	name += "_" + internal.RandStringRunes(16)
 
 	fileKey := fmt.Sprintf("%s/%s/%s%s",
 		f.conf.Name,
