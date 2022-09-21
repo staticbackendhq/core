@@ -25,6 +25,7 @@ vendor lock-in, and your data stays in your control.
 
 ### Table of content
 
+* [Import as Go package](#import-as-go-package)
 * [What can you build](#what-can-you-build)
 * [How it works / dev workflow](#how-it-works--dev-workflow)
 * [Get started with the self-hosted version](#get-started-with-the-self-hosted-version)
@@ -36,6 +37,17 @@ vendor lock-in, and your data stays in your control.
 * [help](#help)
 
 
+## Import as Go package
+
+As of v1.4.1 StaticBackend offer an importable Go package removing the need 
+to self-host the backend API while keeping all functionalities from your Go 
+program.
+
+### Example usage
+
+```go
+
+```
 ## What can you build
 
 I built StaticBackend with the mindset of someone tired of writing the same code 
@@ -255,6 +267,7 @@ precise let us know.
 Here are videos made specifically for people wanting to contribute:
 
 * [Intro, setup, running tests, project structure](https://youtu.be/uTj7UEbg0p4)
+* [backend package and v1.4.1 refactor and changes](https://youtu.be/oWxk2g2yp_g)
 
 Check the [contributing file](CONTRIBUTING.md) for details.
 
