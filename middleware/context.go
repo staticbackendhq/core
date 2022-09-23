@@ -1,3 +1,5 @@
+// Package middleware exposes middlewares and helpers functions
+// related to context get/set of DatabaseConfig and Auth.
 package middleware
 
 import (
@@ -9,11 +11,13 @@ import (
 
 type ContextKey int
 
+// Context keys that are needed for all requests pipeline.
 const (
 	ContextAuth ContextKey = iota
 	ContextBase
 )
 
+// Extract extracts the DatabaseConfig and Auth for the request
 func Extract(r *http.Request, withAuth bool) (model.DatabaseConfig, model.Auth, error) {
 	ctx := r.Context()
 	conf, ok := ctx.Value(ContextBase).(model.DatabaseConfig)

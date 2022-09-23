@@ -15,13 +15,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// Validator validates a session token
 type Validator func(context.Context, string) (string, error)
 
+// ConnectionData holds a channel for each web socket connection
 type ConnectionData struct {
 	ctx      context.Context
 	messages chan model.Command
 }
 
+// Broker is used to hold all web socket connections
 type Broker struct {
 	Broadcast          chan model.Command
 	newConnections     chan ConnectionData
@@ -37,6 +40,7 @@ type Broker struct {
 	log *logger.Logger
 }
 
+// NewBroker returns a ready to use Broker for accepting web socket connections
 func NewBroker(v Validator, pubsub cache.Volatilizer, log *logger.Logger) *Broker {
 	b := &Broker{
 		Broadcast:          make(chan model.Command, 1),
@@ -104,6 +108,8 @@ func (b *Broker) unsub(c chan model.Command) {
 	delete(b.ids, id)
 }
 
+// Accept turns a request into a web socket request and creates a new
+// connection in the Broker
 func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 	// check if writer handles flushing
 	flusher, ok := w.(http.Flusher)

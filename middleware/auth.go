@@ -16,6 +16,10 @@ const (
 	RootRole = 100
 )
 
+// RequireAuth validates that a session token is valid.
+// If not valid a 401 HTTP error is returned.
+//
+// The request must have an HTTP Header of: Authorization: Bearer "session-token".
 func RequireAuth(datastore database.Persister, volatile cache.Volatilizer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +72,7 @@ func RequireAuth(datastore database.Persister, volatile cache.Volatilizer) Middl
 	}
 }
 
+// ValidateAuthKey validates a session token
 func ValidateAuthKey(datastore database.Persister, volatile cache.Volatilizer, ctx context.Context, key string) (model.Auth, error) {
 	a := model.Auth{}
 
@@ -126,6 +131,7 @@ func ValidateAuthKey(datastore database.Persister, volatile cache.Volatilizer, c
 	return a, nil
 }
 
+// RequireRoot validates that the token provided is for a "root" user.
 func RequireRoot(datastore database.Persister, volatile cache.Volatilizer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -196,6 +202,7 @@ func RequireRoot(datastore database.Persister, volatile cache.Volatilizer) Middl
 	}
 }
 
+// ValidateRootToken validates that a session token has root level permissions
 func ValidateRootToken(datastore database.Persister, base, token string) (model.User, error) {
 	tok := model.User{}
 

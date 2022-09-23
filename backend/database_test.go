@@ -32,17 +32,17 @@ func newTask(title string, done bool) Task {
 }
 
 func TestDatabaseCreate(t *testing.T) {
-	db := backend.Collection[Task](adminAuth, base)
+	db := backend.Collection[Task](adminAuth, base, "tasks")
 
 	task := newTask("db create", false)
-	task, err := db.Create("tasks", task)
+	task, err := db.Create(task)
 	if err != nil {
 		t.Fatal(err)
 	} else if len(task.ID) == 0 {
 		t.Error("expected task id length to be > 0")
 	}
 
-	check, err := db.GetByID("tasks", task.ID)
+	check, err := db.GetByID(task.ID)
 	if err != nil {
 		t.Fatal(err)
 	} else if task.Title != check.Title {
@@ -51,19 +51,19 @@ func TestDatabaseCreate(t *testing.T) {
 }
 
 func TestDatabaseList(t *testing.T) {
-	db := backend.Collection[Task](adminAuth, base)
+	db := backend.Collection[Task](adminAuth, base, "tasks")
 
 	tasks := []Task{
 		newTask("t1", false),
 		newTask("t2", true),
 	}
 
-	if err := db.BulkCreate("tasks", tasks); err != nil {
+	if err := db.BulkCreate(tasks); err != nil {
 		t.Fatal(err)
 	}
 
 	lp := model.ListParams{Page: 1, Size: 50}
-	res, err := db.List("tasks", lp)
+	res, err := db.List(lp)
 	if err != nil {
 		t.Fatal(err)
 	} else if len(res.Results) < 2 {
@@ -72,7 +72,7 @@ func TestDatabaseList(t *testing.T) {
 }
 
 func TestDatabaseQuery(t *testing.T) {
-	db := backend.Collection[Task](adminAuth, base)
+	db := backend.Collection[Task](adminAuth, base, "tasks")
 
 	tasks := []Task{
 		newTask("qry1", false),
@@ -80,7 +80,7 @@ func TestDatabaseQuery(t *testing.T) {
 		newTask("qry2", false),
 	}
 
-	if err := db.BulkCreate("tasks", tasks); err != nil {
+	if err := db.BulkCreate(tasks); err != nil {
 		t.Fatal(err)
 	}
 
@@ -93,7 +93,7 @@ func TestDatabaseQuery(t *testing.T) {
 	}
 
 	lp := model.ListParams{Page: 1, Size: 50}
-	res, err := db.Query("tasks", filters, lp)
+	res, err := db.Query(filters, lp)
 	if err != nil {
 		t.Fatal(err)
 	} else if res.Total != 1 {

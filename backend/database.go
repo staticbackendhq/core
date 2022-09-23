@@ -11,24 +11,26 @@ import (
 type Database[T any] struct {
 	auth model.Auth
 	conf model.DatabaseConfig
+	col  string
 }
 
 // Collection returns a ready to use Database to perform operations on a specific type
-func Collection[T any](auth model.Auth, base model.DatabaseConfig) Database[T] {
+func Collection[T any](auth model.Auth, base model.DatabaseConfig, col string) Database[T] {
 	return Database[T]{
 		auth: auth,
 		conf: base,
+		col:  col,
 	}
 }
 
 // Create creates a record in the collection/repository
-func (d Database[T]) Create(col string, data T) (inserted T, err error) {
+func (d Database[T]) Create(data T) (inserted T, err error) {
 	doc, err := toDoc(data)
 	if err != nil {
 		return
 	}
 
-	doc, err = DB.CreateDocument(d.auth, d.conf.Name, col, doc)
+	doc, err = DB.CreateDocument(d.auth, d.conf.Name, d.col, doc)
 	if err != nil {
 		return
 	}
@@ -37,7 +39,7 @@ func (d Database[T]) Create(col string, data T) (inserted T, err error) {
 }
 
 // BulkCreate creates multiple records in the collection/repository
-func (d Database[T]) BulkCreate(col string, entities []T) error {
+func (d Database[T]) BulkCreate(entities []T) error {
 	docs := make([]interface{}, 0)
 
 	for _, doc := range entities {
@@ -48,7 +50,7 @@ func (d Database[T]) BulkCreate(col string, entities []T) error {
 
 		docs = append(docs, x)
 	}
-	return DB.BulkCreateDocument(d.auth, d.conf.Name, col, docs)
+	return DB.BulkCreateDocument(d.auth, d.conf.Name, d.col, docs)
 }
 
 // PageResult wraps a slice of type T with paging information
@@ -60,8 +62,8 @@ type PagedResult[T any] struct {
 }
 
 // List returns records from a collection/repository using paging/sorting params
-func (d Database[T]) List(col string, lp model.ListParams) (res PagedResult[T], err error) {
-	r, err := DB.ListDocuments(d.auth, d.conf.Name, col, lp)
+func (d Database[T]) List(lp model.ListParams) (res PagedResult[T], err error) {
+	r, err := DB.ListDocuments(d.auth, d.conf.Name, d.col, lp)
 	if err != nil {
 		return
 	}
@@ -83,13 +85,13 @@ func (d Database[T]) List(col string, lp model.ListParams) (res PagedResult[T], 
 }
 
 // Query returns records that match with the provided filters.
-func (d Database[T]) Query(col string, filters [][]any, lp model.ListParams) (res PagedResult[T], err error) {
+func (d Database[T]) Query(filters [][]any, lp model.ListParams) (res PagedResult[T], err error) {
 	clauses, err := DB.ParseQuery(filters)
 	if err != nil {
 		return
 	}
 
-	r, err := DB.QueryDocuments(d.auth, d.conf.Name, col, clauses, lp)
+	r, err := DB.QueryDocuments(d.auth, d.conf.Name, d.col, clauses, lp)
 	if err != nil {
 		return
 	}
@@ -111,8 +113,8 @@ func (d Database[T]) Query(col string, filters [][]any, lp model.ListParams) (re
 }
 
 // GetByID returns a specific record from a collection/repository
-func (d Database[T]) GetByID(col, id string) (entity T, err error) {
-	doc, err := DB.GetDocumentByID(d.auth, d.conf.Name, col, id)
+func (d Database[T]) GetByID(id string) (entity T, err error) {
+	doc, err := DB.GetDocumentByID(d.auth, d.conf.Name, d.col, id)
 	if err != nil {
 		return
 	}
@@ -122,13 +124,13 @@ func (d Database[T]) GetByID(col, id string) (entity T, err error) {
 }
 
 // Update updates some fields of a record
-func (d Database[T]) Update(col, id string, v any) (entity T, err error) {
+func (d Database[T]) Update(id string, v any) (entity T, err error) {
 	doc, err := toDoc(v)
 	if err != nil {
 		return
 	}
 
-	x, err := DB.UpdateDocument(d.auth, d.conf.Name, col, id, doc)
+	x, err := DB.UpdateDocument(d.auth, d.conf.Name, d.col, id, doc)
 	if err != nil {
 		return
 	}
@@ -138,7 +140,7 @@ func (d Database[T]) Update(col, id string, v any) (entity T, err error) {
 }
 
 // UpdateMany updates multiple records matching filters
-func (d Database[T]) UpdateMany(col string, filters [][]any, v any) (int64, error) {
+func (d Database[T]) UpdateMany(filters [][]any, v any) (int64, error) {
 	clauses, err := DB.ParseQuery(filters)
 	if err != nil {
 		return 0, err
@@ -148,17 +150,17 @@ func (d Database[T]) UpdateMany(col string, filters [][]any, v any) (int64, erro
 	if err != nil {
 		return 0, err
 	}
-	return DB.UpdateDocuments(d.auth, d.conf.Name, col, clauses, doc)
+	return DB.UpdateDocuments(d.auth, d.conf.Name, d.col, clauses, doc)
 }
 
 // IncrementValue increments or decrements a specifc field from a collection/repository
-func (d Database[T]) IncrementValue(col, id, field string, n int) error {
-	return DB.IncrementValue(d.auth, d.conf.Name, col, id, field, n)
+func (d Database[T]) IncrementValue(id, field string, n int) error {
+	return DB.IncrementValue(d.auth, d.conf.Name, d.col, id, field, n)
 }
 
 // Delete removes a record from a collection
-func (d Database[T]) Delete(col, id string) (int64, error) {
-	return DB.DeleteDocument(d.auth, d.conf.Name, col, id)
+func (d Database[T]) Delete(id string) (int64, error) {
+	return DB.DeleteDocument(d.auth, d.conf.Name, d.col, id)
 }
 
 func toDoc(v any) (doc map[string]any, err error) {

@@ -56,7 +56,6 @@ import (
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/logger"
-	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/storage"
 	mongodrv "go.mongodb.org/mongo-driver/mongo"
@@ -207,24 +206,4 @@ func openPGDatabase(dbHost string) (*sql.DB, error) {
 	}
 
 	return dbConn, nil
-}
-
-func findAuthz(token string) model.Auth {
-	auth, err := middleware.ValidateAuthKey(DB, Cache, context.Background(), token)
-	if err != nil {
-		return model.Auth{}
-	}
-	return auth
-}
-
-func findBasez(baseID string) model.DatabaseConfig {
-	var conf model.DatabaseConfig
-	if err := Cache.GetTyped(baseID, &conf); err != nil {
-		db, err := DB.FindDatabase(baseID)
-		if err != nil {
-			return conf
-		}
-		conf = db
-	}
-	return conf
 }

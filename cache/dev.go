@@ -11,12 +11,14 @@ import (
 	"github.com/staticbackendhq/core/model"
 )
 
+// CacheDev used in local dev mode and is memory-based
 type CacheDev struct {
 	data     map[string]string
 	log      *logger.Logger
 	observer observer.Observer
 }
 
+// NewDevCache returns a memory-based Volatilizer
 func NewDevCache(log *logger.Logger) *CacheDev {
 	return &CacheDev{
 		data:     make(map[string]string),
@@ -25,6 +27,7 @@ func NewDevCache(log *logger.Logger) *CacheDev {
 	}
 }
 
+// Get gets a value by its id
 func (d *CacheDev) Get(key string) (val string, err error) {
 	val, ok := d.data[key]
 	if !ok {
@@ -33,11 +36,13 @@ func (d *CacheDev) Get(key string) (val string, err error) {
 	return
 }
 
+// Set sets a value for a key
 func (d *CacheDev) Set(key string, value string) error {
 	d.data[key] = value
 	return nil
 }
 
+// GetTyped retrives the value for a key and unmarshal the JSON value into the
 func (d *CacheDev) GetTyped(key string, v any) error {
 	val, err := d.Get(key)
 	if err != nil {
@@ -47,6 +52,7 @@ func (d *CacheDev) GetTyped(key string, v any) error {
 	return json.Unmarshal([]byte(val), v)
 }
 
+// SetTyped converts the interface into JSON before storing its string value
 func (d *CacheDev) SetTyped(key string, v any) error {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -56,6 +62,7 @@ func (d *CacheDev) SetTyped(key string, v any) error {
 	return d.Set(key, string(b))
 }
 
+// Inc increments a value (non-atomic)
 func (d *CacheDev) Inc(key string, by int64) (n int64, err error) {
 	if err = d.GetTyped(key, &n); err != nil {
 		return
@@ -67,10 +74,12 @@ func (d *CacheDev) Inc(key string, by int64) (n int64, err error) {
 	return
 }
 
+// Dec decrements a value (non-atomic)
 func (d *CacheDev) Dec(key string, by int64) (int64, error) {
 	return d.Inc(key, -1*by)
 }
 
+// Subscribe subscribes to a topic to receive messages on system/user events
 func (d *CacheDev) Subscribe(send chan model.Command, token, channel string, close chan bool) {
 	pubsub := d.observer.Subscribe(channel)
 
@@ -104,6 +113,8 @@ func (d *CacheDev) Subscribe(send chan model.Command, token, channel string, clo
 	}
 }
 
+// Publish sends a message and all subscribers will receive it if they're
+// subscribed to that topic
 func (d *CacheDev) Publish(msg model.Command) error {
 	b, err := json.Marshal(msg)
 	if err != nil {
@@ -126,6 +137,8 @@ func (d *CacheDev) Publish(msg model.Command) error {
 	return d.observer.Publish(msg.Channel, string(b))
 }
 
+// PublishDocument publishes a database update message (created, updated, deleted)
+// All subscribers will get notified
 func (d *CacheDev) PublishDocument(channel, typ string, v any) {
 	subs := d.observer.PubNumSub(channel)
 
@@ -154,6 +167,7 @@ func (d *CacheDev) PublishDocument(channel, typ string, v any) {
 	}
 }
 
+// HasPermission determines if a session token has permission to a collection
 func (d *CacheDev) HasPermission(token, repo, payload string) bool {
 	var me model.Auth
 	if err := d.GetTyped(token, &me); err != nil {
@@ -187,6 +201,7 @@ func (d *CacheDev) HasPermission(token, repo, payload string) bool {
 	}
 }
 
+// QueueWork uses a slice to replicate a work queue (non-atomic)
 func (d *CacheDev) QueueWork(key, value string) error {
 	var queue []string
 	if err := d.GetTyped(key, &queue); err != nil {
@@ -198,6 +213,9 @@ func (d *CacheDev) QueueWork(key, value string) error {
 	return d.SetTyped(key, queue)
 }
 
+// DequeueWork uses a string slice to replicate a work queue (non-atomic)
+// You'd typically call this from a time.Ticker for instance or in some
+// kind of loop
 func (d *CacheDev) DequeueWork(key string) (val string, err error) {
 	var queue []string
 	if err = d.GetTyped(key, &queue); err != nil {

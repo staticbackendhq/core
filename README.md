@@ -39,15 +39,99 @@ vendor lock-in, and your data stays in your control.
 
 ## Import as Go package
 
-As of v1.4.1 StaticBackend offer an importable Go package removing the need 
+As of v1.4.1 StaticBackend offers an importable Go package removing the need 
 to self-host the backend API while keeping all functionalities from your Go 
 program.
 
 ### Example usage
 
 ```go
+package main
 
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/staticbackendhq/core/backend"
+	"github.com/staticbackendhq/core/config"
+	"github.com/staticbackendhq/core/model"
+)
+
+type Task struct {
+	ID        string `json:"id"`
+	AccountID string `json:"accountId"`
+	Title     string `json:"title"`
+	Done      bool   `json:"done"`
+}
+
+func main() {
+	cfg := config.AppConfig{
+		AppEnv: "dev",
+		Port:   "8099",
+		DatabaseURL:     "mem",
+		DataStore:       "mem",
+		LocalStorageURL: "http://localhost:8099",
+	}
+	// this initialized the backend from config
+	backend.Setup(cfg)
+
+	// You can access most of the raw building blocks directly from the 
+	// package exported variables (which are interface) initialized via the 
+	// config you pass
+
+	// Set a value in the cache
+	backend.Cache.Set("key", "value")
+
+	// For strongly-typed database functionalities
+
+	// in a real app you'd have a middleware handling identifying and fetching a 
+	// model.DatabaseConfig for the current request. For this README sample 
+	// we're faking a real call which would fail if ran.
+	base, _ := backend.DB.FindDatabase("current-web-request-db-id")
+
+	// let's create a user in this new Database
+	usr := backend.Membership(base)
+	sessionToken, user, err := usr.CreateAccountAndUser("user1@mail.com", "passwd123456", 100)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// we simulate having authenticating this user (from middleware normally)
+	// in a real app you'd store the sessionToken in your user's 
+	// app (cookie, local storage, etc)
+	// You'd need to have a middleware responsible of validating this token 
+	// and have a model.Auth for the rest of your pipeline.
+	auth := model.Auth{
+		AccountID: user.AccountID,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		Token:     user.Token,
+	}
+
+	// we create a strongly-typed instance of the "tasks" collection
+	// so we have full CRUD / Queries functions for your Task type
+	tasks := backend.Collection[Task](auth, base, "tasks")
+
+	newTask := Task{Title: "my task", Done: false}
+
+	newTask, err = tasks.Create(newTask)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 ```
+
+### Documentation for the `backend` Go package
+
+Refer to the 
+[Go documentation](https://pkg.go.dev/github.com/staticbackendhq/core/backend) 
+to know about all functions and examples.
+
+
+
+
 ## What can you build
 
 I built StaticBackend with the mindset of someone tired of writing the same code 

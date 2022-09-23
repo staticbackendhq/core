@@ -12,6 +12,9 @@ import (
 
 type BillingPortalGetter func(customerID string) (string, error)
 
+// WithDB validates the presence of the "SB-PUBLIC-KEY" and fetches the proper
+// DatabaseConfig for this Tenant so the rest of the pipeline can executes
+// actions on the right database.
 func WithDB(datastore database.Persister, volatile cache.Volatilizer, g BillingPortalGetter) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

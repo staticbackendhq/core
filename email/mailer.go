@@ -21,5 +21,6 @@ type SendMailData struct {
 
 // Mailer is used to have different implementation for sending email
 type Mailer interface {
+	// Send sends the email
 	Send(SendMailData) error
 }

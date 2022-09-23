@@ -16,6 +16,7 @@ type SMSData struct {
 	Body       string `json:"body"`
 }
 
+// Send sends a text-message using Twilio
 func Send(data SMSData) error {
 	apiURL := "https://api.twilio.com/2010-04-01/Accounts/" + data.AccountSID + "/Messages.json"
 
