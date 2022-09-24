@@ -4,11 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io/fs"
 	"path"
 	"strconv"
 	"strings"
-
-	"github.com/spf13/afero"
 )
 
 func migrate(db *sql.DB) error {
@@ -36,7 +35,7 @@ func ensureSchema(db *sql.DB) error {
 
 	if len(schema) == 0 {
 		// the bootstrap script has not been executed yet.
-		b, err := afero.ReadFile(appFS, path.Join(migrationPath, "0001_bootstrap_db.sql"))
+		b, err := fs.ReadFile(migrationFS, "sql/0001_bootstrap_db.sql")
 		if err != nil {
 			return err
 		}
@@ -59,7 +58,7 @@ func ensureMigrationTable(db *sql.DB) error {
 
 	if len(table) == 0 {
 		// the migrations table does not exists, we create it.
-		b, err := afero.ReadFile(appFS, path.Join(migrationPath, "0002_add_migrations_table.sql"))
+		b, err := fs.ReadFile(migrationFS, "sql/0002_add_migrations_table.sql")
 		if err != nil {
 			return err
 		}
@@ -106,7 +105,7 @@ func getDBLastMigration(db *sql.DB) (dbVersion int, err error) {
 }
 
 func getLastMigration() (last int, err error) {
-	files, err := afero.ReadDir(appFS, migrationPath)
+	files, err := fs.ReadDir(migrationFS, "sql")
 	if err != nil {
 		return
 	}
@@ -132,7 +131,7 @@ func up(db *sql.DB, prefix string, version int) error {
 	}
 
 	var migFile string
-	files, err := afero.ReadDir(appFS, migrationPath)
+	files, err := fs.ReadDir(migrationFS, "sql")
 	if err != nil {
 		return err
 	}
@@ -148,7 +147,7 @@ func up(db *sql.DB, prefix string, version int) error {
 		return errors.New("unable to find migration file starting with: " + prefix)
 	}
 
-	b, err := afero.ReadFile(appFS, path.Join(migrationPath, migFile))
+	b, err := fs.ReadFile(migrationFS, path.Join("sql", migFile))
 	if err != nil {
 		return err
 	}

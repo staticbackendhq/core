@@ -2,11 +2,11 @@ package postgresql
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/spf13/afero"
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/logger"
@@ -19,14 +19,10 @@ type PostgreSQL struct {
 	log             *logger.Logger
 }
 
-var (
-	migrationPath string
-	appFS         = afero.NewOsFs()
-)
+//go:embed sql
+var migrationFS embed.FS
 
-func New(db *sql.DB, pubdoc cache.PublishDocumentEvent, migPath string, log *logger.Logger) database.Persister {
-	migrationPath = migPath
-
+func New(db *sql.DB, pubdoc cache.PublishDocumentEvent, log *logger.Logger) database.Persister {
 	// run migrations
 	if err := migrate(db); err != nil {
 		fmt.Println("=== MIGRATION FAILED ===")

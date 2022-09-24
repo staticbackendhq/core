@@ -1,13 +1,13 @@
 // Package backend allows a Go program to import a standard Go package
 // instead of self-hosting the backend API.
 //
-// You need to call the Setup function to initialize all services passing
-// a config.AppConfig. You may create environment variables and load the config
-// directly from confing.LoadConfig.
+// You need to call the [Setup] function to initialize all services passing
+// a [github.com/staticbackendhq/core/config.AppConfig]. You may create
+// environment variables and load the config directly by confing.Load function.
 //
-// The building blocks of StaticBackend are exported as variable and can be
+// The building blocks of [StaticBackend] are exported as variables and can be
 // used directly accessing their interface's functions. For instance
-// to use the Volatilizer (cache and pub/sub) you'd use the Cache variable:
+// to use the Volatilizer (cache and pub/sub) you'd use the [Cache] variable:
 //
 //    if err := backend.Cache.Set("key", "value"); err != nil {
 //      return err
@@ -22,21 +22,43 @@
 // 5. Config: the config that was passed to Setup
 // 6. Log: logger
 //
-// You may see those services as raw building blocks to give you the most
+// You may see those services as raw building blocks that give you the most
 // flexibility. For easy of use, this package wraps important / commonly used
-// functionalities into more developer friendly implementation.
+// functionalities into more developer friendly implementations.
 //
-// For instance, the Membership function wants a model.DatabaseConfig and allow
+// For instance, the [Membership] function wants a model.DatabaseConfig and allows
 // the caller to create account and user as well as reseting password etc.
 //
-// To contrast, all of those can be done from your program by using the DB
-// (Persister) data store, but for convenience this package offers easier /
-// ready-made functions for common use-case.
+//    usr := backend.Membership(base)
+//    sessionToken, user, err := usr.CreateAccountAndUser("me@test.com", "passwd", 100)
 //
-// StaticBackend makes your Go web application multi-tenant by default.
+// To contrast, all of those can be done from your program by using the [DB]
+// ([github.com/staticbackendhq/core/database.Persister]) data store, but for
+// convenience this package offers easier / ready-made functions for common
+// use-cases. Example:
+//
+//    tasks := backend.Collection[Task](auth, base, "tasks")
+//    newTask, err := tasks.Create(Task{Name: "testing"})
+//
+// The [Collection] returns a strongly-typed structure where functions
+// input/output are properly typed, it's a generic type.
+//
+// [StaticBackend] makes your Go web application multi-tenant by default.
 // For this reason you must supply a model.DatabaseConfig and sometimes a
-// model.auth (user performing the actions) to the different parts of the system
+// model.Auth (user performing the actions) to the different parts of the system
 // so the data and security are applied to the right tenant, account and user.
+//
+// You'd design your application around one or more tenants. Each tenant has
+// their own database. It's fine to have one tenant/database. In that case
+// you might create the tenant and its database and use the database ID in
+// an environment variable. From a middleware you might load the database from
+// this ID.
+//
+// If you ever decide to switch to a multi-tenant design, you'd already be all
+// set with this middleware, instead of getting the ID from the env variable,
+// you'd define how the user should provide their database ID.
+//
+// [StaticBackend]: https://staticbackend.com/
 package backend
 
 import (
@@ -65,6 +87,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// All StaticBackend services (need to call Setup before using them).
 var (
 	// Config reflect the configuration received on Setup
 	Config config.AppConfig
@@ -120,7 +143,7 @@ func Setup(cfg config.AppConfig) {
 			Log.Fatal().Err(err).Msg("failed to create connection with postgres")
 		}
 
-		DB = postgresql.New(cl, Cache.PublishDocument, "./sql/", Log)
+		DB = postgresql.New(cl, Cache.PublishDocument, Log)
 	}
 
 	mp := cfg.MailProvider

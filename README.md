@@ -131,7 +131,6 @@ to know about all functions and examples.
 
 
 
-
 ## What can you build
 
 I built StaticBackend with the mindset of someone tired of writing the same code 
