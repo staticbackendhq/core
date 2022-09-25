@@ -217,16 +217,12 @@ func (database *Database) getByIds(w http.ResponseWriter, r *http.Request) {
 	_, r.URL.Path = ShiftPath(r.URL.Path)
 	col, r.URL.Path = ShiftPath(r.URL.Path)
 
-	var body map[string][]string
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	var ids []string
+	if err := parseBody(r.Body, &ids); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ids, ok := body["ids"]
-	if !ok {
-		http.Error(w, "ids should be provided", http.StatusBadRequest)
-		return
-	}
+
 	if len(ids) < 1 {
 		http.Error(w, "ids list can not be empty", http.StatusBadRequest)
 		return

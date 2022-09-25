@@ -260,9 +260,7 @@ func TestDBBulkUpdate(t *testing.T) {
 }
 
 func TestDBGetByIds(t *testing.T) {
-	var data = new(struct {
-		Ids []string `json:"ids"`
-	})
+	var data []string
 
 	tasks := []Task{
 		{
@@ -289,7 +287,7 @@ func TestDBGetByIds(t *testing.T) {
 		if err := parseBody(resp.Body, &saved); err != nil {
 			t.Fatal(err)
 		}
-		data.Ids = append(data.Ids, saved.ID)
+		data = append(data, saved.ID)
 		createdTasks = append(createdTasks, saved)
 	}
 
