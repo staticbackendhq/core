@@ -259,6 +259,54 @@ func TestDBBulkUpdate(t *testing.T) {
 	}
 }
 
+func TestDBGetByIds(t *testing.T) {
+	var data []string
+
+	tasks := []Task{
+		{
+			Title: "should be returned 1",
+			Done:  false,
+		},
+		{
+			Title: "should be returned 2",
+			Done:  false,
+		},
+	}
+
+	var createdTasks []Task
+
+	for _, v := range tasks {
+		resp := dbReq(t, db.add, "POST", "/db/tasks", v)
+		defer resp.Body.Close()
+
+		if resp.StatusCode > 299 {
+			t.Fatal(GetResponseBody(t, resp))
+		}
+
+		var saved Task
+		if err := parseBody(resp.Body, &saved); err != nil {
+			t.Fatal(err)
+		}
+		data = append(data, saved.ID)
+		createdTasks = append(createdTasks, saved)
+	}
+
+	resp := dbReq(t, db.getByIds, "POST", "/db/tasks?byids=1", data)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var result []Task
+	if err := parseBody(resp.Body, &result); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(createdTasks, result) {
+		t.Errorf("Received incorrect data\nexpected: %v\ngot: %v", createdTasks, result)
+	}
+}
+
 func TestDBIncrease(t *testing.T) {
 	task :=
 		Task{

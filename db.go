@@ -23,6 +23,8 @@ func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		if len(r.URL.Query().Get("bulk")) > 0 {
 			database.bulkAdd(w, r)
+		} else if r.URL.Query().Has("ids") {
+			database.getByIds(w, r)
 		} else {
 			database.add(w, r)
 		}
@@ -195,6 +197,38 @@ func (database *Database) query(w http.ResponseWriter, r *http.Request) {
 	col, r.URL.Path = ShiftPath(r.URL.Path)
 
 	result, err := backend.DB.QueryDocuments(auth, conf.Name, col, filter, params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, result)
+}
+
+func (database *Database) getByIds(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	col := ""
+
+	_, r.URL.Path = ShiftPath(r.URL.Path)
+	col, r.URL.Path = ShiftPath(r.URL.Path)
+
+	var ids []string
+	if err := parseBody(r.Body, &ids); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(ids) < 1 {
+		http.Error(w, "ids list can not be empty", http.StatusBadRequest)
+		return
+	}
+
+	result, err := backend.DB.GetDocumentsByIDs(auth, conf.Name, col, ids)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

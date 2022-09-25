@@ -233,6 +233,35 @@ func (pg *PostgreSQL) GetDocumentByID(auth model.Auth, dbName, col, id string) (
 	return doc.Data, nil
 }
 
+func (pg *PostgreSQL) GetDocumentsByIDs(auth model.Auth, dbName, col string, ids []string) (docs []map[string]interface{}, err error) {
+	where := secureRead(auth, col)
+
+	qry := fmt.Sprintf(`
+		SELECT * 
+		FROM %s.%s 
+		%s AND id in ('%s'::uuid)
+	`, dbName, model.CleanCollectionName(col), where, strings.Join(ids, "'::uuid,'"))
+
+	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
+	if err != nil {
+		return []map[string]interface{}{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var doc Document
+		if err = scanDocument(rows, &doc); err != nil {
+			return []map[string]interface{}{}, err
+		}
+
+		doc.Data[FieldID] = doc.ID
+		doc.Data[FieldAccountID] = doc.AccountID
+		docs = append(docs, doc.Data)
+	}
+
+	return docs, nil
+}
+
 func (pg *PostgreSQL) UpdateDocument(auth model.Auth, dbName, col, id string, doc map[string]interface{}) (map[string]interface{}, error) {
 	where := secureWrite(auth, col)
 
@@ -265,7 +294,30 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 	where := secureWrite(auth, col)
 	where = applyFilter(where, filters)
 
+	var ids []string
 	qry := fmt.Sprintf(`
+		SELECT id
+		FROM %s.%s 
+		%s
+	`, dbName, model.CleanCollectionName(col), where)
+
+	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			pg.log.Error().Err(err).Msg("error occurred during scanning id for UpdateDocument event")
+			continue
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	qry = fmt.Sprintf(`
 		UPDATE %s.%s SET
 			data = data || $3
 		%s
@@ -283,6 +335,16 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 	if err != nil {
 		return 0, err
 	}
+
+	go func() {
+		docs, err := pg.GetDocumentsByIDs(auth, dbName, col, ids)
+		if err != nil {
+			pg.log.Error().Err(err).Msgf("the documents with ids=%#s are not received for publishDocument event", ids)
+		}
+		for _, doc := range docs {
+			pg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
+		}
+	}()
 	return
 }
 

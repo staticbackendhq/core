@@ -117,6 +117,20 @@ func (m *Memory) GetDocumentByID(auth model.Auth, dbName, col, id string) (doc m
 	return
 }
 
+func (m *Memory) GetDocumentsByIDs(auth model.Auth, dbName, col string, ids []string) (docs []map[string]interface{}, err error) {
+
+	for _, id := range ids {
+		var doc map[string]interface{}
+		if err := getByID(m, dbName, col, id, &doc); err != nil {
+			return []map[string]interface{}{}, err
+		}
+		docs = append(docs, doc)
+	}
+
+	docs = secureRead(auth, col, docs)
+	return docs, nil
+}
+
 func (m *Memory) UpdateDocument(auth model.Auth, dbName, col, id string, doc map[string]any) (exists map[string]any, err error) {
 	exists, err = m.GetDocumentByID(auth, dbName, col, id)
 	if err != nil {
