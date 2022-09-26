@@ -1,13 +1,24 @@
 // Package backend allows a Go program to import a standard Go package
-// instead of self-hosting the backend API.
+// instead of self-hosting the backend API in a separate web server.
 //
 // You need to call the [Setup] function to initialize all services passing
 // a [github.com/staticbackendhq/core/config.AppConfig]. You may create
 // environment variables and load the config directly by confing.Load function.
 //
+//    // this sample uses the in-memory database provider built-in
+//    // you can use PostgreSQL or MongoDB
+//    cfg := config.AppConfig{
+//      AppEnv:      "dev",
+//      DataStore:   "mem",
+//      DatabaseURL: "mem",
+//      LocalStorageURL: "http://localhost:8099",
+//    }
+//    backend.Setup(cfg)
+//
 // The building blocks of [StaticBackend] are exported as variables and can be
 // used directly accessing their interface's functions. For instance
-// to use the Volatilizer (cache and pub/sub) you'd use the [Cache] variable:
+// to use the [github.com/staticbackendhq/core/cache.Volatilizer] (cache and
+// pub/sub) you'd use the [Cache] variable:
 //
 //    if err := backend.Cache.Set("key", "value"); err != nil {
 //      return err
@@ -15,19 +26,22 @@
 //    val, err := backend.Cache.Get("key")
 //
 // The available services are as follow:
-// 1. Cache: caching and pub/sub
-// 2. DB: a raw Persister instance (see below for when to use it)
-// 3. Filestore: raw blob storage
-// 4. Emailer: to send emails
-// 5. Config: the config that was passed to Setup
-// 6. Log: logger
+//   - [Cache]: caching and pub/sub
+//   - [DB]: a raw [github.com/staticbackendhq/core/database.Persister] instance (see below for when to use it)
+//   -  [Filestore]: raw blob storage
+//   - [Emailer]: to send emails
+//   - [Config]: the config that was passed to [Setup]
+//   - [Log]: logger
 //
 // You may see those services as raw building blocks that give you the most
-// flexibility. For easy of use, this package wraps important / commonly used
+// flexibility to build on top.
+//
+// For easy of use, this package wraps important / commonly used
 // functionalities into more developer friendly implementations.
 //
-// For instance, the [Membership] function wants a model.DatabaseConfig and allows
-// the caller to create account and user as well as reseting password etc.
+// For instance, the [Membership] function wants a
+// [github.com/staticbackendhq/core/model.DatabaseConfig] and allows the caller
+// to create account and user as well as reseting password etc.
 //
 //    usr := backend.Membership(base)
 //    sessionToken, user, err := usr.CreateAccountAndUser("me@test.com", "passwd", 100)
@@ -35,7 +49,7 @@
 // To contrast, all of those can be done from your program by using the [DB]
 // ([github.com/staticbackendhq/core/database.Persister]) data store, but for
 // convenience this package offers easier / ready-made functions for common
-// use-cases. Example:
+// use-cases. Example for database CRUD and querying:
 //
 //    tasks := backend.Collection[Task](auth, base, "tasks")
 //    newTask, err := tasks.Create(Task{Name: "testing"})
@@ -44,15 +58,50 @@
 // input/output are properly typed, it's a generic type.
 //
 // [StaticBackend] makes your Go web application multi-tenant by default.
-// For this reason you must supply a model.DatabaseConfig and sometimes a
-// model.Auth (user performing the actions) to the different parts of the system
-// so the data and security are applied to the right tenant, account and user.
+// For this reason you must supply a
+// [github.com/staticbackendhq/core/model.DatabaseConfig] and (database) and
+// sometimes a [github.com/staticbackendhq/core/model.Auth] (user performing
+// the actions) to the different parts of the system so the data and security
+// are applied to the right tenant, account and user.
 //
 // You'd design your application around one or more tenants. Each tenant has
 // their own database. It's fine to have one tenant/database. In that case
 // you might create the tenant and its database and use the database ID in
 // an environment variable. From a middleware you might load the database from
 // this ID.
+//
+//    // if you'd want to use SB's middleware (it's not required)
+//    // you use whatever you like for your web handlers and middleware.
+//    // SB is a library not a framework.
+//    func DetectTenant() middleware.Middleware {
+//      return func(next http.Handler) http.Handler {
+//        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//          // check for presence of a public DB ID
+//          // this can come from cookie, URL query param
+//          key := r.Header.Get("DB-ID")
+//          // for multi-tenant, DB ID can be from an env var
+//          if len(key) == 0 {
+//            key = os.Getenv("SINGLE_TENANT_DBID")
+//          }
+//          var curDB model.DatabaseConfig
+//          if err := backend.Cache.GetTyped(key, &curDB); err != nil {
+//            http.Error(w, err.Error(), http.StatusBadRequest)
+//            return
+//          }
+//          curDB, err := backend.DB.FindDatabase(key)
+//          // err != nil return HTTP 400 Bad request
+//          err = backend.Cache.SetTyped(key, curDB)
+//          // add the tenant's DB in context for the rest of
+//          // your pipeline to have the proper DB.
+//          ctx := r.Context()
+//          ctx = context.WithValue(ctx, ContextBase, curDB)
+//          next.ServeHTTP(w, r.WithContext(ctx)))
+//        })
+//      }
+//    }
+//
+// You'd create a similar middleware for adding the current user into the
+// request context.
 //
 // If you ever decide to switch to a multi-tenant design, you'd already be all
 // set with this middleware, instead of getting the ID from the env variable,

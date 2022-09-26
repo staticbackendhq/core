@@ -14,7 +14,12 @@ type Database[T any] struct {
 	col  string
 }
 
-// Collection returns a ready to use Database to perform operations on a specific type
+// Collection returns a ready to use Database to perform DB operations on a
+// specific type. You must pass auth which is the user performing the action and
+// the tenant's database in which this action will be executed. The col is the
+// name of the collection.
+//
+// Collection name only accept alpha-numberic values and cannot start with a digit.
 func Collection[T any](auth model.Auth, base model.DatabaseConfig, col string) Database[T] {
 	return Database[T]{
 		auth: auth,
@@ -184,7 +189,17 @@ func fromDoc(doc map[string]any, v interface{}) error {
 	return json.Unmarshal(b, v)
 }
 
-// BuildQueryFilters helps building the proper slice of filters
+// BuildQueryFilters helps building the proper slice of filters.
+//
+// The arguments must be divided by 3 and has the following order:
+//
+// field name | operator | value
+//
+//    backend.BuildQueryFilters("done", "=", false)
+//
+// This would filter for the false value in the "done" field.
+//
+// Supported operators: =, !=, >, <, >=, <=, in, !in
 func BuildQueryFilters(p ...any) (q [][]any, err error) {
 	if len(p)%3 != 0 {
 		err = errors.New("parameters should all have 3 values for each criteria")

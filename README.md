@@ -23,6 +23,12 @@ applications.
 You can think of it as a lightweight Firebase replacement you may self-host. Less 
 vendor lock-in, and your data stays in your control.
 
+You may use its building blocks from one or a combination of:
+
+* Client-side JavaScript
+* Server-side client libraries (Node, Go, Python)
+* Import a Go package directly in your Go programs
+
 ### Table of content
 
 * [Import as Go package](#import-as-go-package)
@@ -40,96 +46,44 @@ vendor lock-in, and your data stays in your control.
 ## Import as Go package
 
 As of v1.4.1 StaticBackend offers an importable Go package removing the need 
-to self-host the backend API while keeping all functionalities from your Go 
-program.
+to self-host the backend API separately while keeping all functionalities from 
+your Go program.
+
+### Installing
+
+```sh
+$ go get github.com/staticbackendhq/core/backend
+```
 
 ### Example usage
 
 ```go
-package main
+// using the cache & pub/sub
+backend.Cache.Set("key", "value")
 
-import (
-	"fmt"
-	"log"
-	"time"
+msg := model.Command{Type: "chan_out", Channel: "#lobby", Data: "hello world"}
+backend.Cache.Publish(msg)
 
-	"github.com/staticbackendhq/core/backend"
-	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/model"
-)
-
+// use the generic Collection for strongly-typed CRUD and querying
 type Task struct {
-	ID        string `json:"id"`
-	AccountID string `json:"accountId"`
-	Title     string `json:"title"`
-	Done      bool   `json:"done"`
+	ID string `json:"id"`
+	Title string `json:"title"`
 }
-
-func main() {
-	cfg := config.AppConfig{
-		AppEnv: "dev",
-		Port:   "8099",
-		DatabaseURL:     "mem",
-		DataStore:       "mem",
-		LocalStorageURL: "http://localhost:8099",
-	}
-	// this initialized the backend from config
-	backend.Setup(cfg)
-
-	// You can access most of the raw building blocks directly from the 
-	// package exported variables (which are interface) initialized via the 
-	// config you pass
-
-	// Set a value in the cache
-	backend.Cache.Set("key", "value")
-
-	// For strongly-typed database functionalities
-
-	// in a real app you'd have a middleware handling identifying and fetching a 
-	// model.DatabaseConfig for the current request. For this README sample 
-	// we're faking a real call which would fail if ran.
-	base, _ := backend.DB.FindDatabase("current-web-request-db-id")
-
-	// let's create a user in this new Database
-	usr := backend.Membership(base)
-	sessionToken, user, err := usr.CreateAccountAndUser("user1@mail.com", "passwd123456", 100)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// we simulate having authenticating this user (from middleware normally)
-	// in a real app you'd store the sessionToken in your user's 
-	// app (cookie, local storage, etc)
-	// You'd need to have a middleware responsible of validating this token 
-	// and have a model.Auth for the rest of your pipeline.
-	auth := model.Auth{
-		AccountID: user.AccountID,
-		UserID:    user.ID,
-		Email:     user.Email,
-		Role:      user.Role,
-		Token:     user.Token,
-	}
-
-	// we create a strongly-typed instance of the "tasks" collection
-	// so we have full CRUD / Queries functions for your Task type
-	tasks := backend.Collection[Task](auth, base, "tasks")
-
-	newTask := Task{Title: "my task", Done: false}
-
-	newTask, err = tasks.Create(newTask)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
+// auth is the currently authenticated user performing the action.
+// base is the current tenant's database to execute action
+// "tasks" is the collection name
+tasks := backend.Collection(auth, base, "tasks")
+newTask, err := tasks.Create(Task{Title: "testing"})
+// newTask.ID is filled with the unique ID of the created task in DB
 ```
+
+View a [full example in the doc](https://pkg.go.dev/github.com/staticbackendhq/core/backend#example-package).
 
 ### Documentation for the `backend` Go package
 
 Refer to the 
 [Go documentation](https://pkg.go.dev/github.com/staticbackendhq/core/backend) 
 to know about all functions and examples.
-
-
 
 ## What can you build
 
