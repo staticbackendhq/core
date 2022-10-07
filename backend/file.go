@@ -32,7 +32,7 @@ type SavedFile struct {
 // Save saves a file content to the file storage (Storer interface) and to the
 // database
 func (f FileStore) Save(filename, name string, file io.ReadSeeker, size int64) (sf SavedFile, err error) {
-	ext := filepath.Ext(name)
+	ext := filepath.Ext(filename)
 
 	if len(name) == 0 {
 		// if no forced name is used, let's use the original file name
