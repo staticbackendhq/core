@@ -217,7 +217,6 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		http.Handle("/localfs/", http.StripPrefix("/localfs/", fs))
 	}
 
-	// count
 	// ui routes
 	webUI := ui{log: log}
 	http.HandleFunc("/ui/login", webUI.auth)
