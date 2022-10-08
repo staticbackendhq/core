@@ -142,4 +142,6 @@ type Persister interface {
 	DeleteFile(dbName, fileID string) error
 	// ListAllFiles lists all file
 	ListAllFiles(dbName, accountID string) ([]model.File, error)
+	// Count returns the numbers of entries in a collection based on optional filters
+	Count(auth model.Auth, dbName, col string, filters map[string]interface{}) (int64, error)
 }
