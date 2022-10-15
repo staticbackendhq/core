@@ -197,7 +197,7 @@ func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	id := getURLPart(r.URL.Path, 3)
+	id := getURLPart(r.URL.Path, 2)
 
 	tok, err := backend.DB.GetFirstUserFromAccountID(conf.Name, id)
 	if err != nil {
