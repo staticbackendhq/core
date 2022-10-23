@@ -15,10 +15,7 @@ func submitForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	form := ""
-
-	_, r.URL.Path = ShiftPath(r.URL.Path)
-	form, r.URL.Path = ShiftPath(r.URL.Path)
+	form := getURLPart(r.URL.Path, 2)
 
 	doc := make(map[string]interface{})
 
