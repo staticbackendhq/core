@@ -136,6 +136,40 @@ func (database *Database) list(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, result)
 }
 
+func (database *Database) count(w http.ResponseWriter, r *http.Request) {
+	var clauses [][]interface{}
+
+	if err := json.NewDecoder(r.Body).Decode(&clauses); err != nil {
+		// Here we don't return an error because filters are optional
+		database.log.Error().Err(err).Msg("error parsing body")
+	}
+
+	filter, err := backend.DB.ParseQuery(clauses)
+	if err != nil {
+		// Here we don't return an error because filters are optional
+		database.log.Error().Err(err).Msg("error parsing query")
+	}
+
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		database.log.Error().Err(err).Msg("error extracting conf and auth")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	col := getURLPart(r.URL.Path, 3)
+
+	result, err := backend.DB.Count(auth, conf.Name, col, filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	respond(w, http.StatusOK, map[string]int64{"count": result})
+}
+
 func (database *Database) get(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {

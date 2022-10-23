@@ -142,6 +142,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 
 	// database routes
 	http.Handle("/db/", middleware.Chain(http.HandlerFunc(database.dbreq), stdAuth...))
+	http.Handle("/db/count/", middleware.Chain(http.HandlerFunc(database.count), stdAuth...))
 	http.Handle("/query/", middleware.Chain(http.HandlerFunc(database.query), stdAuth...))
 	http.Handle("/inc/", middleware.Chain(http.HandlerFunc(database.increase), stdAuth...))
 	http.Handle("/sudoquery/", middleware.Chain(http.HandlerFunc(database.query), stdRoot...))
