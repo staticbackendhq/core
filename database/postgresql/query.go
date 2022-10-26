@@ -21,6 +21,8 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 			return filter, fmt.Errorf("The %d query clause's field parameter must be a string: %v", i+1, clause[0])
 		}
 
+		origField := field
+
 		field = fmt.Sprintf(`data->>'%s'`, field)
 
 		op, ok := clause[1].(string)
@@ -36,8 +38,11 @@ func (mg *PostgreSQL) ParseQuery(clauses [][]interface{}) (map[string]interface{
 		case ">", "<", ">=", "<=":
 			filter[field+" "+op+" "] = clause[2]
 		case "in", "!in":
-			//TODO: Implement the value in array or value not in array
-			return filter, fmt.Errorf("array lookup is not implemented yet for PostgreSQL at %d op: %s.", i+1, op)
+			field = fmt.Sprintf("data->'%s' ? ", origField)
+			if strings.HasPrefix(op, "!") {
+				field = " NOT " + field
+			}
+			filter[field] = clause[2]
 		default:
 			return filter, fmt.Errorf("The %d query clause's operator: %s is not supported at the moment.", i+1, op)
 		}

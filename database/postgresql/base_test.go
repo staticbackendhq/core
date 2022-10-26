@@ -17,6 +17,7 @@ type Task struct {
 	Done      bool      `json:"done"`
 	Likes     int64     `json:"likes"`
 	Todos     []Todo    `json:"todos"`
+	Tags      []string  `json:"tags"`
 	Created   time.Time `json:"created"`
 }
 
@@ -57,6 +58,7 @@ func newTask(title string, done bool) map[string]interface{} {
 		Title:   title,
 		Done:    done,
 		Todos:   []Todo{Todo{Title: "sub", Done: done}, Todo{Title: "sub2", Done: done}},
+		Tags:    []string{title, "unittest", "tag"},
 		Created: time.Now(),
 	})
 }
@@ -368,5 +370,68 @@ func TestQueryDocumentsWithNonExistingDB(t *testing.T) {
 		t.Fatal(err)
 	} else if !reflect.DeepEqual(result, expected) {
 		t.Fatalf("expected empty result but got %v", result)
+	}
+}
+
+func TestQueryWithInOperator(t *testing.T) {
+	redTask := newTask("red", false)
+	redTask, err := datastore.CreateDocument(adminAuth, confDBName, colName, redTask)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	blueTask := newTask("blue", false)
+	blueTask, err = datastore.CreateDocument(adminAuth, confDBName, colName, blueTask)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// test the "in" operator
+	var clauses [][]interface{}
+	clauses = append(clauses, []interface{}{"tags", "in", "red"})
+	clauses = append(clauses, []interface{}{"done", "=", false})
+
+	lp := model.ListParams{Page: 1, Size: 5}
+
+	filters, err := datastore.ParseQuery(clauses)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := datastore.QueryDocuments(adminAuth, confDBName, colName, filters, lp)
+	if err != nil {
+		t.Fatal(err)
+	} else if result.Total != 1 {
+		t.Fatalf("expected total to be 1 got %d", result.Total)
+	} else if id := result.Results[0]["ID"]; id != redTask["ID"] {
+		t.Fatalf("expected result item id to be %s got %s", redTask["ID"], id)
+	}
+
+	clauses = nil
+	clauses = append(clauses, []interface{}{"tags", "!in", "red"})
+	clauses = append(clauses, []interface{}{"done", "=", false})
+
+	filters, err = datastore.ParseQuery(clauses)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err = datastore.QueryDocuments(adminAuth, confDBName, colName, filters, lp)
+	if err != nil {
+		t.Fatal(err)
+	} else if result.Total <= 1 {
+		t.Fatalf("expected total to be > 1 got %d", result.Total)
+	}
+
+	found := false
+	for _, task := range result.Results {
+		if task["ID"] == blueTask["ID"] {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("expected to find blueTask ID in result set")
 	}
 }

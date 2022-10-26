@@ -48,7 +48,10 @@ func TestCountWithNoFilter(t *testing.T) {
 	}
 
 	// Here we expect this count because after running all tests total count of documents will be 16 + 3
-	if count != 19 {
+	//TODO: Use a dedicated collection for testing the count, only this function
+	// will append row to the collection so this hardcoded value isn't dependent of
+	// previous test
+	if count != 21 {
 		t.Fatalf("expected 19 got %v", count)
 	}
 }
