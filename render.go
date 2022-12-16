@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,7 +18,7 @@ var (
 
 func loadTemplates() error {
 	var partials []string
-	entries, err := os.ReadDir("./templates/partials")
+	entries, err := content.ReadDir("templates/partials")
 	if err != nil {
 		return err
 	}
@@ -27,25 +26,25 @@ func loadTemplates() error {
 	funcs := customFuncs()
 
 	for _, e := range entries {
-		partials = append(partials, fmt.Sprintf("./templates/partials/%s", e.Name()))
+		partials = append(partials, fmt.Sprintf("templates/partials/%s", e.Name()))
 	}
 
 	views = make(map[string]*template.Template)
 
-	tmpls, err := os.ReadDir("./templates")
+	tmpls, err := content.ReadDir("templates")
 	if err != nil {
 		return err
 	}
 
 	for _, tmpl := range tmpls {
-		name := fmt.Sprintf("./templates/%s", tmpl.Name())
+		name := fmt.Sprintf("templates/%s", tmpl.Name())
 		if !strings.HasSuffix(name, ".html") {
 			continue
 		}
 
 		cur := append([]string{name}, partials...)
 
-		t, err := template.New(tmpl.Name()).Funcs(funcs).ParseFiles(cur...)
+		t, err := template.New(tmpl.Name()).Funcs(funcs).ParseFS(content, cur...)
 		if err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@ package staticbackend
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +30,9 @@ const (
 	AppEnvDev  = "dev"
 	AppEnvProd = "prod"
 )
+
+//go:embed static templates
+var content embed.FS
 
 // Start starts the web server and all dependencies services
 func Start(c config.AppConfig, log *logger.Logger) {
@@ -120,6 +124,9 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
 		middleware.RequireRoot(backend.DB, backend.Cache),
 	}
+
+	// static assets
+	http.Handle("/static/", http.StripPrefix("/", http.FileServer(http.FS(content))))
 
 	m := &membership{log: log}
 
