@@ -3,7 +3,7 @@ module github.com/staticbackendhq/core
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go v1.27.2
+	github.com/aws/aws-sdk-go v1.33.0
 	github.com/chromedp/cdproto v0.0.0-20211126220118-81fa0469ad77
 	github.com/chromedp/chromedp v0.7.6
 	github.com/dop251/goja v0.0.0-20210804101310-32956a348b49
@@ -14,12 +14,13 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/lib/pq v1.10.4
 	github.com/markbates/goth v1.73.0
-	github.com/spf13/afero v1.8.1
+	github.com/rs/zerolog v1.27.0
 	github.com/stripe/stripe-go/v72 v72.94.0
 	go.mongodb.org/mongo-driver v1.7.0
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 	golang.org/x/image v0.0.0-20190802002840-cff245a6509b
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
 require (
@@ -35,7 +36,7 @@ require (
 	github.com/gobwas/ws v1.1.0 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
+	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/magefile/mage v1.9.0 // indirect
@@ -45,7 +46,6 @@ require (
 	github.com/mrjones/oauth v0.0.0-20180629183705-f4e24b6d100c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/rs/zerolog v1.27.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.0.2 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect
@@ -58,5 +58,4 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
