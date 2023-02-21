@@ -11,8 +11,9 @@ var (
 	letterRunes = []rune("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2345679")
 )
 
-// RandStringRunes returns a random string with n characters
+// RandStringRunes returns a random string with n characters where n>=1
 func RandStringRunes(n int) string {
+	n = maxInt(1, n)
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
@@ -32,4 +33,12 @@ func CleanUpFileName(s string) string {
 
 	return exp.ReplaceAllString(s, "")
 
+}
+
+// maxInt returns max value between two integers
+func maxInt(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }
