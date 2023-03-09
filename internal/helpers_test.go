@@ -11,6 +11,15 @@ func TestRandStringRunes(t *testing.T) {
 	}
 }
 
+func TestRandStringRuneMinValue(t *testing.T) {
+	lengths := []int{0, -1, -2}
+	for _, length := range lengths {
+		if p := RandStringRunes(length); len(p) != 1 {
+			t.Errorf("%s: expected length %d got %d", p, 1, len(p))
+		}
+	}
+}
+
 func TestCleanUpFileName(t *testing.T) {
 	tables := make(map[string]string)
 	tables["dummy_1_.sample"] = "dummy__"
