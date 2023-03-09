@@ -18,8 +18,8 @@ require (
 	github.com/stripe/stripe-go/v72 v72.94.0
 	go.mongodb.org/mongo-driver v1.7.0
 	golang.org/x/crypto v0.1.0
-	golang.org/x/image v0.0.0-20190802002840-cff245a6509b
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/image v0.5.0
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
@@ -54,7 +54,7 @@ require (
 	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220628200809-02e64fa58f26 // indirect
 	golang.org/x/sys v0.1.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
