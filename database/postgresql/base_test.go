@@ -333,6 +333,40 @@ func TestDeleteDocument(t *testing.T) {
 	}
 }
 
+func TesDeleteDocuments(t *testing.T) {
+	task1 := newTask("abc123456-bulkdel", true)
+	task2 := newTask("def123456-bulkdel", true)
+
+	var many []interface{}
+	many = append(many, task1)
+	many = append(many, task2)
+
+	if err := datastore.BulkCreateDocument(adminAuth, confDBName, colName, many); err != nil {
+		t.Fatal(err)
+	}
+	var clauses [][]interface{}
+	clauses = append(clauses, []interface{}{"done", "=", true})
+
+	filters, err := datastore.ParseQuery(clauses)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := datastore.DeleteDocuments(adminAuth, confDBName, colName, filters)
+	if err != nil {
+		t.Errorf("The documents are not updated because of an error\nExpected err = nil\nActual err: %s", err.Error())
+	} else if n < 2 {
+		t.Errorf("expected deleted documents count to be > 2, got %d", n)
+	}
+
+	docs, err := datastore.QueryDocuments(adminAuth, confDBName, colName, filters, model.ListParams{Page: 1, Size: 5})
+	if err != nil {
+		t.Fatal(err)
+	} else if len(docs.Results) > 0 {
+		t.Errorf("should not have any docs with filter done=true got %d", len(docs.Results))
+	}
+}
+
 func TestListCollections(t *testing.T) {
 	results, err := datastore.ListCollections(confDBName)
 	if err != nil {

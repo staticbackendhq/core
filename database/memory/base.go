@@ -220,6 +220,37 @@ func (m *Memory) DeleteDocument(auth model.Auth, dbName, col, id string) (n int6
 	return
 }
 
+func (m *Memory) DeleteDocuments(auth model.Auth, dbName, col string, filters map[string]any) (n int64, err error) {
+	list, err := all[map[string]any](m, dbName, col)
+
+	if err != nil {
+		return
+	}
+	list = secureRead(auth, col, list)
+
+	filtered := filterByClauses(list, filters)
+
+	key := fmt.Sprintf("%s_%s", dbName, col)
+	docs, ok := m.DB[key]
+	if !ok {
+		return 0, err
+	}
+
+	for _, doc := range filtered {
+
+		if !canWrite(auth, col, doc) {
+			continue
+		}
+
+		docID := fmt.Sprintf("%v", doc["id"])
+		delete(docs, docID)
+		n = 1
+	}
+
+	m.DB[key] = docs
+	return n, nil
+}
+
 func (m *Memory) ListCollections(dbName string) (repos []string, err error) {
 	for key := range m.DB {
 		pairs := strings.Split(key, "_")

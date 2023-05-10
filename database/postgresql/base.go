@@ -389,6 +389,52 @@ func (pg *PostgreSQL) DeleteDocument(auth model.Auth, dbName, col, id string) (i
 	return res.RowsAffected()
 }
 
+func (pg *PostgreSQL) DeleteDocuments(auth model.Auth, dbName, col string, filters map[string]any) (n int64, err error) {
+	where := secureWrite(auth, col)
+	where = applyFilter(where, filters)
+
+	var ids []string
+	qry := fmt.Sprintf(`
+		SELECT id
+		FROM %s.%s 
+		%s
+	`, dbName, model.CleanCollectionName(col), where)
+
+	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
+	if err != nil {
+		return
+	}
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			pg.log.Error().Err(err).Msg("error occurred during scanning id for DeleteDocuments event")
+			continue
+		}
+
+		ids = append(ids, id)
+	}
+
+	qry = fmt.Sprintf(`
+		DELETE 
+		FROM %s.%s 
+		%s
+	`, dbName, model.CleanCollectionName(col), where)
+
+	res, err := pg.DB.Exec(qry, auth.AccountID, auth.UserID)
+	if err != nil {
+		return 0, err
+	}
+
+	go func() {
+		for _, id := range ids {
+			pg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+		}
+	}()
+
+	return res.RowsAffected()
+}
+
 func (pg *PostgreSQL) ListCollections(dbName string) (results []string, err error) {
 	qry := fmt.Sprintf(`
 		SELECT table_name FROM information_schema.tables WHERE table_schema='%s'

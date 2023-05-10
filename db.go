@@ -1,6 +1,7 @@
 package staticbackend
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -35,7 +36,11 @@ func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 			database.update(w, r)
 		}
 	} else if r.Method == http.MethodDelete {
-		database.del(w, r)
+		if len(r.URL.Query().Get("bulk")) > 0 {
+			database.bulkDelete(w, r)
+		} else {
+			database.del(w, r)
+		}
 	} else if r.Method == http.MethodGet {
 		p := r.URL.Path
 		if strings.HasSuffix(p, "/") == false {
@@ -362,6 +367,50 @@ func (database *Database) del(w http.ResponseWriter, r *http.Request) {
 	id := getURLPart(r.URL.Path, 3)
 
 	count, err := backend.DB.DeleteDocument(auth, conf.Name, col, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, count)
+}
+
+func (database *Database) bulkDelete(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	col := getURLPart(r.URL.Path, 2)
+
+	// since it's a DELETE HTTP request we use the query parameter
+	// to send the where clauses
+	x := r.URL.Query().Get("x")
+	if len(x) == 0 {
+		http.Error(w, "no filters supplied via the &x= query parameter", http.StatusBadRequest)
+		return
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(x)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var clauses [][]any
+	if err := json.Unmarshal(decoded, &clauses); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	filter, err := backend.DB.ParseQuery(clauses)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	count, err := backend.DB.DeleteDocuments(auth, conf.Name, col, filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

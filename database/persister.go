@@ -97,6 +97,7 @@ type Persister interface {
 	IncrementValue(auth model.Auth, dbName, col, id, field string, n int) error
 	// DeleteDocument removes a record by its ID
 	DeleteDocument(auth model.Auth, dbName, col, id string) (int64, error)
+	DeleteDocuments(auth model.Auth, dbName, col string, filters map[string]interface{}) (int64, error)
 	// ListCollections returns all collections for a database
 	ListCollections(dbName string) ([]string, error)
 	// ParseQuery parses the filters into an internal query clauses
