@@ -2,6 +2,7 @@ package staticbackend
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -253,6 +254,52 @@ func TestDBBulkUpdate(t *testing.T) {
 
 	var result int
 	if err := parseBody(resp.Body, &result); err != nil {
+		t.Fatal(err)
+	} else if result != 2 {
+		t.Errorf("expected count to be 2 got %d", result)
+	}
+}
+
+func TestDBBulkDelete(t *testing.T) {
+	tasks := []Task{
+		{
+			Title: "testing-123456-bulkdel",
+			Done:  true,
+		},
+		{
+			Title: "testing-123456-bulkdel",
+			Done:  true,
+		},
+	}
+
+	resp := dbReq(t, db.bulkAdd, "POST", "/db/tasks/bulk", tasks)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var clauses [][]any
+	clauses = append(clauses, []any{"title", "=", "testing-123456-bulkdel"})
+	clauses = append(clauses, []any{"done", "=", true})
+
+	b, err := json.Marshal(clauses)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(b)
+
+	bulkDelURL := fmt.Sprintf("/db/tasks?bulk=1&x=%s", encoded)
+	resp2 := dbReq(t, db.bulkDelete, "DELETE", bulkDelURL, nil)
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var result int
+	if err := parseBody(resp2.Body, &result); err != nil {
 		t.Fatal(err)
 	} else if result != 2 {
 		t.Errorf("expected count to be 2 got %d", result)

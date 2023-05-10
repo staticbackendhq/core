@@ -430,6 +430,7 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 			ids = append(ids, id.Hex())
 		}
 	}
+
 	if len(ids) == 0 {
 		return 0, nil
 	}
@@ -515,6 +516,48 @@ func (mg *Mongo) DeleteDocument(auth model.Auth, dbName, col, id string) (int64,
 	}
 
 	mg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+
+	return res.DeletedCount, nil
+}
+
+func (mg *Mongo) DeleteDocuments(auth model.Auth, dbName, col string, filters map[string]any) (int64, error) {
+	db := mg.Client.Database(dbName)
+
+	acctID, userID, err := parseObjectID(auth)
+	if err != nil {
+		return 0, err
+	}
+
+	secureWrite(acctID, userID, auth.Role, col, filters)
+
+	res, err := db.Collection(model.CleanCollectionName(col)).DeleteMany(mg.Ctx, filters)
+	if err != nil {
+		return 0, err
+	}
+
+	go func() {
+		var ids []string
+		findOpts := options.Find().SetProjection(bson.D{{FieldID, 1}})
+		cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filters, findOpts)
+		if err != nil {
+			mg.log.Error().Err(err).Msg("trying to get list of ids for bulk delete")
+			return
+		}
+		for cur.Next(mg.Ctx) {
+			var v map[string]interface{}
+			if err := cur.Decode(&v); err != nil {
+				mg.log.Error().Err(err).Msg("")
+			}
+			id, ok := v[FieldID].(primitive.ObjectID)
+			if ok {
+				ids = append(ids, id.Hex())
+			}
+		}
+
+		for _, id := range ids {
+			mg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+		}
+	}()
 
 	return res.DeletedCount, nil
 }
