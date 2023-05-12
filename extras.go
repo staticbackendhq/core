@@ -153,12 +153,13 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 	)*/
 
 	// make sure it can timeout
-	cctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
+	cctx, ccancel := context.WithTimeout(context.Background(), 15*time.Second)
 
 	//HACK:
 	ctx, cancel := chromedp.NewContext(cctx)
 	//ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
+	defer ccancel()
 
 	var buf []byte
 

@@ -43,7 +43,7 @@ func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if r.Method == http.MethodGet {
 		p := r.URL.Path
-		if strings.HasSuffix(p, "/") == false {
+		if !strings.HasSuffix(p, "/"){
 			p += "/"
 		}
 
