@@ -3,12 +3,10 @@ package sqlite
 import (
 	"database/sql"
 	"embed"
-	"strings"
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/logger"
-	"github.com/staticbackendhq/core/model"
 )
 
 //go:embed sql
@@ -18,10 +16,12 @@ type SQLite struct {
 	DB              *sql.DB
 	PublishDocument cache.PublishDocumentEvent
 	log             logger.Logger
+
+	collections map[string]bool
 }
 
 func New(db *sql.DB, pubdoc cache.PublishDocumentEvent) database.Persister {
-	return &SQLite{DB: db, PublishDocument: pubdoc}
+	return &SQLite{DB: db, PublishDocument: pubdoc, collections: make(map[string]bool)}
 }
 
 func (sl *SQLite) Ping() error {
@@ -29,19 +29,21 @@ func (sl *SQLite) Ping() error {
 }
 
 func (sl *SQLite) CreateIndex(dbName, col, field string) error {
-	qry := `
-		CREATE INDEX IF NOT EXISTS 
-			{schema}_idx_{col}_{field} 
-		ON {schema}_{col} 
-		USING btree ((data->'{col}'))
-	`
+	// TODO: this does not seems it's possible to create an index on a JSON field
+	/*
+		qry := `
+			CREATE INDEX IF NOT EXISTS
+				{schema}_idx_{col}_{field}
+			ON {schema}_{col}({field}, json_extract(data, "$.{field}"));
+		`
 
-	qry = strings.Replace(qry, "{col}", model.CleanCollectionName(col), -1)
-	qry = strings.Replace(qry, "{field}", field, -1)
-	qry = strings.Replace(qry, "{schema}", dbName, -1)
+		qry = strings.Replace(qry, "{col}", model.CleanCollectionName(col), -1)
+		qry = strings.Replace(qry, "{field}", field, -1)
+		qry = strings.Replace(qry, "{schema}", dbName, -1)
 
-	if _, err := sl.DB.Exec(qry); err != nil {
-		return err
-	}
+		if _, err := sl.DB.Exec(qry); err != nil {
+			return err
+		}
+	*/
 	return nil
 }

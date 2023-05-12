@@ -9,21 +9,23 @@ import (
 )
 
 func (sl *SQLite) AddFunction(dbName string, data model.ExecData) (id string, err error) {
+	id = sl.NewID()
+
 	qry := fmt.Sprintf(`
-		INSERT INTO %s_sb_functions(function_name, trigger_topic, code, version, last_updated, last_run)
-		VALUES($1, $2, $3, $4, $5, $6)
-		RETURNING id;
+		INSERT INTO %s_sb_functions(id, function_name, trigger_topic, code, version, last_updated, last_run)
+		VALUES($1, $2, $3, $4, $5, $6, $7);
 	`, dbName)
 
-	err = sl.DB.QueryRow(
+	_, err = sl.DB.Exec(
 		qry,
+		id,
 		data.FunctionName,
 		data.TriggerTopic,
 		data.Code,
 		data.Version,
 		data.LastUpdated,
 		data.LastRun,
-	).Scan(&id)
+	)
 	return
 }
 func (sl *SQLite) UpdateFunction(dbName, id, code, trigger string) error {
@@ -69,7 +71,7 @@ func (sl *SQLite) GetFunctionByID(dbName, id string) (result model.ExecData, err
 
 	qry = fmt.Sprintf(`
 		SELECT * 
-		FROM %s.sb_function_logs 
+		FROM %s_sb_function_logs 
 		WHERE function_id = $1
 		ORDER BY completed DESC
 		LIMIT 50;
@@ -111,7 +113,7 @@ func (sl *SQLite) GetFunctionByName(dbName, name string) (result model.ExecData,
 	//TODO: this should be its own function and re-used from prev function
 	qry = fmt.Sprintf(`
 		SELECT * 
-		FROM %s.sb_function_logs 
+		FROM %s_sb_function_logs 
 		WHERE function_id = $1
 		ORDER BY completed DESC
 		LIMIT 50;
@@ -213,12 +215,15 @@ func (sl *SQLite) RanFunction(dbName, id string, rh model.ExecHistory) error {
 	}
 
 	qry = fmt.Sprintf(`
-		INSERT INTO %s.sb_function_logs(function_id, version, started, completed, success, output)
-		VALUES($1, $2, $3, $4, $5, $6)
+		INSERT INTO %s_sb_function_logs(id, function_id, version, started, completed, success, output)
+		VALUES($1, $2, $3, $4, $5, $6, $7)
 	`, dbName)
+
+	newID := sl.NewID()
 
 	_, err := sl.DB.Exec(
 		qry,
+		newID,
 		id,
 		rh.Version,
 		rh.Started,

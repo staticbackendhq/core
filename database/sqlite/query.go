@@ -23,7 +23,7 @@ func (sl *SQLite) ParseQuery(clauses [][]interface{}) (map[string]interface{}, e
 
 		origField := field
 
-		field = fmt.Sprintf(`data->>'%s'`, field)
+		field = fmt.Sprintf(`json_extract(data, "$.%s")`, field)
 
 		op, ok := clause[1].(string)
 		if !ok {
@@ -38,11 +38,12 @@ func (sl *SQLite) ParseQuery(clauses [][]interface{}) (map[string]interface{}, e
 		case ">", "<", ">=", "<=":
 			filter[field+" "+op+" "] = clause[2]
 		case "in", "!in":
-			field = fmt.Sprintf("data->'%s' ? ", origField)
+			field = fmt.Sprintf(`EXISTS (SELECT 1 FROM json_each(json_extract(data, "$.%s")) WHERE value IN (_in_))`, origField)
+
 			if strings.HasPrefix(op, "!") {
 				field = " NOT " + field
 			}
-			filter[field] = clause[2]
+			filter[field+" "+op+" "] = clause[2]
 		default:
 			return filter, fmt.Errorf("The %d query clause's operator: %s is not supported at the moment.", i+1, op)
 		}
@@ -53,7 +54,23 @@ func (sl *SQLite) ParseQuery(clauses [][]interface{}) (map[string]interface{}, e
 
 func applyFilter(where string, filters map[string]interface{}) string {
 	for field, val := range filters {
-		where += fmt.Sprintf(" AND %s '%v'", field, val)
+		if s, ok := val.(string); ok {
+			s = strings.Replace(s, "'", "''", -1)
+			where += fmt.Sprintf(" AND %s '%v'", field, s)
+		} else if list, ok := val.([]string); ok {
+			//TODO: this is dirty as F, just to make the in and !in operator tests pass
+			// this will need lots of thinking and refactoring
+
+			var s string
+			for _, item := range list {
+				s += fmt.Sprintf("'%s', ", strings.Replace(item, "'", "''", -1))
+			}
+
+			s = strings.TrimRight(s, ", ")
+			where += fmt.Sprintf(" AND %s", strings.Replace(field, "_in", s, -1))
+		} else {
+			where += fmt.Sprintf(" AND %s %v", field, val)
+		}
 	}
 	return where
 }

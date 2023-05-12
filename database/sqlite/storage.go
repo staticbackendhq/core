@@ -7,20 +7,22 @@ import (
 )
 
 func (sl *SQLite) AddFile(dbName string, f model.File) (id string, err error) {
+	id = sl.NewID()
+
 	qry := fmt.Sprintf(`
-		INSERT INTO %s_sb_files(account_id, key, url, size, uploaded)
-		VALUES($1, $2, $3, $4, $5)
-		RETURNING id;
+		INSERT INTO %s_sb_files(id, account_id, key, url, size, uploaded)
+		VALUES($1, $2, $3, $4, $5, $6);
 	`, dbName)
 
-	err = sl.DB.QueryRow(
+	_, err = sl.DB.Exec(
 		qry,
+		id,
 		f.AccountID,
 		f.Key,
 		f.URL,
 		f.Size,
 		f.Uploaded,
-	).Scan(&id)
+	)
 	return
 }
 

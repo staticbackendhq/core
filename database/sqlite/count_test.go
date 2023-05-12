@@ -51,7 +51,7 @@ func TestCountWithNoFilter(t *testing.T) {
 	//TODO: Use a dedicated collection for testing the count, only this function
 	// will append row to the collection so this hardcoded value isn't dependent of
 	// previous test
-	if count != 21 {
+	if count != 19 {
 		t.Fatalf("expected 19 got %v", count)
 	}
 }

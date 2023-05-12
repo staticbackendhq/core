@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/lib/pq"
 	"github.com/staticbackendhq/core/model"
 )
 
@@ -33,7 +34,7 @@ func (j JSON) Value() (driver.Value, error) {
 }
 
 func (j *JSON) Scan(value interface{}) error {
-	b, ok := value.([]byte)
+	b, ok := value.([]uint8)
 	if !ok {
 		return errors.New("type assertion to []byte failed")
 	}
@@ -49,9 +50,18 @@ func (sl *SQLite) CreateDocument(auth model.Auth, dbName, col string, doc map[st
 	//TODO: find a good way to prevent doing the create
 	// table if not exists each time
 
-	qry := fmt.Sprintf(`
+	// for SQLite, this seems to cause issue with tests
+	// so I'm using a map to hold if the collection was already
+	// created
+
+	m := &sync.RWMutex{}
+	m.Lock()
+	defer m.Unlock()
+
+	if _, ok := sl.collections[col]; !ok {
+		qry := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s_%s (
-			id TEXT PRIMARY KEY DEFAULT uuid_generate_v4 (),
+			id TEXT PRIMARY KEY,
 			account_id TEXT REFERENCES %s_sb_accounts(id) ON DELETE CASCADE,
 			owner_id TEXT REFERENCES %s_sb_tokens(id) ON DELETE CASCADE,
 			data JSON NOT NULL,
@@ -61,16 +71,19 @@ func (sl *SQLite) CreateDocument(auth model.Auth, dbName, col string, doc map[st
 		CREATE INDEX IF NOT EXISTS %s_%s_acctid_idx ON %s_%s (account_id);			
 	`, dbName, cleancol, dbName, dbName, dbName, cleancol, dbName, cleancol)
 
-	if _, err = sl.DB.Exec(qry); err != nil {
-		err = fmt.Errorf("error creating table: %w", err)
-		return
+		if _, err = sl.DB.Exec(qry); err != nil {
+			err = fmt.Errorf("error creating table: %w", err)
+			return
+		}
+
+		sl.collections[col] = true
 	}
 
 	id := sl.NewID()
 
-	qry = fmt.Sprintf(`
-		INSERT INTO %s_%s(account_id, owner_id, data, created)
-		VALUES($1, $2, $3, $4);
+	qry := fmt.Sprintf(`
+		INSERT INTO %s_%s(id, account_id, owner_id, data, created)
+		VALUES($1, $2, $3, $4, $5);
 	`, dbName, model.CleanCollectionName(col))
 
 	b, err := json.Marshal(doc)
@@ -79,7 +92,10 @@ func (sl *SQLite) CreateDocument(auth model.Auth, dbName, col string, doc map[st
 		return
 	}
 
-	_, err = sl.DB.Exec(qry, auth.AccountID, auth.UserID, b, time.Now())
+	// TODO: sqlite BUSY error in unit test
+	time.Sleep(10 * time.Millisecond)
+
+	_, err = sl.DB.Exec(qry, id, auth.AccountID, auth.UserID, b, time.Now())
 	if err != nil {
 		err = fmt.Errorf("error getting the new row ID: %w", err)
 	}
@@ -238,8 +254,8 @@ func (sl *SQLite) GetDocumentsByIDs(auth model.Auth, dbName, col string, ids []s
 	qry := fmt.Sprintf(`
 		SELECT * 
 		FROM %s_%s 
-		%s AND id in ('%s'::uuid)
-	`, dbName, model.CleanCollectionName(col), where, strings.Join(ids, "'::uuid,'"))
+		%s AND id in ('%s')
+	`, dbName, model.CleanCollectionName(col), where, strings.Join(ids, "','"))
 
 	rows, err := sl.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
@@ -266,7 +282,7 @@ func (sl *SQLite) UpdateDocument(auth model.Auth, dbName, col, id string, doc ma
 
 	qry := fmt.Sprintf(`
 		UPDATE %s_%s SET
-			data = data || $4
+			data = json_set(data, '$', $4)
 		%s AND id = $3
 	`, dbName, model.CleanCollectionName(col), where)
 
@@ -318,7 +334,7 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 
 	qry = fmt.Sprintf(`
 		UPDATE %s_%s SET
-			data = data || $3
+			data = json_set(data, '$', $3)
 		%s
 	`, dbName, model.CleanCollectionName(col), where)
 
@@ -348,24 +364,31 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 }
 
 func (sl *SQLite) IncrementValue(auth model.Auth, dbName, col, id, field string, n int) error {
-	where := secureWrite(auth, col)
-
-	qry := fmt.Sprintf(`
-		UPDATE %s_%s SET
-		data = jsonb_set(data, '{%s}', (COALESCE(data->>'%s','0')::int + $4)::text::jsonb)
-		%s AND id = $3
-	`, dbName, model.CleanCollectionName(col), field, field, where)
-
-	if _, err := sl.DB.Exec(qry, auth.AccountID, auth.UserID, id, n); err != nil {
-		return err
-	}
-
-	updated, err := sl.GetDocumentByID(auth, dbName, col, id)
+	doc, err := sl.GetDocumentByID(auth, dbName, col, id)
 	if err != nil {
 		return err
 	}
 
-	sl.PublishDocument("db-"+col, model.MsgTypeDBUpdated, updated)
+	switch doc[field].(type) {
+	case float64:
+		v := doc[field].(float64)
+		doc[field] = v + float64(n)
+	case int64:
+		v := doc[field].(int64)
+		doc[field] = v + int64(n)
+	default:
+		return fmt.Errorf("invalid type for increment: %s", reflect.TypeOf(doc[field]))
+	}
+
+	update := make(map[string]any)
+	update[field] = doc[field]
+
+	doc, err = sl.UpdateDocument(auth, dbName, col, id, update)
+	if err != nil {
+		return err
+	}
+
+	sl.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
 
 	return nil
 }
@@ -436,8 +459,11 @@ func (sl *SQLite) DeleteDocuments(auth model.Auth, dbName, col string, filters m
 
 func (sl *SQLite) ListCollections(dbName string) (results []string, err error) {
 	qry := fmt.Sprintf(`
-		SELECT table_name FROM information_schema.tables WHERE table_schema='%s'
-	`, strings.ToLower(dbName))
+		SELECT name 
+		FROM sqlite_schema 
+		WHERE type='table' AND name LIKE '%s'
+		ORDER BY name;
+	`, strings.ToLower(dbName)+"_%")
 
 	rows, err := sl.DB.Query(qry)
 	if err != nil {
@@ -469,10 +495,9 @@ func scanDocument(rows Scanner, doc *Document) error {
 }
 
 func isTableExists(err error) bool {
-	if err, ok := err.(*pq.Error); ok {
-		if err.Code.Name() == "undefined_table" {
-			return false
-		}
+	if strings.Contains(err.Error(), "no such table") {
+		return false
 	}
+	return true
 	return true
 }

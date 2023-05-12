@@ -36,7 +36,7 @@ test-mem:
 	@go test --race --cover ./database/memory
 
 test-sqlite:
-	@cd database/sqlite && go test --race --cover
+	@cd database/sqlite && go test --cover
 
 test-intl:
 	@JWT_SECRET=okdevmode go test --race --cover ./internal

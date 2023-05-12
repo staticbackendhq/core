@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 	}
 	defer dbConn.Close()
 
-	datastore = &SQLite{DB: dbConn, PublishDocument: fakePubDocEvent}
+	datastore = &SQLite{DB: dbConn, PublishDocument: fakePubDocEvent, collections: make(map[string]bool)}
 
 	if err := datastore.Ping(); err != nil {
 		log.Fatal(err)
