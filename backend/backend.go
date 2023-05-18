@@ -5,30 +5,30 @@
 // a [github.com/staticbackendhq/core/config.AppConfig]. You may create
 // environment variables and load the config directly by confing.Load function.
 //
-//    // this sample uses the in-memory database provider built-in
-//    // you can use PostgreSQL or MongoDB
-//    cfg := config.AppConfig{
-//      AppEnv:      "dev",
-//      DataStore:   "mem",
-//      DatabaseURL: "mem",
-//      LocalStorageURL: "http://localhost:8099",
-//    }
-//    backend.Setup(cfg)
+//	// this sample uses the in-memory database provider built-in
+//	// you can use PostgreSQL or MongoDB
+//	cfg := config.AppConfig{
+//	  AppEnv:      "dev",
+//	  DataStore:   "mem",
+//	  DatabaseURL: "mem",
+//	  LocalStorageURL: "http://localhost:8099",
+//	}
+//	backend.Setup(cfg)
 //
 // The building blocks of [StaticBackend] are exported as variables and can be
 // used directly accessing their interface's functions. For instance
 // to use the [github.com/staticbackendhq/core/cache.Volatilizer] (cache and
 // pub/sub) you'd use the [Cache] variable:
 //
-//    if err := backend.Cache.Set("key", "value"); err != nil {
-//      return err
-//    }
-//    val, err := backend.Cache.Get("key")
+//	if err := backend.Cache.Set("key", "value"); err != nil {
+//	  return err
+//	}
+//	val, err := backend.Cache.Get("key")
 //
 // The available services are as follow:
 //   - [Cache]: caching and pub/sub
 //   - [DB]: a raw [github.com/staticbackendhq/core/database.Persister] instance (see below for when to use it)
-//   -  [Filestore]: raw blob storage
+//   - [Filestore]: raw blob storage
 //   - [Emailer]: to send emails
 //   - [Config]: the config that was passed to [Setup]
 //   - [Log]: logger
@@ -43,16 +43,16 @@
 // [github.com/staticbackendhq/core/model.DatabaseConfig] and allows the caller
 // to create account and user as well as reseting password etc.
 //
-//    usr := backend.Membership(base)
-//    sessionToken, user, err := usr.CreateAccountAndUser("me@test.com", "passwd", 100)
+//	usr := backend.Membership(base)
+//	sessionToken, user, err := usr.CreateAccountAndUser("me@test.com", "passwd", 100)
 //
 // To contrast, all of those can be done from your program by using the [DB]
 // ([github.com/staticbackendhq/core/database.Persister]) data store, but for
 // convenience this package offers easier / ready-made functions for common
 // use-cases. Example for database CRUD and querying:
 //
-//    tasks := backend.Collection[Task](auth, base, "tasks")
-//    newTask, err := tasks.Create(Task{Name: "testing"})
+//	tasks := backend.Collection[Task](auth, base, "tasks")
+//	newTask, err := tasks.Create(Task{Name: "testing"})
 //
 // The [Collection] returns a strongly-typed structure where functions
 // input/output are properly typed, it's a generic type.
@@ -70,35 +70,35 @@
 // an environment variable. From a middleware you might load the database from
 // this ID.
 //
-//    // if you'd want to use SB's middleware (it's not required)
-//    // you use whatever you like for your web handlers and middleware.
-//    // SB is a library not a framework.
-//    func DetectTenant() middleware.Middleware {
-//      return func(next http.Handler) http.Handler {
-//        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//          // check for presence of a public DB ID
-//          // this can come from cookie, URL query param
-//          key := r.Header.Get("DB-ID")
-//          // for multi-tenant, DB ID can be from an env var
-//          if len(key) == 0 {
-//            key = os.Getenv("SINGLE_TENANT_DBID")
-//          }
-//          var curDB model.DatabaseConfig
-//          if err := backend.Cache.GetTyped(key, &curDB); err != nil {
-//            http.Error(w, err.Error(), http.StatusBadRequest)
-//            return
-//          }
-//          curDB, err := backend.DB.FindDatabase(key)
-//          // err != nil return HTTP 400 Bad request
-//          err = backend.Cache.SetTyped(key, curDB)
-//          // add the tenant's DB in context for the rest of
-//          // your pipeline to have the proper DB.
-//          ctx := r.Context()
-//          ctx = context.WithValue(ctx, ContextBase, curDB)
-//          next.ServeHTTP(w, r.WithContext(ctx)))
-//        })
-//      }
-//    }
+//	// if you'd want to use SB's middleware (it's not required)
+//	// you use whatever you like for your web handlers and middleware.
+//	// SB is a library not a framework.
+//	func DetectTenant() middleware.Middleware {
+//	  return func(next http.Handler) http.Handler {
+//	    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//	      // check for presence of a public DB ID
+//	      // this can come from cookie, URL query param
+//	      key := r.Header.Get("DB-ID")
+//	      // for multi-tenant, DB ID can be from an env var
+//	      if len(key) == 0 {
+//	        key = os.Getenv("SINGLE_TENANT_DBID")
+//	      }
+//	      var curDB model.DatabaseConfig
+//	      if err := backend.Cache.GetTyped(key, &curDB); err != nil {
+//	        http.Error(w, err.Error(), http.StatusBadRequest)
+//	        return
+//	      }
+//	      curDB, err := backend.DB.FindDatabase(key)
+//	      // err != nil return HTTP 400 Bad request
+//	      err = backend.Cache.SetTyped(key, curDB)
+//	      // add the tenant's DB in context for the rest of
+//	      // your pipeline to have the proper DB.
+//	      ctx := r.Context()
+//	      ctx = context.WithValue(ctx, ContextBase, curDB)
+//	      next.ServeHTTP(w, r.WithContext(ctx)))
+//	    })
+//	  }
+//	}
 //
 // You'd create a similar middleware for adding the current user into the
 // request context.
@@ -124,6 +124,7 @@ import (
 	"github.com/staticbackendhq/core/database/memory"
 	"github.com/staticbackendhq/core/database/mongo"
 	"github.com/staticbackendhq/core/database/postgresql"
+	"github.com/staticbackendhq/core/database/sqlite"
 	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/logger"
@@ -134,6 +135,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	_ "github.com/lib/pq"
+	_ "modernc.org/sqlite"
 )
 
 // All StaticBackend services (need to call Setup before using them).
@@ -186,6 +188,13 @@ func Setup(cfg config.AppConfig) {
 			Log.Fatal().Err(err).Msg("failed to create connection with mongodb")
 		}
 		DB = mongo.New(cl, Cache.PublishDocument, Log)
+	} else if strings.EqualFold(persister, "sqlite") {
+		cl, err := openSQLite(cfg.DatabaseURL)
+		if err != nil {
+			Log.Fatal().Err(err).Msg("failed to create connection with SQLite")
+		}
+
+		DB = sqlite.New(cl, Cache.PublishDocument, Log)
 	} else {
 		cl, err := openPGDatabase(cfg.DatabaseURL)
 		if err != nil {
@@ -269,6 +278,19 @@ func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {
 func openPGDatabase(dbHost string) (*sql.DB, error) {
 	//connStr := "user=postgres password=example dbname=test sslmode=disable"
 	dbConn, err := sql.Open("postgres", dbHost)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := dbConn.Ping(); err != nil {
+		return nil, err
+	}
+
+	return dbConn, nil
+}
+
+func openSQLite(url string) (*sql.DB, error) {
+	dbConn, err := sql.Open("sqlite", url)
 	if err != nil {
 		return nil, err
 	}

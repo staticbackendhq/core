@@ -410,10 +410,6 @@ func TestQueryDocumentsWithNonExistingDB(t *testing.T) {
 }
 
 func TestQueryWithInOperator(t *testing.T) {
-	//TODO: skip for now as the in, !in operator will need some serious
-	// thinking / refactoring
-	t.Skip()
-
 	redTask := newTask("red", false)
 	redTask, err := datastore.CreateDocument(adminAuth, confDBName, colName, redTask)
 	if err != nil {
@@ -448,7 +444,7 @@ func TestQueryWithInOperator(t *testing.T) {
 	}
 
 	clauses = nil
-	clauses = append(clauses, []interface{}{"tags", "!in", "red"})
+	clauses = append(clauses, []interface{}{"tags", "!in", []string{"red"}})
 	clauses = append(clauses, []interface{}{"done", "=", false})
 
 	filters, err = datastore.ParseQuery(clauses)

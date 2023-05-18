@@ -109,7 +109,7 @@ func (sl *SQLite) CreateDocument(auth model.Auth, dbName, col string, doc map[st
 }
 
 func (sl *SQLite) BulkCreateDocument(auth model.Auth, dbName, col string, docs []interface{}) error {
-	//TODO: Naive implementation, not sure if PostgreSQL
+	//TODO: Naive implementation, not sure if SQLite
 	// has a better way for bulk insert, but will suffice for now.
 	for _, doc := range docs {
 		d, ok := doc.(map[string]interface{})

@@ -3,6 +3,8 @@ package sqlite
 import (
 	"database/sql"
 	"embed"
+	"fmt"
+	"os"
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
@@ -15,13 +17,26 @@ var migrationFS embed.FS
 type SQLite struct {
 	DB              *sql.DB
 	PublishDocument cache.PublishDocumentEvent
-	log             logger.Logger
+	log             *logger.Logger
 
 	collections map[string]bool
 }
 
-func New(db *sql.DB, pubdoc cache.PublishDocumentEvent) database.Persister {
-	return &SQLite{DB: db, PublishDocument: pubdoc, collections: make(map[string]bool)}
+func New(db *sql.DB, pubdoc cache.PublishDocumentEvent, log *logger.Logger) database.Persister {
+	// run migrations
+	if err := migrate(db); err != nil {
+		fmt.Println("=== MIGRATION FAILED ===")
+		fmt.Println(err)
+		fmt.Println("=== /MIGRATION FAILED ===")
+		os.Exit(1)
+	}
+
+	return &SQLite{
+		DB:              db,
+		PublishDocument: pubdoc,
+		collections:     make(map[string]bool),
+		log:             log,
+	}
 }
 
 func (sl *SQLite) Ping() error {

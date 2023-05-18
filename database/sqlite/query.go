@@ -43,7 +43,7 @@ func (sl *SQLite) ParseQuery(clauses [][]interface{}) (map[string]interface{}, e
 			if strings.HasPrefix(op, "!") {
 				field = " NOT " + field
 			}
-			filter[field+" "+op+" "] = clause[2]
+			filter[field+" "] = clause[2]
 		default:
 			return filter, fmt.Errorf("The %d query clause's operator: %s is not supported at the moment.", i+1, op)
 		}
@@ -67,7 +67,7 @@ func applyFilter(where string, filters map[string]interface{}) string {
 			}
 
 			s = strings.TrimRight(s, ", ")
-			where += fmt.Sprintf(" AND %s", strings.Replace(field, "_in", s, -1))
+			where += fmt.Sprintf(" AND %s", strings.Replace(field, "_in_", s, -1))
 		} else {
 			where += fmt.Sprintf(" AND %s %v", field, val)
 		}

@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -262,8 +263,16 @@ func (sl *SQLite) NewID() string {
 }
 
 func (sl *SQLite) DeleteTenant(dbName, email string) error {
-	//TODO: need to grab all tables starting with dbName and
-	// delete them
+	tables, err := sl.ListCollections(dbName)
+	if err != nil {
+		return err
+	}
+
+	for _, table := range tables {
+		if _, err := sl.DB.Exec(fmt.Sprintf("DROP TABLE %s", table)); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
