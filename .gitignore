@@ -2,6 +2,7 @@
 postgres-data/
 mongodata/
 cmd/staticbackend
+database/sqlite/test.db
 
 dist/
 
