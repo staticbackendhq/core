@@ -44,6 +44,9 @@ test-intl:
 test-extra:
 	@JWT_SECRET=okdevmode go test --race --cover ./extra
 
+test-search:
+	@cd search && go test --cover
+
 stripe-dev:
 	stripe listen -p sb --forward-to http://localhost:8099/stripe
 
