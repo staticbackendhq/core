@@ -1,27 +1,37 @@
 package search
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/search/query"
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/model"
+)
+
+const (
+	ChannelIndexEvent = "sys-fts"
 )
 
 type Search struct {
-	index bleve.Index
+	pubsub cache.Volatilizer
+	index  bleve.Index
 }
 
 type IndexDocument struct {
+	ID     string `json:"id"`
 	DBName string `json:"dbname"`
 	Key    string `json:"key"`
 	Text   string `json:"text"`
 }
 
-func New(filename string) (*Search, error) {
-	s := &Search{}
+func New(filename string, pubsub cache.Volatilizer) (*Search, error) {
+	s := &Search{pubsub: pubsub}
 
 	if _, err := os.Stat(filename); err != nil {
 		if !os.IsNotExist(err) {
@@ -42,6 +52,7 @@ func New(filename string) (*Search, error) {
 		s.index = idx
 	}
 
+	go s.setupIndexEvent()
 	return s, nil
 }
 
@@ -66,13 +77,27 @@ func createMapping(filename string) (bleve.Index, error) {
 
 func (s *Search) Index(dbName, col, id, text string) error {
 	doc := IndexDocument{
+		ID:     id,
 		DBName: dbName,
 		Key:    col,
 		Text:   text,
 	}
 
-	docID := fmt.Sprintf("%s_%s_%s", dbName, col, id)
-	return s.index.Index(docID, doc)
+	b, err := json.Marshal(doc)
+	if err != nil {
+		return err
+	}
+
+	msg := model.Command{
+		SID:           "system",
+		Type:          "system",
+		Data:          string(b),
+		Channel:       ChannelIndexEvent,
+		Token:         "system",
+		IsSystemEvent: true,
+	}
+
+	return s.pubsub.Publish(msg)
 }
 
 type SearchResult struct {
@@ -125,4 +150,33 @@ func (s *Search) Search(dbName, col, keywords string) (SearchResult, error) {
 	}
 
 	return sr, nil
+}
+
+func (s *Search) setupIndexEvent() {
+	receiver := make(chan model.Command)
+	close := make(chan bool)
+
+	go s.pubsub.Subscribe(receiver, "system", ChannelIndexEvent, close)
+
+	for {
+		select {
+		case msg := <-receiver:
+			go s.receivedIndexEvent(msg.Data)
+		case <-close:
+			break
+		}
+	}
+}
+
+func (s *Search) receivedIndexEvent(data string) {
+	var doc IndexDocument
+	if err := json.Unmarshal([]byte(data), &doc); err != nil {
+		log.Println(err)
+		return
+	}
+
+	docID := fmt.Sprintf("%s_%s_%s", doc.DBName, doc.Key, doc.ID)
+	if err := s.index.Index(docID, doc); err != nil {
+		log.Println(err)
+	}
 }

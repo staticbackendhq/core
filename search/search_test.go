@@ -1,19 +1,33 @@
 package search_test
 
 import (
-	"fmt"
 	"testing"
+	"time"
 
+	"github.com/staticbackendhq/core/cache"
+	"github.com/staticbackendhq/core/config"
+	"github.com/staticbackendhq/core/logger"
+	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/search"
 )
 
 func TestSearchIndexAndQuery(t *testing.T) {
-	s, err := search.New("testdata/test.fts")
+	c := config.AppConfig{}
+
+	l := logger.Get(c)
+
+	pubsub := cache.NewDevCache(l)
+
+	go fakeSySubscriber(pubsub, l)
+
+	s, err := search.New("testdata/test.fts", pubsub)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Println("starting indexing")
+	// give some times for go routines to kick-in
+	// and create the subscriptions
+	time.Sleep(1250 * time.Millisecond)
 
 	err = s.Index("test", "catalog", "123", "this is the first doc")
 	if err != nil {
@@ -25,6 +39,10 @@ func TestSearchIndexAndQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// let time for go rountines to propagate the system
+	// event to create new full-text index
+	time.Sleep(4250 * time.Millisecond)
+
 	results, err := s.Search("test", "catalog", "first doc")
 	if err != nil {
 		t.Fatal(err)
@@ -33,5 +51,24 @@ func TestSearchIndexAndQuery(t *testing.T) {
 	} else if results.IDs[0] != "test_catalog_123" {
 		t.Log(results)
 		t.Errorf("expected id to be test_catalog_123 got %s", results.IDs[0])
+	}
+}
+
+func fakeSySubscriber(pubsub cache.Volatilizer, l *logger.Logger) {
+	receiver := make(chan model.Command)
+	close := make(chan bool)
+
+	go pubsub.Subscribe(receiver, "", "sbsys", close)
+
+	timer := time.NewTimer(10 * time.Second)
+	for {
+		select {
+		case msg := <-receiver:
+			l.Debug().Msg("rcvd in fake sbsys subscriber: " + msg.Type)
+		case <-close:
+			return
+		case <-timer.C:
+			return
+		}
 	}
 }

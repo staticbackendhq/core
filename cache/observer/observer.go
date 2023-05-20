@@ -2,9 +2,10 @@ package observer
 
 import (
 	"errors"
-	"github.com/staticbackendhq/core/logger"
 	"sync"
 	"time"
+
+	"github.com/staticbackendhq/core/logger"
 )
 
 type Observer interface {
