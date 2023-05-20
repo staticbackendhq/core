@@ -157,6 +157,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/sudo/index", middleware.Chain(http.HandlerFunc(database.index), stdRoot...))
 	http.Handle("/sudo/", middleware.Chain(http.HandlerFunc(database.dbreq), stdRoot...))
 	http.Handle("/newid", middleware.Chain(http.HandlerFunc(database.newID), stdAuth...))
+	http.Handle("/search", middleware.Chain(http.HandlerFunc(database.search), stdAuth...))
 
 	// forms routes
 	http.Handle("/postform/", middleware.Chain(http.HandlerFunc(submitForm), pubWithDB...))

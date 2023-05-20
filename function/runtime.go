@@ -13,6 +13,7 @@ import (
 	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
+	"github.com/staticbackendhq/core/search"
 
 	"github.com/dop251/goja"
 )
@@ -22,6 +23,7 @@ type ExecutionEnvironment struct {
 	BaseName  string
 	DataStore database.Persister
 	Volatile  cache.Volatilizer
+	Search    *search.Search
 	Data      model.ExecData
 
 	CurrentRun model.ExecHistory
@@ -40,6 +42,7 @@ func (env *ExecutionEnvironment) Execute(data interface{}) error {
 	env.addHelpers(vm)
 	env.addDatabaseFunctions(vm)
 	env.addVolatileFunctions(vm)
+	env.addSearch(vm)
 
 	if _, err := vm.RunString(env.Data.Code); err != nil {
 		return err
@@ -418,6 +421,59 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
 
 		if err := env.Volatile.Publish(msg); err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error publishing your message: %v", err)})
+		}
+
+		return vm.ToValue(Result{OK: true})
+	})
+}
+
+func (env *ExecutionEnvironment) addSearch(vm *goja.Runtime) {
+	vm.Set("search", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) != 2 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for search(col, keywords)"})
+		}
+
+		var col, keywords string
+		if err := vm.ExportTo(call.Argument(0), &col); err != nil {
+			return vm.ToValue(Result{Content: "the first argument should be a string"})
+		} else if err := vm.ExportTo(call.Argument(1), &keywords); err != nil {
+			return vm.ToValue(Result{Content: "the second argument should be a string"})
+		}
+
+		results, err := env.Search.Search(env.BaseName, col, keywords)
+		if err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error while executing search(): %v", err)})
+		}
+
+		docs, err := env.DataStore.GetDocumentsByIDs(env.Auth, env.BaseName, col, results.IDs)
+		if err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error getting document by ids from search result: %v", err)})
+		}
+
+		for _, doc := range docs {
+			if err := env.clean(doc); err != nil {
+				return vm.ToValue(Result{Content: fmt.Sprintf("error cleaning doc: %v", err)})
+			}
+		}
+
+		return vm.ToValue(Result{OK: true, Content: docs})
+	})
+	vm.Set("indexDocument", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) != 3 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for indexDocument(col, id, text)"})
+		}
+
+		var col, id, text string
+		if err := vm.ExportTo(call.Argument(0), &col); err != nil {
+			return vm.ToValue(Result{Content: "the first argument should be a string"})
+		} else if err := vm.ExportTo(call.Argument(1), &id); err != nil {
+			return vm.ToValue(Result{Content: "the second argument should be a string"})
+		} else if err := vm.ExportTo(call.Argument(1), &text); err != nil {
+			return vm.ToValue(Result{Content: "the third argument should be a string"})
+		}
+
+		if err := env.Search.Index(env.BaseName, col, id, text); err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error while trying to index the document: %v", err)})
 		}
 
 		return vm.ToValue(Result{OK: true})

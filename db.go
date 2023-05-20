@@ -43,7 +43,7 @@ func (database *Database) dbreq(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if r.Method == http.MethodGet {
 		p := r.URL.Path
-		if !strings.HasSuffix(p, "/"){
+		if !strings.HasSuffix(p, "/") {
 			p += "/"
 		}
 
@@ -477,4 +477,37 @@ func getPagination(u *url.URL) (page int64, size int64) {
 	}
 
 	return
+}
+
+type SearchData struct {
+	Col      string `json:"col"`
+	Keywords string `json:"keywords"`
+}
+
+func (database *Database) search(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var data SearchData
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	result, err := backend.Search.Search(conf.Name, data.Col, data.Keywords)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	docs, err := backend.DB.GetDocumentsByIDs(auth, conf.Name, data.Col, result.IDs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, docs)
 }
