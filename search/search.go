@@ -15,11 +15,9 @@ type Search struct {
 }
 
 type IndexDocument struct {
-	DBName string         `json:"dbname"`
-	Key    string         `json:"key"`
-	ID     string         `json:"id"`
-	Text   string         `json:"text"`
-	Data   map[string]any `json:"data"`
+	DBName string `json:"dbname"`
+	Key    string `json:"key"`
+	Text   string `json:"text"`
 }
 
 func New(filename string) (*Search, error) {
@@ -51,17 +49,14 @@ func createMapping(filename string) (bleve.Index, error) {
 	mapping := bleve.NewDocumentMapping()
 
 	dbMap := bleve.NewKeywordFieldMapping()
-	mapping.AddFieldMappingsAt("DBName", dbMap)
+	mapping.AddFieldMappingsAt("dbname", dbMap)
 
 	keyMap := bleve.NewKeywordFieldMapping()
-	mapping.AddFieldMappingsAt("Key", keyMap)
-
-	idMap := bleve.NewKeywordFieldMapping()
-	mapping.AddFieldMapping(idMap)
+	mapping.AddFieldMappingsAt("key", keyMap)
 
 	textMap := bleve.NewTextFieldMapping()
 	textMap.Analyzer = "en"
-	mapping.AddFieldMappingsAt("Text", textMap)
+	mapping.AddFieldMappingsAt("text", textMap)
 
 	idxmap := bleve.NewIndexMapping()
 	idxmap.AddDocumentMapping("IndexDocument", mapping)
@@ -69,55 +64,65 @@ func createMapping(filename string) (bleve.Index, error) {
 	return bleve.New(filename, idxmap)
 }
 
-func (s *Search) Index(dbName, catalog, id, text string, data map[string]any) error {
+func (s *Search) Index(dbName, col, id, text string) error {
 	doc := IndexDocument{
 		DBName: dbName,
-		Key:    catalog,
-		ID:     id,
+		Key:    col,
 		Text:   text,
-		Data:   data,
 	}
 
-	docID := fmt.Sprintf("%s-%s-%s", dbName, catalog, id)
+	docID := fmt.Sprintf("%s_%s_%s", dbName, col, id)
 	return s.index.Index(docID, doc)
 }
 
-func (s *Search) Search(dbName, catalog, keywords string) ([]map[string]any, error) {
+type SearchResult struct {
+	DBName string
+	Col    string
+	IDs    []string
+}
+
+func (s *Search) Search(dbName, col, keywords string) (SearchResult, error) {
+	sr := SearchResult{DBName: dbName, Col: col}
+
 	tokens := strings.Split(keywords, " ")
 
 	var queries []query.Query
 
+	dbQry := bleve.NewTermQuery(dbName)
+	dbQry.SetField("dbname")
+
+	colQry := bleve.NewTermQuery(col)
+	colQry.SetField("key")
+
+	queries = append(queries, dbQry)
+	queries = append(queries, colQry)
+
 	for _, keyword := range tokens {
 		fq := bleve.NewFuzzyQuery(keyword)
-		fq.SetField("Text")
+		fq.SetField("text")
 
 		queries = append(queries, fq)
 	}
 
 	conj := bleve.NewConjunctionQuery(queries...)
 	if conj == nil {
-		return nil, errors.New("conj is nil")
+		return sr, errors.New("conj is nil")
 	}
 
 	req := bleve.NewSearchRequest(conj)
 
 	if req == nil {
-		return nil, errors.New("wtf? it's nil")
+		return sr, errors.New("wtf? it's nil")
 	}
 
 	results, err := s.index.Search(req)
 	if err != nil {
-		return nil, err
+		return sr, err
 	}
 
-	var docs []map[string]any
 	for _, r := range results.Hits {
-		doc, ok := r.Fields["data"].(map[string]any)
-		if !ok {
-			continue
-		}
-		docs = append(docs, doc)
+		sr.IDs = append(sr.IDs, r.ID)
 	}
 
-	return docs, nil
+	return sr, nil
 }

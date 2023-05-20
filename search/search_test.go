@@ -15,17 +15,12 @@ func TestSearchIndexAndQuery(t *testing.T) {
 
 	fmt.Println("starting indexing")
 
-	data := make(map[string]any)
-	data["field"] = "a"
-	data["ison"] = true
-
-	err = s.Index("test", "catalog", "123", "this is the first doc", data)
+	err = s.Index("test", "catalog", "123", "this is the first doc")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data["ison"] = false
-	err = s.Index("test", "catalog", "123", "this is the 2nd doc", data)
+	err = s.Index("test", "catalog", "456", "this is the 2nd doc")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,10 +28,10 @@ func TestSearchIndexAndQuery(t *testing.T) {
 	results, err := s.Search("test", "catalog", "first doc")
 	if err != nil {
 		t.Fatal(err)
-	} else if len(results) != 1 {
-		t.Errorf("expected 1 result, got %d", len(results))
-	} else if results[0]["ison"] == true {
+	} else if len(results.IDs) != 1 {
+		t.Errorf("expected 1 result, got %d", len(results.IDs))
+	} else if results.IDs[0] != "test_catalog_123" {
 		t.Log(results)
-		t.Errorf("expected ison to be false, got %v", results[0]["ison"])
+		t.Errorf("expected id to be test_catalog_123 got %s", results.IDs[0])
 	}
 }
