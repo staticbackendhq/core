@@ -1,0 +1,5 @@
+{
+    "image":"mcr.microsoft.com/devcontainers/universal:2",
+    "forwardPorts": [8099],
+    "postStartCommand": "cp .codespaces.env .env & docker-compose -f docker-compose-unitest.yml up"
+}
