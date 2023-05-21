@@ -129,6 +129,7 @@ import (
 	"github.com/staticbackendhq/core/function"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
+	"github.com/staticbackendhq/core/search"
 	"github.com/staticbackendhq/core/storage"
 	mongodrv "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -150,7 +151,8 @@ var (
 	// Filestore initialized Storer for raw save/delete blob file
 	Filestore storage.Storer
 	// Cache initialized Volatilizer for cache and pub/sub
-	Cache cache.Volatilizer
+	Cache  cache.Volatilizer
+	Search *search.Search
 	// Log initialized Logger for all logging
 	Log *logger.Logger
 
@@ -218,6 +220,18 @@ func Setup(cfg config.AppConfig) {
 		Filestore = storage.Local{}
 	}
 
+	ftsFilename := "sb.fts"
+	if cfg.DatabaseURL == "mem" {
+		ftsFilename = "mem.fts"
+	}
+	src, err := search.New(ftsFilename, Cache)
+	if err != nil {
+		Log.Fatal().Err(err).Msg("unable to start full-text search")
+		return
+	}
+
+	Search = src
+
 	sub := &function.Subscriber{Log: Log}
 	sub.PubSub = Cache
 	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
@@ -248,6 +262,7 @@ func Setup(cfg config.AppConfig) {
 		exe.BaseName = conf.Name
 		exe.DataStore = DB
 		exe.Volatile = Cache
+		exe.Search = Search
 
 		return exe, nil
 	}

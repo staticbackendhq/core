@@ -430,3 +430,47 @@ func TestDBCreateIndex(t *testing.T) {
 	//TODO: would be nice to validate the index were created
 	// but there's no way to get a collection's indexes for now.
 }
+
+func TestDBSearchIndexAndQuery(t *testing.T) {
+	task :=
+		Task{
+			Title:   "item indexed in search catalog",
+			Created: time.Now(),
+			Count:   1,
+		}
+
+	resp := dbReq(t, db.add, "POST", "/db/tasks", task)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var createdTask Task
+	if err := parseBody(resp.Body, &createdTask); err != nil {
+		t.Fatal(err)
+	}
+
+	backend.Search.Index(dbName, "tasks", createdTask.ID, "adding this to search index")
+	backend.Search.Index(dbName, "tasks", "invalid-id", "Montreal Expos were the best in 95")
+
+	// wait for the go routine for the pubsub to complete
+	time.Sleep(3 * time.Second)
+
+	data := SearchData{Col: "tasks", Keywords: "adding search"}
+	resp2 := dbReq(t, db.search, "POST", "/search", data)
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp2))
+	}
+
+	var tasks []Task
+	if err := parseBody(resp2.Body, &tasks); err != nil {
+		t.Fatal(err)
+	} else if len(tasks) != 1 {
+		t.Errorf("expected to get 1 task, got %d", len(tasks))
+	} else if tasks[0].ID != createdTask.ID {
+		t.Errorf("expected task id to be %s got %s", createdTask.ID, tasks[0].ID)
+	}
+}

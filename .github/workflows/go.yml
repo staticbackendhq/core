@@ -31,7 +31,7 @@ jobs:
       run: make build
 
     - name: Test (PostgreSQL data store)
-      run: make alltest
+      run: make test-core
 
     - name: Change DATA_STORE to Mongo
       run: sed -i 's/DATA_STORE=pg/DATA_STORE=mongo/g' .env
@@ -39,5 +39,8 @@ jobs:
     - name: Change DATABASE_URL to Mongo connection string
       run: sed -i 's/DATABASE_URL=user=postgres password=postgres dbname=postgres sslmode=disable/DATABASE_URL=mongodb:\/\/localhost:27017/g' .env
 
+    - name: Remove full-text index DB
+      run: rm -rf sb.fts && rm -rf backend/sb.fts
+
     - name: Test (Mongo data store)
-      run: make alltest
+      run: make test-core
