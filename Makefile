@@ -23,7 +23,7 @@ thistest:
 	go test -run $(TESTNAME) --cover ./...
 
 test-core:
-	@go test --race --cover
+	@go clean -testcache && go test --race --cover
 
 test-pg:
 	@cd database/postgresql && go test --race --cover

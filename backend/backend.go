@@ -220,7 +220,11 @@ func Setup(cfg config.AppConfig) {
 		Filestore = storage.Local{}
 	}
 
-	src, err := search.New("sb.fts", Cache)
+	ftsFilename := "sb.fts"
+	if cfg.DatabaseURL == "mem" {
+		ftsFilename = "mem.fts"
+	}
+	src, err := search.New(ftsFilename, Cache)
 	if err != nil {
 		Log.Fatal().Err(err).Msg("unable to start full-text search")
 		return
