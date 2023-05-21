@@ -1,3 +1,6 @@
+# codespaces related file
+oryxBuildBinary
+
 .env
 postgres-data/
 mongodata/
