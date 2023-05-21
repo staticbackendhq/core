@@ -7,6 +7,7 @@ mongodata/
 cmd/staticbackend
 database/sqlite/test.db
 search/testdata
+**/sb.fts
 
 dist/
 

@@ -146,7 +146,12 @@ func (s *Search) Search(dbName, col, keywords string) (SearchResult, error) {
 	}
 
 	for _, r := range results.Hits {
-		sr.IDs = append(sr.IDs, r.ID)
+		parts := strings.Split(r.ID, "_")
+		if len(parts) != 3 {
+			continue
+		}
+
+		sr.IDs = append(sr.IDs, parts[2])
 	}
 
 	return sr, nil

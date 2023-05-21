@@ -462,11 +462,11 @@ func TestDBSearchIndexAndQuery(t *testing.T) {
 	defer resp2.Body.Close()
 
 	if resp2.StatusCode > 299 {
-		t.Fatal(GetResponseBody(t, resp))
+		t.Fatal(GetResponseBody(t, resp2))
 	}
 
 	var tasks []Task
-	if err := parseBody(resp.Body, &tasks); err != nil {
+	if err := parseBody(resp2.Body, &tasks); err != nil {
 		t.Fatal(err)
 	} else if len(tasks) != 1 {
 		t.Errorf("expected to get 1 task, got %d", len(tasks))

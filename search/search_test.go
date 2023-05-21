@@ -48,7 +48,7 @@ func TestSearchIndexAndQuery(t *testing.T) {
 		t.Fatal(err)
 	} else if len(results.IDs) != 1 {
 		t.Errorf("expected 1 result, got %d", len(results.IDs))
-	} else if results.IDs[0] != "test_catalog_123" {
+	} else if results.IDs[0] != "123" {
 		t.Log(results)
 		t.Errorf("expected id to be test_catalog_123 got %s", results.IDs[0])
 	}
