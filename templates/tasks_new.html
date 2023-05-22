@@ -1,0 +1,60 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6" x-data="{tab: 'edit', log: ''}">
+		<h2 class="title is-2">
+			New schedule job
+		</h2>
+
+
+		<div>
+			<form action="/ui/tasks/new" method="POST">
+				<div class="field">
+					<label class="label">Job name</label>
+					<div class="control">
+						<input type="text" class="input" name="name" placeholder="Name your job"
+							required>
+					</div>
+				</div>
+
+				<div class="field">
+					<label class="label">Type</label>
+					<div class="control">
+						<div class="select">
+							<select name="type">
+								<option value="function">Function</option>
+								<option value="message">Send message (topic for PubSub)</option>
+							</select>
+						</div>
+					</div>
+				</div>
+
+				<div class="field">
+					<label class="label">Value (based on Type: function name or topic)</label>
+					<div class="control">
+						<input type="text" class="input" name="value" placeholder="function name or topic"
+							required>						
+					</div>
+				</div>
+
+				<div class="field">
+					<label class="label">Interval (unix cron format)</label>
+					<div class="control">
+						<input type="text" class="input" name="interval" placeholder="30 6 * * *"
+							required>						
+					</div>
+				</div>
+
+				<div class="field">
+					<div class="control">
+						<button type="submit" class="button is-primary">Create schedule job</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+</body>
+
+{{template "foot"}}

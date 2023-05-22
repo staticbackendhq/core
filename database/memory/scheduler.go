@@ -1,6 +1,11 @@
 package memory
 
-import "github.com/staticbackendhq/core/model"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/staticbackendhq/core/model"
+)
 
 func (m *Memory) ListTasks() (results []model.Task, err error) {
 	bases, err := m.ListDatabases()
@@ -8,15 +13,42 @@ func (m *Memory) ListTasks() (results []model.Task, err error) {
 		return
 	}
 
-	var tasks []model.Task
 	for _, base := range bases {
-		tasks, err = all[model.Task](m, base.Name, "sb_tasks")
+		tasks, err := m.ListTasksByBase(base.Name)
 		if err != nil {
-			return
+			return nil, err
 		}
 
 		results = append(results, tasks...)
 	}
 
 	return
+}
+
+func (m *Memory) ListTasksByBase(dbName string) ([]model.Task, error) {
+	tasks, err := all[model.Task](m, dbName, "sb_tasks")
+	if err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
+func (m *Memory) AddTask(dbName string, task model.Task) error {
+	id := m.NewID()
+	task.ID = id
+
+	return create(m, dbName, "sb_tasks", id, task)
+}
+
+func (m *Memory) DeleteTask(dbName, id string) error {
+	key := fmt.Sprintf("%s_sb_tasks", dbName)
+	tasks, ok := m.DB[key]
+	if !ok {
+		return errors.New("cannot find repo")
+	}
+
+	delete(tasks, id)
+
+	m.DB[key] = tasks
+	return nil
 }

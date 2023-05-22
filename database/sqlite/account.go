@@ -45,6 +45,64 @@ func (sl *SQLite) GetRootForBase(dbName string) (tok model.User, err error) {
 	return
 }
 
+func (sl *SQLite) ListAccounts(dbName string) ([]model.Account, error) {
+	qry := fmt.Sprintf(`
+	SELECT * 
+	FROM %s_sb_accounts
+	ORDER BY created DESC;
+	`, dbName)
+
+	rows, err := sl.DB.Query(qry)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []model.Account
+	for rows.Next() {
+		var a model.Account
+		if err = scanAccount(rows, &a); err != nil {
+			return nil, err
+		}
+
+		list = append(list, a)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (sl *SQLite) ListUsers(dbName, accountID string) ([]model.User, error) {
+	qry := fmt.Sprintf(`
+	SELECT * 
+	FROM %s_sb_tokens
+	WHERE account_id = $1
+	`, dbName)
+
+	rows, err := sl.DB.Query(qry, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []model.User
+	for rows.Next() {
+		var u model.User
+		if err = scanToken(rows, &u); err != nil {
+			return nil, err
+		}
+
+		list = append(list, u)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 func (sl *SQLite) FindUserByEmail(dbName, email string) (tok model.User, err error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
@@ -68,5 +126,13 @@ func scanToken(rows Scanner, tok *model.User) error {
 		&tok.Role,
 		&tok.ResetCode,
 		&tok.Created,
+	)
+}
+
+func scanAccount(rows Scanner, a *model.Account) error {
+	return rows.Scan(
+		&a.ID,
+		&a.Email,
+		&a.Created,
 	)
 }

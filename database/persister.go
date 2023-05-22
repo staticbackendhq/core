@@ -61,6 +61,10 @@ type Persister interface {
 	UserEmailExists(dbName, email string) (exists bool, err error)
 	// GetFirstUserFromAccountID get the first user created for an account
 	GetFirstUserFromAccountID(dbName, accountID string) (model.User, error)
+	// ListAccounts returns a list of all account for this database
+	ListAccounts(dbname string) ([]model.Account, error)
+	// ListUsers returns the list of users for an account
+	ListUsers(dbname, accountID string) ([]model.User, error)
 
 	// membership / account & user functions
 	// CreateAccount creates an account
@@ -132,7 +136,14 @@ type Persister interface {
 	RanFunction(dbName, id string, rh model.ExecHistory) error
 
 	// schedule tasks
+	// ListTasks eturns the list of all tasks across all database
 	ListTasks() ([]model.Task, error)
+	// ListTasksByBase returns the tasks for a specific database
+	ListTasksByBase(dbName string) ([]model.Task, error)
+	// AddTask inserts a new task in the reserved sb_tasks collection
+	AddTask(string, model.Task) error
+	// DeleteTask removes a task from the reserved sb_tasks collection
+	DeleteTask(dbName, id string) error
 
 	// Files / storage
 	// AddFile adds a new file

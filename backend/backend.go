@@ -175,7 +175,7 @@ func Setup(cfg config.AppConfig) {
 
 	Log = logger.Get(cfg)
 
-	if strings.EqualFold(cfg.DatabaseURL, "mem") {
+	if strings.EqualFold(cfg.DatabaseURL, "mem") || strings.EqualFold(cfg.RedisHost, "mem") {
 		Cache = cache.NewDevCache(Log)
 	} else {
 		Cache = cache.NewCache(Log)

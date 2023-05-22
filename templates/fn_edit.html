@@ -24,7 +24,7 @@
 
 		<div x-show="tab == 'edit'">
 			<form action="/ui/fn/save" method="POST">
-				<input type="hidden" name="id" value="{{if .Data.FunctionName}}{{.Data.ID.Hex}}{{else}}new{{end}}">
+				<input type="hidden" name="id" value="{{if .Data.FunctionName}}{{.Data.ID}}{{else}}new{{end}}">
 
 				<div class="field">
 					<label class="label">Function name</label>

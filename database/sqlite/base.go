@@ -477,6 +477,8 @@ func (sl *SQLite) ListCollections(dbName string) (results []string, err error) {
 			return
 		}
 
+		// we remove the dbname from the collection name
+		name = strings.Replace(name, dbName+"_", "", -1)
 		results = append(results, name)
 	}
 

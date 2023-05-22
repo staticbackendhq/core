@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"errors"
+	"time"
 
 	"github.com/staticbackendhq/core/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,8 +11,17 @@ import (
 )
 
 type LocalAccount struct {
-	ID    primitive.ObjectID `bson:"_id" json:"id"`
-	Email string             `bson:"email" json:"email"`
+	ID      primitive.ObjectID `bson:"_id" json:"id"`
+	Email   string             `bson:"email" json:"email"`
+	Created time.Time          `bson:"created" json:"created"`
+}
+
+func fromLocalAccount(a LocalAccount) model.Account {
+	return model.Account{
+		ID:      a.ID.Hex(),
+		Email:   a.Email,
+		Created: a.Created,
+	}
 }
 
 func (mg *Mongo) CreateAccount(dbName, email string) (id string, err error) {
