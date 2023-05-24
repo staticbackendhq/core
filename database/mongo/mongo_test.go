@@ -3,11 +3,12 @@ package mongo
 import (
 	"context"
 	"errors"
-	"github.com/staticbackendhq/core/logger"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/staticbackendhq/core/logger"
 
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/model"
@@ -37,7 +38,9 @@ func fakePubDocEvent(channel, typ string, v interface{}) {
 func TestMain(m *testing.M) {
 	config.Current = config.LoadConfig()
 
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	cl, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		log.Fatal(err)
@@ -104,7 +107,9 @@ func createCustomerAndDB() error {
 	}
 
 	exists, err = datastore.DatabaseExists(confDBName)
-	if exists {
+	if err != nil {
+		return err
+	} else if exists {
 		return errors.New("testdb db exists")
 	}
 

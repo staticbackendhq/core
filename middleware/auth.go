@@ -148,7 +148,7 @@ func RequireRoot(datastore database.Persister, volatile cache.Volatilizer) Middl
 			if len(key) == 0 {
 				http.Error(w, "missing authorization HTTP header", http.StatusUnauthorized)
 				return
-			} else if strings.HasPrefix(key, "Bearer ") == false {
+			} else if !strings.HasPrefix(key, "Bearer ") {
 				http.Error(w,
 					fmt.Sprintf("invalid authorization HTTP header, should be: Bearer your-token, but we got %s", key),
 					http.StatusBadRequest,

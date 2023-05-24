@@ -30,7 +30,9 @@ func New(client *mongo.Client, pubdoc cache.PublishDocumentEvent, log *logger.Lo
 }
 
 func (mg *Mongo) Ping() error {
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	return mg.Client.Ping(ctx, readpref.Primary())
 }
 

@@ -47,11 +47,15 @@ func TestMain(m *testing.M) {
 
 	deleteAndSetupTestAccount()
 
-	hub := newHub(backend.Cache)
-	go hub.run()
+	//TODO: re-enable this when we move back to WebSocket instead of SSE
+	/*
+		hub := newHub(backend.Cache)
+		go hub.run()
+	*/
 
 	ws := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		serveWs(backend.Log, hub, w, r)
+		//TODO: re-enable this when we move back to WebSocket instead of SSE
+		//serveWs(backend.Log, hub, w, r)
 	}))
 	defer ws.Close()
 

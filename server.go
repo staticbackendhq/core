@@ -54,8 +54,11 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	backend.Setup(c)
 
 	// websockets
-	hub := newHub(backend.Cache)
-	go hub.run()
+	//TODO: need to rename the hub.tofix and socket.tofix files
+	// when returning to full WebSocket instead of SSE
+	// should move the hub and socket to the realtime package
+	//hub := newHub(backend.Cache)
+	//go hub.run()
 
 	// Server Send Event, alternative to websocket
 	b := realtime.NewBroker(func(ctx context.Context, key string) (string, error) {
@@ -184,7 +187,8 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.HandleFunc("/ping", ping)
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(log, hub, w, r)
+		//TODO: when we move from SSE to full WebSocket re-enable this upgrade
+		//serveWs(log, hub, w, r)
 	})
 
 	http.Handle("/sse/connect", middleware.Chain(http.HandlerFunc(b.Accept), pubWithDB...))

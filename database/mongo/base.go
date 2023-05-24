@@ -338,7 +338,7 @@ func (mg *Mongo) GetDocumentsByIDs(auth model.Auth, dbName, col string, ids []st
 		return []map[string]interface{}{}, err
 	}
 
-	filter := bson.M{FieldID: bson.D{{"$in", oids}}}
+	filter := bson.M{FieldID: bson.M{"$in": oids}}
 
 	secureRead(acctID, userID, auth.Role, col, filter)
 
@@ -415,7 +415,7 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 	removeNotEditableFields(updateFields)
 
 	var ids []string
-	findOpts := options.Find().SetProjection(bson.D{{"id", 1}})
+	findOpts := options.Find().SetProjection(bson.M{"id": 1})
 	cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filters, findOpts)
 	if err != nil {
 		return 0, err
@@ -537,7 +537,7 @@ func (mg *Mongo) DeleteDocuments(auth model.Auth, dbName, col string, filters ma
 
 	go func() {
 		var ids []string
-		findOpts := options.Find().SetProjection(bson.D{{FieldID, 1}})
+		findOpts := options.Find().SetProjection(bson.M{FieldID: 1})
 		cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filters, findOpts)
 		if err != nil {
 			mg.log.Error().Err(err).Msg("trying to get list of ids for bulk delete")

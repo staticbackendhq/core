@@ -1,7 +1,6 @@
 package model
 
 import (
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -38,10 +37,6 @@ type JWTPayload struct {
 	jwt.Payload
 	Token string `json:"token,omitempty"`
 }
-
-var (
-	ctx = context.Background()
-)
 
 type Account struct {
 	ID      string    `json:"id"`

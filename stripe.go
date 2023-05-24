@@ -94,7 +94,7 @@ func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
 
 	wh.log.Info().Msgf("[Sub Changed]: found account: %s", cus.Email)
 
-	if sub.Items.TotalCount > 0 {
+	if sub.Items != nil && len(sub.Items.Data) > 0 {
 		wh.log.Info().Msg("[Sub Changed]: there's at least 1 sub")
 
 		priceID := sub.Items.Data[0].Price.ID

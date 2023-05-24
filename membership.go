@@ -139,6 +139,8 @@ func (m *membership) resetPassword(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
+/*
+TODO: those function are not used in the API ???
 func (m *membership) setRole(w http.ResponseWriter, r *http.Request) {
 	conf, a, err := middleware.Extract(r, true)
 	if err != nil || a.Role < 100 {
@@ -189,6 +191,7 @@ func (m *membership) setPassword(w http.ResponseWriter, r *http.Request) {
 
 	respond(w, http.StatusOK, true)
 }
+*/
 
 func (m *membership) sudoGetTokenFromAccountID(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)

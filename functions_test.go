@@ -182,7 +182,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 	foundError := false
 	for _, h := range checkFn.History {
 		for _, line := range h.Output {
-			if strings.Index(line, "ERROR") > -1 {
+			if !strings.Contains(line, "ERROR") {
 				errorLines = h.Output
 				foundError = true
 				break

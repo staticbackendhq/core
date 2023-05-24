@@ -495,9 +495,5 @@ func scanDocument(rows Scanner, doc *Document) error {
 }
 
 func isTableExists(err error) bool {
-	if strings.Contains(err.Error(), "no such table") {
-		return false
-	}
-	return true
-	return true
+	return !strings.Contains(err.Error(), "no such table")
 }
