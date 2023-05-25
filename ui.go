@@ -636,7 +636,10 @@ func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
 
 		task := model.Task{
 			Name:     r.Form.Get("name"),
