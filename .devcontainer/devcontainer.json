@@ -1,7 +1,7 @@
 {
     "image":"mcr.microsoft.com/devcontainers/universal:2",
     "forwardPorts": [8099],
-    "postStartCommand": "cp .codespaces.env .env && docker-compose -f docker-compose-unittest.yml up",
+    "postStartCommand": "cp .codespaces.env .env && docker-compose -f docker-compose-unittest.yml up -d",
     "customizations": {
         "vscode": {
             "extensions": [

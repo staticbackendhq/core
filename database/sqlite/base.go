@@ -320,6 +320,8 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 	if err != nil {
 		return
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
@@ -426,6 +428,7 @@ func (sl *SQLite) DeleteDocuments(auth model.Auth, dbName, col string, filters m
 	if err != nil {
 		return
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var id string

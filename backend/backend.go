@@ -220,17 +220,16 @@ func Setup(cfg config.AppConfig) {
 		Filestore = storage.Local{}
 	}
 
-	ftsFilename := "sb.fts"
-	if cfg.DatabaseURL == "mem" {
-		ftsFilename = "mem.fts"
-	}
-	src, err := search.New(ftsFilename, Cache)
-	if err != nil {
-		Log.Fatal().Err(err).Msg("unable to start full-text search")
-		return
-	}
+	if !cfg.NoFullTextSearch {
+		ftsFilename := "sb.fts"
+		src, err := search.New(ftsFilename, Cache)
+		if err != nil {
+			Log.Fatal().Err(err).Msg("unable to start full-text search")
+			return
+		}
 
-	Search = src
+		Search = src
+	}
 
 	sub := &function.Subscriber{Log: Log}
 	sub.PubSub = Cache

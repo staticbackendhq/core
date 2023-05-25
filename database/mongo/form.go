@@ -1,11 +1,12 @@
 package mongo
 
 import (
-	"errors"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -63,37 +64,36 @@ func (mg *Mongo) ListFormSubmissions(dbName, name string) (results []map[string]
 }
 
 func (mg *Mongo) GetForms(dbName string) ([]string, error) {
-	return nil, errors.New("need to be re-implemented")
+	db := mg.Client.Database(dbName)
 
-	/*
-		db := mg.Client.Database(dbName)
+	// previously was bson.D{{"$group", bson.D{"_id", "$form"}}}
+	pipeline := mongo.Pipeline{bson.D{
+		{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$form"},
+		}}}}
+	cur, err := db.Collection("sb_forms").Aggregate(mg.Ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(mg.Ctx)
 
-		// previously was bson.D{{"$group", bson.D{"_id", "$form"}}}
-		pipeline := mongo.Pipeline{bson.D{bson.M{"$group": bson.M{"_id": "$form"}}}}
-		cur, err := db.Collection("sb_forms").Aggregate(mg.Ctx, pipeline)
-		if err != nil {
-			return nil, err
-		}
-		defer cur.Close(mg.Ctx)
-
-		var names []string
-		for cur.Next(mg.Ctx) {
-			var form bson.M
-			if err := cur.Decode(&form); err != nil {
-				return nil, err
-			}
-
-			names = append(names, fmt.Sprintf("%v", form[FieldID]))
-		}
-
-		if err := cur.Err(); err != nil {
+	var names []string
+	for cur.Next(mg.Ctx) {
+		var form bson.M
+		if err := cur.Decode(&form); err != nil {
 			return nil, err
 		}
 
-		if len(names) == 0 {
-			names = make([]string, 1)
-		}
+		names = append(names, fmt.Sprintf("%v", form[FieldID]))
+	}
 
-		return names, nil
-	*/
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(names) == 0 {
+		names = make([]string, 1)
+	}
+
+	return names, nil
 }
