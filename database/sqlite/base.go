@@ -354,7 +354,7 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 	go func() {
 		docs, err := sl.GetDocumentsByIDs(auth, dbName, col, ids)
 		if err != nil {
-			sl.log.Error().Err(err).Msgf("the documents with ids=%#s are not received for publishDocument event", ids)
+			sl.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
 		}
 		for _, doc := range docs {
 			sl.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
@@ -497,9 +497,5 @@ func scanDocument(rows Scanner, doc *Document) error {
 }
 
 func isTableExists(err error) bool {
-	if strings.Contains(err.Error(), "no such table") {
-		return false
-	}
-	return true
-	return true
+	return !strings.Contains(err.Error(), "no such table")
 }

@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/internal"
@@ -44,12 +45,15 @@ func TestFileUpload(t *testing.T) {
 		middleware.RequireAuth(backend.DB, backend.Cache),
 	}
 
+	// prevent DB (SQLite) from being busy
+	time.Sleep(35 * time.Millisecond)
+
 	w := httptest.NewRecorder()
 	h := middleware.Chain(http.HandlerFunc(upload), stdAuth...)
 	h.ServeHTTP(w, req)
 
 	if w.Code != 200 {
-		t.Errorf("Expected 200, got %d", w.Code)
+		t.Fatalf("Expected 200, got %d", w.Code)
 	}
 
 	var data backend.SavedFile

@@ -143,7 +143,7 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var data ConvertParam
-	if parseBody(r.Body, &data); err != nil {
+	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

@@ -451,8 +451,12 @@ func TestDBSearchIndexAndQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	backend.Search.Index(dbName, "tasks", createdTask.ID, "adding this to search index")
-	backend.Search.Index(dbName, "tasks", "invalid-id", "Montreal Expos were the best in 95")
+	if err := backend.Search.Index(dbName, "tasks", createdTask.ID, "adding this to search index"); err != nil {
+		t.Fatal(err)
+	}
+	if err := backend.Search.Index(dbName, "tasks", "invalid-id", "Montreal Expos were the best in 95"); err != nil {
+		t.Fatal(err)
+	}
 
 	// wait for the go routine for the pubsub to complete
 	time.Sleep(3 * time.Second)

@@ -83,7 +83,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
 	stripeID := sub.Customer.ID
 
-	wh.log.Info().Msgf("[Sub Changed]: for StripeID: %d", stripeID)
+	wh.log.Info().Msgf("[Sub Changed]: for StripeID: %s", stripeID)
 
 	// find the customer
 	cus, err := backend.DB.GetTenantByStripeID(stripeID)
@@ -94,7 +94,7 @@ func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
 
 	wh.log.Info().Msgf("[Sub Changed]: found account: %s", cus.Email)
 
-	if sub.Items.TotalCount > 0 {
+	if sub.Items != nil && len(sub.Items.Data) > 0 {
 		wh.log.Info().Msg("[Sub Changed]: there's at least 1 sub")
 
 		priceID := sub.Items.Data[0].Price.ID
@@ -138,7 +138,7 @@ func (wh *stripeWebhook) handlePaymentMethodAttached(pm stripe.PaymentMethod) {
 	}
 
 	if err := backend.DB.ActivateTenant(cus.ID, true); err != nil {
-		wh.log.Error().Err(err).Msgf("STRIPE ERROR (activate cus): %d", stripeID)
+		wh.log.Error().Err(err).Msgf("STRIPE ERROR (activate cus): %s", stripeID)
 	}
 }
 

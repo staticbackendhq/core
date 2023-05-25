@@ -101,7 +101,7 @@ func (d *CacheDev) Subscribe(send chan model.Command, token, channel string, clo
 				msg.Type = model.MsgTypeChanOut
 			} else if msg.IsSystemEvent {
 
-			} else if msg.IsDBEvent() && d.HasPermission(token, channel, msg.Data) == false {
+			} else if msg.IsDBEvent() && !d.HasPermission(token, channel, msg.Data) {
 				continue
 			}
 			send <- msg

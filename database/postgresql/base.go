@@ -339,7 +339,7 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 	go func() {
 		docs, err := pg.GetDocumentsByIDs(auth, dbName, col, ids)
 		if err != nil {
-			pg.log.Error().Err(err).Msgf("the documents with ids=%#s are not received for publishDocument event", ids)
+			pg.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
 		}
 		for _, doc := range docs {
 			pg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)

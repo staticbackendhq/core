@@ -3,7 +3,6 @@ package staticbackend
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -503,8 +502,6 @@ func (database *Database) search(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Println("DEBUG", result.IDs)
 
 	docs, err := backend.DB.GetDocumentsByIDs(auth, conf.Name, data.Col, result.IDs)
 	if err != nil {

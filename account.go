@@ -34,7 +34,10 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		fromCLI = false
 
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		email = strings.ToLower(r.Form.Get("email"))
 	} else {
@@ -50,7 +53,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// TODO: cheap email validation
-	if len(email) < 4 || strings.Index(email, "@") == -1 || strings.Index(email, ".") == -1 {
+	if len(email) < 4 || !strings.Contains(email, "@") || !strings.Contains(email, ".") {
 		http.Error(w, "invalid email", http.StatusBadRequest)
 		return
 	}
@@ -241,7 +244,9 @@ Refer to the documentation at https://staticbackend.com/docs\n
 		// cache the root token so caller can always use
 		// "safe-to-use-in-dev-root-token" as root token instead of
 		// the changing one across CLI start/stop
-		backend.Cache.Set("dev-root-token", rootToken)
+		if err := backend.Cache.Set("dev-root-token", rootToken); err != nil {
+			backend.Log.Error().Err(err)
+		}
 	} else {
 		err = backend.Emailer.Send(ed)
 		if err != nil {

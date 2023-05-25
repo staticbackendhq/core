@@ -75,7 +75,7 @@ func (ts *TaskScheduler) run(task model.Task) {
 func (ts *TaskScheduler) execFunction(auth model.Auth, task model.Task) {
 	fn, err := ts.DataStore.GetFunctionForExecution(task.BaseName, task.Value)
 	if err != nil {
-		ts.log.Error().Err(err).Msgf("cannot find function %s on task %s", task.Value)
+		ts.log.Error().Err(err).Msgf("cannot find function %s on task %s", task.Value, task.ID)
 		return
 	}
 
@@ -100,7 +100,7 @@ func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 
 	if len(task.Meta) > 0 {
 		if err := json.Unmarshal([]byte(task.Meta), &meta); err != nil {
-			ts.log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %d", task.ID)
+			ts.log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %s", task.ID)
 			return
 		}
 	}
@@ -114,6 +114,6 @@ func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 	}
 
 	if err := ts.Volatile.Publish(msg); err != nil {
-		ts.log.Error().Err(err).Msgf("error publishing message from task: %d", task.ID)
+		ts.log.Error().Err(err).Msgf("error publishing message from task: %s", task.ID)
 	}
 }

@@ -39,10 +39,18 @@ func (env *ExecutionEnvironment) Execute(data interface{}) error {
 	vm := goja.New()
 	vm.SetFieldNameMapper(goja.TagFieldNameMapper("json", true))
 
-	env.addHelpers(vm)
-	env.addDatabaseFunctions(vm)
-	env.addVolatileFunctions(vm)
-	env.addSearch(vm)
+	if err := env.addHelpers(vm); err != nil {
+		return err
+	}
+	if err := env.addDatabaseFunctions(vm); err != nil {
+		return err
+	}
+	if err := env.addVolatileFunctions(vm); err != nil {
+		return err
+	}
+	if err := env.addSearch(vm); err != nil {
+		return err
+	}
 
 	if _, err := vm.RunString(env.Data.Code); err != nil {
 		return err
@@ -114,8 +122,8 @@ func (env *ExecutionEnvironment) prepareArguments(vm *goja.Runtime, data interfa
 	return args, nil
 }
 
-func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) {
-	vm.Set("log", func(call goja.FunctionCall) goja.Value {
+func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) error {
+	err := vm.Set("log", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) == 0 {
 			return goja.Undefined()
 		}
@@ -127,7 +135,10 @@ func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) {
 		env.CurrentRun.Output = append(env.CurrentRun.Output, fmt.Sprint(params...))
 		return goja.Undefined()
 	})
-	vm.Set("fetch", func(call goja.FunctionCall) goja.Value {
+	if err != nil {
+		return err
+	}
+	err = vm.Set("fetch", func(call goja.FunctionCall) goja.Value {
 		url := ""
 		fetchOptions := NewJSFetcthOptionArg()
 		if len(call.Arguments) == 0 {
@@ -192,10 +203,14 @@ func (env *ExecutionEnvironment) addHelpers(vm *goja.Runtime) {
 		}
 		return goja.Undefined()
 	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
-	vm.Set("create", func(call goja.FunctionCall) goja.Value {
+func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) error {
+	err := vm.Set("create", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 2 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for create(col, doc"})
 		}
@@ -218,7 +233,11 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 		}
 		return vm.ToValue(Result{OK: true, Content: doc})
 	})
-	vm.Set("list", func(call goja.FunctionCall) goja.Value {
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("list", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) < 1 {
 			return vm.ToValue(Result{Content: "argument missmatch: your need at least 1 argument for list(col, [params])"})
 		}
@@ -251,7 +270,11 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true, Content: result})
 	})
-	vm.Set("getById", func(call goja.FunctionCall) goja.Value {
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("getById", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 2 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for get(col, id)"})
 		}
@@ -274,7 +297,11 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true, Content: doc})
 	})
-	vm.Set("query", func(call goja.FunctionCall) goja.Value {
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("query", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) < 2 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need at least 2 arguments for query(col, filter, [params])"})
 		}
@@ -321,7 +348,11 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true, Content: result})
 	})
-	vm.Set("update", func(call goja.FunctionCall) goja.Value {
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("update", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 3 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for update(col, id, doc)"})
 		}
@@ -350,7 +381,11 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true, Content: updated})
 	})
-	vm.Set("del", func(call goja.FunctionCall) goja.Value {
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("del", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 2 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for del(col, id)"})
 		}
@@ -370,6 +405,10 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true, Content: deleted})
 	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (*ExecutionEnvironment) clean(doc map[string]interface{}) error {
@@ -393,8 +432,8 @@ func (*ExecutionEnvironment) clean(doc map[string]interface{}) error {
 	return nil
 }
 
-func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
-	vm.Set("send", func(call goja.FunctionCall) goja.Value {
+func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) error {
+	err := vm.Set("send", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 3 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for send(type, data, channel)"})
 		}
@@ -425,10 +464,14 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true})
 	})
+	if err != nil {
+		return nil
+	}
+	return nil
 }
 
-func (env *ExecutionEnvironment) addSearch(vm *goja.Runtime) {
-	vm.Set("search", func(call goja.FunctionCall) goja.Value {
+func (env *ExecutionEnvironment) addSearch(vm *goja.Runtime) error {
+	err := vm.Set("search", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 2 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for search(col, keywords)"})
 		}
@@ -458,7 +501,11 @@ func (env *ExecutionEnvironment) addSearch(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true, Content: docs})
 	})
-	vm.Set("indexDocument", func(call goja.FunctionCall) goja.Value {
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("indexDocument", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 3 {
 			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for indexDocument(col, id, text)"})
 		}
@@ -478,6 +525,10 @@ func (env *ExecutionEnvironment) addSearch(vm *goja.Runtime) {
 
 		return vm.ToValue(Result{OK: true})
 	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (env *ExecutionEnvironment) complete(err error) {
