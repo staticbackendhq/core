@@ -18,16 +18,21 @@ type ui struct {
 	log *logger.Logger
 }
 
-func (ui) login(w http.ResponseWriter, r *http.Request) {
+func (x *ui) login(w http.ResponseWriter, r *http.Request) {
 	render(w, r, "login.html", nil, nil, nil)
 }
 
-func (ui) createApp(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+/*
+TODO: this function is not used ?!?
+func (x *ui) createApp(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
 
 	email := strings.ToLower(r.URL.Query().Get("email"))
 	// TODO: cheap email validation
-	if len(email) < 4 || strings.Index(email, "@") == -1 || strings.Index(email, ".") == -1 {
+	if len(email) < 4 || !strings.Contains(email, "@") || !strings.Contains(email, ".") {
 		http.Error(w, "invalid email", http.StatusBadRequest)
 		return
 	}
@@ -42,9 +47,13 @@ func (ui) createApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+*/
 
 func (x ui) auth(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
 
 	pk := r.Form.Get("pk")
 	token := r.Form.Get("token")
@@ -116,7 +125,11 @@ func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
 	provider := r.Form.Get("provider")
 	apikey := r.Form.Get("apikey")
 	secret := r.Form.Get("apisecret")
@@ -198,7 +211,10 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 	// handle post
 	if r.Method == http.MethodPost {
-		r.ParseForm()
+		if err := r.ParseForm(); err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
 
 		col = r.Form.Get("col")
 		params.SortBy = r.Form.Get("sortby")
@@ -288,7 +304,10 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
 
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
@@ -360,11 +379,9 @@ func (ui) readColumnNames(docs []map[string]interface{}) []string {
 
 	first := docs[0]
 
-	var columns []string
-	columns = append(columns, "id")
-	columns = append(columns, "accountId")
+	columns := []string{"id", "accountId"}
 
-	for k, _ := range first {
+	for k := range first {
 		if strings.EqualFold(k, "id") {
 			continue
 		} else if strings.EqualFold(k, "accountId") {
@@ -474,7 +491,9 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		renderErr(w, r, err, x.log)
+	}
 
 	id := r.Form.Get("id")
 	name := r.Form.Get("name")

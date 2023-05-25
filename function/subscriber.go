@@ -69,7 +69,9 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
 			ids = append(ids, fn.ID)
 		}
 
-		sub.PubSub.SetTyped(key, ids)
+		if err := sub.PubSub.SetTyped(key, ids); err != nil {
+			sub.Log.Error().Err(err).Msg("unable to publish message")
+		}
 	}
 
 	for _, id := range ids {

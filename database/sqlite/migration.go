@@ -27,11 +27,14 @@ func migrate(db *sql.DB) error {
 
 func ensureSchema(db *sql.DB) error {
 	var schema string
-	db.QueryRow(`
+	err := db.QueryRow(`
 		SELECT name 
 		FROM sqlite_master 
 		WHERE type='table' AND name='sb_customers';
 	`).Scan(&schema)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
 
 	if len(schema) == 0 {
 		// the bootstrap script has not been executed yet.
@@ -49,11 +52,14 @@ func ensureSchema(db *sql.DB) error {
 
 func ensureMigrationTable(db *sql.DB) error {
 	var table string
-	db.QueryRow(`
+	err := db.QueryRow(`
 		SELECT name 
 		FROM sqlite_master 
 		WHERE type='table' AND name='sb_migrations';
 	`).Scan(&table)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
 
 	if len(table) == 0 {
 		// the migrations table does not exists, we create it.

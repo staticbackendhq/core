@@ -102,7 +102,9 @@ func createCustomerAndSchema() error {
 	}
 
 	exists, err = datastore.DatabaseExists(confDBName)
-	if exists {
+	if err != nil {
+		return err
+	} else if exists {
 		return errors.New("testdb schema exists")
 	}
 

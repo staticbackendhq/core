@@ -1,6 +1,10 @@
 include .env
 export $(shell sed 's/=.*//' .env)
 
+cleanup:
+	@rm -rf dev.db && rm -rf backend/dev.db
+	@rm -rf *.fts && rm -rf backend/*.fts
+
 build:
 	@cd cmd && rm -rf staticbackend && go build \
 	-ldflags "-X github.com/staticbackendhq/core/config.BuildTime=$(shell date +'%Y-%m-%d.%H:%M:%S') \
@@ -22,7 +26,7 @@ alltest:
 thistest:
 	go test -run $(TESTNAME) --cover ./...
 
-test-core:
+test-core: cleanup
 	@go clean -testcache && go test --race --cover
 
 test-pg:

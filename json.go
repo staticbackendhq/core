@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/staticbackendhq/core/backend"
 )
 
 func respond(w http.ResponseWriter, code int, v interface{}) {
@@ -15,7 +17,9 @@ func respond(w http.ResponseWriter, code int, v interface{}) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(b)
+	if _, err := w.Write(b); err != nil {
+		backend.Log.Error().Err(err)
+	}
 }
 
 func parseBody(body io.ReadCloser, v interface{}) error {

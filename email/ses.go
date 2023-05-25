@@ -14,7 +14,7 @@ import (
 type AWSSES struct{}
 
 func (AWSSES) Send(data SendMailData) error {
-	if len(data.To) == 0 || strings.Index(data.To, "@") == -1 {
+	if len(data.To) == 0 || !strings.Contains(data.To, "@") {
 		return fmt.Errorf("empty To email")
 	}
 

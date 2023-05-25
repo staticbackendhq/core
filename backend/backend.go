@@ -175,7 +175,7 @@ func Setup(cfg config.AppConfig) {
 
 	Log = logger.Get(cfg)
 
-	if strings.EqualFold(cfg.DatabaseURL, "mem") {
+	if strings.EqualFold(cfg.DatabaseURL, "mem") || strings.EqualFold(cfg.RedisHost, "mem") {
 		Cache = cache.NewDevCache(Log)
 	} else {
 		Cache = cache.NewCache(Log)
@@ -277,7 +277,9 @@ func Setup(cfg config.AppConfig) {
 func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {
 	uri := dbHost
 
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	cl, err := mongodrv.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to mongo: %v", err)

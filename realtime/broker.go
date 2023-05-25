@@ -139,27 +139,28 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// handles the client-side disconnection
-	notify := w.(http.CloseNotifier).CloseNotify()
-	go func() {
-		<-notify
-		b.closingConnections <- messages
-	}()
+	ctx := r.Context()
 
 	// broadcast messages
 	for {
-		// write Server Sent Event data
-		msg := <-messages
-		bytes, err := json.Marshal(msg)
-		if err != nil {
-			b.log.Warn().Err(err).Msg("error converting to JSON")
+		select {
+		case msg := <-messages:
+			// write Server Sent Event data
+			bytes, err := json.Marshal(msg)
+			if err != nil {
+				b.log.Warn().Err(err).Msg("error converting to JSON")
 
-			continue
+				continue
+			}
+
+			fmt.Fprintf(w, "data: %s\n\n", bytes)
+
+			// flush immediately.
+			flusher.Flush()
+		case <-ctx.Done():
+			b.closingConnections <- messages
+			return
 		}
-
-		fmt.Fprintf(w, "data: %s\n\n", bytes)
-
-		// flush immediately.
-		flusher.Flush()
 	}
 }
 
@@ -169,7 +170,7 @@ func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, pa
 	if msg.SID != model.SystemID {
 		s, ok := b.ids[msg.SID]
 		if !ok {
-			b.log.Info().Msgf("cannot find sender socket: %d", msg.SID)
+			b.log.Info().Msgf("cannot find sender socket: %s", msg.SID)
 			return
 		}
 		sender = s
@@ -214,7 +215,9 @@ func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, pa
 		// make sure the subscription had time to kick-off
 		go func(m model.Command) {
 			time.Sleep(250 * time.Millisecond)
-			b.pubsub.Publish(joinedMsg)
+			if err := b.pubsub.Publish(joinedMsg); err != nil {
+				b.log.Error().Err(err)
+			}
 		}(joinedMsg)
 
 		payload = model.Command{Type: model.MsgTypeOk, Data: msg.Data}
@@ -238,8 +241,11 @@ func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, pa
 			return
 		}
 
-		go b.pubsub.Publish(msg)
-		//go b.Publish(msg, msg.Channel)
+		go func() {
+			if err := b.pubsub.Publish(msg); err != nil {
+				b.log.Error().Err(err)
+			}
+		}()
 
 		payload = model.Command{Type: model.MsgTypeOk}
 	default:

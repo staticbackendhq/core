@@ -149,7 +149,10 @@ func (el *ExternalLogins) callback() http.Handler {
 		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			params := r.URL.Query()
 			if params.Encode() == "" && r.Method == "POST" {
-				r.ParseForm()
+				if err := r.ParseForm(); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
 				params = r.Form
 			}
 

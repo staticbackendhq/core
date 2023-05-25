@@ -168,7 +168,7 @@ func (s *Search) setupIndexEvent() {
 		case msg := <-receiver:
 			go s.receivedIndexEvent(msg.Data)
 		case <-close:
-			break
+			return
 		}
 	}
 }
