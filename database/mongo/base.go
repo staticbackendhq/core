@@ -450,7 +450,7 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 	go func() {
 		docs, err := mg.GetDocumentsByIDs(auth, dbName, col, ids)
 		if err != nil {
-			mg.log.Error().Err(err).Msgf("the documents with ids=%#s are not received for publishDocument event", ids)
+			mg.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
 		}
 		for _, doc := range docs {
 			mg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)

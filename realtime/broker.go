@@ -170,7 +170,7 @@ func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, pa
 	if msg.SID != model.SystemID {
 		s, ok := b.ids[msg.SID]
 		if !ok {
-			b.log.Info().Msgf("cannot find sender socket: %d", msg.SID)
+			b.log.Info().Msgf("cannot find sender socket: %s", msg.SID)
 			return
 		}
 		sender = s
