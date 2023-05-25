@@ -20,7 +20,7 @@ import (
 	FieldOwnerID   = "ownerId"
 )*/
 
-var collectionNotFoundErr = errors.New("collection not found")
+var errCollectionNotFound = errors.New("collection not found")
 
 func init() {
 	gob.Register(map[string]any{})
@@ -92,7 +92,7 @@ func getByID[T any](m *Memory, dbName, col, id string, v T) error {
 
 	repo, ok := m.DB[key]
 	if !ok {
-		return collectionNotFoundErr
+		return errCollectionNotFound
 	}
 
 	b, ok := repo[id]
@@ -109,7 +109,7 @@ func all[T any](m *Memory, dbName, col string) (list []T, err error) {
 
 	repo, ok := m.DB[key]
 	if !ok {
-		return nil, collectionNotFoundErr
+		return nil, errCollectionNotFound
 	}
 
 	for _, v := range repo {

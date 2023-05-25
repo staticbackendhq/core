@@ -171,6 +171,16 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 	}
 
 	infoResp := dbReq(t, funexec.info, "GET", "/fn/info/unittest", nil, true)
+	defer infoResp.Body.Close()
+
+	if infoResp.StatusCode >= 299 {
+		b, err := io.ReadAll(infoResp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Fatalf("expected 200 status got %d - %s", infoResp.StatusCode, string(b))
+	}
 
 	var checkFn model.ExecData
 	if err := parseBody(infoResp.Body, &checkFn); err != nil {

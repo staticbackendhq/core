@@ -32,7 +32,7 @@ func ensureSchema(db *sql.DB) error {
 		FROM sqlite_master 
 		WHERE type='table' AND name='sb_customers';
 	`).Scan(&schema)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 
@@ -57,7 +57,7 @@ func ensureMigrationTable(db *sql.DB) error {
 		FROM sqlite_master 
 		WHERE type='table' AND name='sb_migrations';
 	`).Scan(&table)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 

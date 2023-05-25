@@ -32,7 +32,7 @@ func ensureSchema(db *sql.DB) error {
 		FROM information_schema.schemata 
 		WHERE schema_name = 'sb';
 	`).Scan(&schema)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 
@@ -58,7 +58,7 @@ func ensureMigrationTable(db *sql.DB) error {
 	WHERE	table_schema = 'sb'
 		AND	table_name   = 'migrations'
 	`).Scan(&table)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 

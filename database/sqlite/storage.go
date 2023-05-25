@@ -43,7 +43,7 @@ func (sl *SQLite) GetFileByID(dbName, fileID string) (f model.File, err error) {
 func (sl *SQLite) DeleteFile(dbName, fileID string) error {
 	qry := fmt.Sprintf(`
 		DELETE FROM %s_sb_files 
-		WHERE id = $1
+		WHERE id = $1;
 	`, dbName)
 
 	if _, err := sl.DB.Exec(qry, fileID); err != nil {
