@@ -31,7 +31,7 @@
 			{{range .Data}}
 			<tr>
 				<td>
-					<a href="/ui/fn/{{.ID.Hex}}">
+					<a href="/ui/fn/{{.ID}}">
 						{{.FunctionName}}
 					</a>
 				</td>
@@ -50,6 +50,7 @@
 						href="/ui/fn/del/{{.FunctionName}}" 
 						class="delete" 
 						onclick="return confirm('Are you sure you want to delete this function?\n\nThis is irreversible.')">
+						delete
 					</a>
 				</td>
 			</tr>

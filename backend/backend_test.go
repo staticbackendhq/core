@@ -24,12 +24,13 @@ func TestMain(t *testing.M) {
 	// the backend package
 
 	cfg := config.AppConfig{
-		AppEnv:          "dev",
-		FromCLI:         "yes",
-		Port:            "8099",
-		DatabaseURL:     "mem",
-		DataStore:       "mem",
-		LocalStorageURL: "http://localhost:8099",
+		AppEnv:           "dev",
+		FromCLI:          "yes",
+		Port:             "8099",
+		DatabaseURL:      "mem",
+		DataStore:        "mem",
+		LocalStorageURL:  "http://localhost:8099",
+		NoFullTextSearch: true,
 	}
 
 	// initializes all core services basesd on config

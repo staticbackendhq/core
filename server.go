@@ -232,6 +232,8 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	// ui routes
 	webUI := ui{log: log}
 	http.HandleFunc("/ui/login", webUI.auth)
+	http.Handle("/ui/accounts", middleware.Chain(http.HandlerFunc(webUI.accounts), stdRoot...))
+	http.Handle("/ui/users/", middleware.Chain(http.HandlerFunc(webUI.users), stdRoot...))
 	http.Handle("/ui/logins", middleware.Chain(http.HandlerFunc(webUI.logins), stdRoot...))
 	http.Handle("/ui/enable-login", middleware.Chain(http.HandlerFunc(webUI.enableExternalLogin), stdRoot...))
 	http.Handle("/ui/db", middleware.Chain(http.HandlerFunc(webUI.dbCols), stdRoot...))
@@ -243,10 +245,13 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/ui/fn/del/", middleware.Chain(http.HandlerFunc(webUI.fnDel), stdRoot...))
 	http.Handle("/ui/fn/", middleware.Chain(http.HandlerFunc(webUI.fnEdit), stdRoot...))
 	http.Handle("/ui/fn", middleware.Chain(http.HandlerFunc(webUI.fnList), stdRoot...))
+	http.Handle("/ui/tasks/new", middleware.Chain(http.HandlerFunc(webUI.taskNew), stdRoot...))
+	http.Handle("/ui/tasks", middleware.Chain(http.HandlerFunc(webUI.tasks), stdRoot...))
 	http.Handle("/ui/forms", middleware.Chain(http.HandlerFunc(webUI.forms), stdRoot...))
 	http.Handle("/ui/forms/del/", middleware.Chain(http.HandlerFunc(webUI.formDel), stdRoot...))
 	http.Handle("/ui/fs", middleware.Chain(http.HandlerFunc(webUI.fsList), stdRoot...))
 	http.Handle("/ui/fs/del/", middleware.Chain(http.HandlerFunc(webUI.fsDel), stdRoot...))
+	http.Handle("/ui/my-account/", middleware.Chain(http.HandlerFunc(webUI.myAccount), stdRoot...))
 	http.HandleFunc("/", webUI.login)
 
 	// graceful shutdown

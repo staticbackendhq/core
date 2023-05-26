@@ -78,6 +78,8 @@ type AppConfig struct {
 
 	// LogFilename if set, write logs to console and this file.
 	LogFilename string
+	// NoFullTextSearch prevents full-text search index from initializing
+	NoFullTextSearch bool
 }
 
 func LoadConfig() AppConfig {

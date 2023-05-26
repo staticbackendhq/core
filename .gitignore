@@ -10,6 +10,7 @@ cmd/staticbackend
 database/sqlite/test.db
 search/testdata
 **/*.fts
+**/*.db
 
 dist/
 

@@ -119,13 +119,17 @@
 					<td>
 						{{if eq . "id"}}
 							<a href="/ui/db/{{getField . $doc}}?col={{$col}}">
-								{{getField . $doc}}
+								edit
 							</a>
 						{{else}}
 							{{getField . $doc}}
 						{{end}}
 					</td>
 					{{end}}
+				</tr>
+				{{else}}
+				<tr>
+					<td>no document matches</td>
 				</tr>
 				{{end}}
 			</tbody>

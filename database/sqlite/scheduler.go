@@ -49,6 +49,40 @@ func (sl *SQLite) ListTasksByBase(dbName string) (results []model.Task, err erro
 	return
 }
 
+func (sl *SQLite) AddTask(dbName string, task model.Task) error {
+	qry := fmt.Sprintf(`
+	INSERT INTO %s_sb_tasks(id, name, type, value, meta, interval, last_run)
+	VALUES($1, $2, $3, $4, $5, $6, $7);
+	`, dbName)
+
+	_, err := sl.DB.Exec(
+		qry,
+		sl.NewID(),
+		task.Name,
+		task.Type,
+		task.Value,
+		task.Meta,
+		task.Interval,
+		task.LastRun,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sl *SQLite) DeleteTask(dbName, id string) error {
+	qry := fmt.Sprintf(`
+	DELETE FROM %s_sb_tasks
+	WHERE id = $1;
+	`, dbName)
+
+	if _, err := sl.DB.Exec(qry, id); err != nil {
+		return err
+	}
+	return nil
+}
+
 func scanTask(rows Scanner, t *model.Task) error {
 	return rows.Scan(
 		&t.ID,

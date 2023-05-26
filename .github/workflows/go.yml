@@ -31,7 +31,7 @@ jobs:
       run: make build
 
     - name: Test (PostgreSQL data store)
-      run: make test-core
+      run: make alltest
 
     - name: Change DATA_STORE to Mongo
       run: sed -i 's/DATA_STORE=pg/DATA_STORE=mongo/g' .env
@@ -43,4 +43,4 @@ jobs:
       run: rm -rf sb.fts && rm -rf backend/sb.fts
 
     - name: Test (Mongo data store)
-      run: make test-core
+      run: make alltest
