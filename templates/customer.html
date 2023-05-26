@@ -1,0 +1,37 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6">
+		<h2 class="title is-2">
+			Your account
+		</h2>
+		<p class="subtitle is-5">
+			View account information and access the billing portal.
+		</p>
+
+
+		<div class="content">
+			<p>
+				<strong>Your email</strong><br />{{.Data.Email}}
+			</p>
+			<p>
+				<strong>Account active?</strong><br />
+				{{if .Data.IsActive}}
+					yes
+				{{else}}
+					no
+				{{end}}
+			</p>
+			<p>
+				<strong>Access the billing portal</strong><br />
+				<form action="/ui/my-account" method="post">
+					<button type="submit" class="button is-primary">Access your billing portal</button>
+				</form>
+			</p>
+		</div>
+	</div>
+</body>
+
+{{template "foot"}}

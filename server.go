@@ -251,6 +251,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/ui/forms/del/", middleware.Chain(http.HandlerFunc(webUI.formDel), stdRoot...))
 	http.Handle("/ui/fs", middleware.Chain(http.HandlerFunc(webUI.fsList), stdRoot...))
 	http.Handle("/ui/fs/del/", middleware.Chain(http.HandlerFunc(webUI.fsDel), stdRoot...))
+	http.Handle("/ui/my-account/", middleware.Chain(http.HandlerFunc(webUI.myAccount), stdRoot...))
 	http.HandleFunc("/", webUI.login)
 
 	// graceful shutdown

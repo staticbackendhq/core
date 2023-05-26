@@ -662,3 +662,35 @@ func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
 
 	render(w, r, "tasks_new.html", nil, nil, nil)
 }
+
+func (x ui) myAccount(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
+
+		url, err := getStripePortalURL(conf.TenantID)
+		if err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
+
+		http.Redirect(w, r, url, http.StatusSeeOther)
+		return
+	}
+
+	tenant, err := backend.DB.FindTenant(conf.TenantID)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	render(w, r, "customer.html", tenant, nil, x.log)
+}
