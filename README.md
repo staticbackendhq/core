@@ -20,8 +20,8 @@ user management, database, file storage, forms, real-time experiences via
 channel/topic-based communication, and server-side functions for web and mobile 
 applications.
 
-You can think of it as a lightweight Firebase replacement you may self-host. Less 
-vendor lock-in, and your data stays in your control.
+You can think of it as a lightweight and stable backend API you may self-host. 
+Less vendor lock-in, and your data stays in your control.
 
 You may use its building blocks from one or a combination of:
 
@@ -72,7 +72,7 @@ type Task struct {
 // auth is the currently authenticated user performing the action.
 // base is the current tenant's database to execute action
 // "tasks" is the collection name
-tasks := backend.Collection(auth, base, "tasks")
+tasks := backend.Collection[Task](auth, base, "tasks")
 newTask, err := tasks.Create(Task{Title: "testing"})
 // newTask.ID is filled with the unique ID of the created task in DB
 ```
@@ -94,10 +94,9 @@ a good fit.
 
 I'm personally using it to build SaaS:
 
-[En Pyjama - an online course platform for kids](https://enpyjama.com)
-
 Abandoned projects:
 
+* [En Pyjama - an online course platform for kids](https://enpyjama.com)
 * [Vivid - Automatic video clips for podcasts](https://vivid.fm)
 * [Tangara - one page checkout for creators](https://tangara.io)
 
@@ -106,12 +105,13 @@ It can be used from client-side and/or server-side.
 ## How it works / dev workflow
 
 The main idea is that StaticBackend is your backend API for your applications. 
-A performant free and open-source self-hosted Firebase alternative.
+It handles common web/mobile building blocks so you do not have to 
+re-implement them.
 
 _Note that it can also be used from your backend code as well._
 
 Once you have an instance running and your first app created, you may install 
-the JavaScript client-side library:
+the JavaScript client-side library for example:
 
 ```shell
 $> npm install @staticbackend/js
@@ -167,7 +167,7 @@ The last `console.log` prints
 From there you build your application using the 
 [database](https://staticbackend.com/docs/database/) CRUD and query functions, 
 the [real-time component](https://staticbackend.com/docs/websocket/),
-the [storage API](https://staticbackend.com/docs/storage/), etc.
+the [storage API](https://staticbackend.com/docs/storage/), and much more.
 
 StaticBackend provides commonly used building blocks for web applications.
 

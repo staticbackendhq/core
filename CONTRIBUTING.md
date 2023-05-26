@@ -27,21 +27,48 @@ Here's what you'll need to run the tests:
 * Either Docker or local PostgreSQL, Mongo, and Redis
 * Environment variables in an `.env` file
 
+*Please note that since v1.5 there's an SQLite data provider removing the need 
+to have PostgreSQL/Mongo. Also there's a memory cache implemented removing the need 
+to have Redis installed.*
+
 Here's my dev `.env` file:
 
 ```
 APP_SECRET=a-very-long-key-should-be-32long
 APP_ENV=dev
 APP_URL=http://localhost:8099
-DATABASE_URL=user=postgres password=postgres dbname=postgres sslmode=disable
-DATA_STORE=pg
-# DATABASE_URL=mongodb://localhost:27017
-#DATA_STORE=mongo
 JWT_SECRET=tiaAvfn
+
+# For PostgreSQL
+#DATABASE_URL=host=localhost user=postgres password=postgres dbname=postgres sslmode=disable
+#DATA_STORE=pg
+
+# For MongoDB
+#DATABASE_URL=mongodb://localhost:27017
+#DATA_STORE=mongo
+
+# For SQLite
+#DATABASE_URL=dev.db
+#DATA_STORE=sqlite
+
+# For the memory provider
+DATABASE_URL=mem
+DATA_STORE=mem
+# Dev email (printed to terminal)
+MAIL_PROVIDER=dev
 FROM_EMAIL=host@dev.com
 FROM_NAME=StaticBackend
-REDIS_HOST=localhost:6379
+
+# For Redis cache
+#REDIS_HOST=localhost:6379
+#REDIS_PASSWORD=
+
+# For the in-memory cache implementation
+REDIS_HOST=mem
 REDIS_PASSWORD=
+
+# Local file storage implementation
+STORAGE_PROVIDER=local
 LOCAL_STORAGE_URL=http://localhost:8099
 ```
 
@@ -52,6 +79,10 @@ MongoDB, and Redis) and have a local Go compiler to run tests.
 $ docker-compose -f docker-compose-unittest.yml up
 ```
 
+If you are using the SQLite or Memory data provider with the Memory cache 
+provider you'd have nothing to install. But sometimes, it's nice to run all 
+tests against all supported options.
+
 I use `make` to run tests, refer the the `Makefile` for the commands if you 
 don't have `make` available.
 
@@ -61,6 +92,13 @@ $ make alltest
 
 I often changes the `DATA_STORE` between `pg` and `mongo`. There's also specific 
 make entry for all database providers.
+
+Another I use often is the `test-core`, it test only the public API and does 
+not test sub-packages.
+
+```sh
+$ make test-core
+```
 
 ## Submit Pull Requests
 
