@@ -52,6 +52,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 			fromCLI = false
 		}
 	}
+
 	// TODO: cheap email validation
 	if len(email) < 4 || !strings.Contains(email, "@") || !strings.Contains(email, ".") {
 		http.Error(w, "invalid email", http.StatusBadRequest)
@@ -124,7 +125,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	retry := 10
 	dbName := internal.RandStringRunes(12)
 	if memoryMode {
-		dbName = "dev-memory-pk"
+		dbName = "dev_memory_pk"
 	}
 	for {
 		exists, err = backend.DB.DatabaseExists(dbName)
@@ -232,10 +233,10 @@ Admin user:
 
 
 Dev root token:		safe-to-use-in-dev-root-token
-Real root token:		%s
+Real root token:	%s
 
 
-Refer to the documentation at https://staticbackend.com/docs\n
+Refer to the documentation at https://staticbackend.com/docs
 
 `,
 			bc.ID, email, pw, rootToken,
