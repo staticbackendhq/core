@@ -104,6 +104,7 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 		BaseName:  conf.Name,
 		DataStore: backend.DB,
 		Data:      fn,
+		Email:     backend.Emailer,
 	}
 
 	if err := env.Execute(r); err != nil {

@@ -11,6 +11,9 @@ database/sqlite/test.db
 search/testdata
 **/*.fts
 
+dev.db
+__debug_bin
+
 dist/
 
 # Binaries for programs and plugins

@@ -263,6 +263,7 @@ func Setup(cfg config.AppConfig) {
 		exe.DataStore = DB
 		exe.Volatile = Cache
 		exe.Search = Search
+		exe.Email = Emailer
 
 		return exe, nil
 	}

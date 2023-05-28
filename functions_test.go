@@ -14,6 +14,15 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 	code := `
 	function handle(body) {
 		log(body);
+
+		sendMail({
+			From: "me@backend.com",
+			To: "user1@domain.com",
+			Subject: "Begin test",
+			HTMLBody: "<h1>Hello</h1>...",
+			TextBody: "Hello\n\n...",
+		  });
+
 		var o = {
 			from: body.from,
 			desc: "yep", 
@@ -137,6 +146,15 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			log(delRes.content);
 			return;
 		}
+
+		sendMail({
+			from: "me@backend.com",
+			to: "user1@domain.com",
+			subject: "End test",
+			htmlBody: "<h1>Bye</h1>...",
+			textBody: "Bye\n\n...",
+		  });
+
 	}`
 	data := model.ExecData{
 		FunctionName: "unittest",
