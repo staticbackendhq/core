@@ -16,11 +16,11 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 		log(body);
 
 		sendMail({
-			From: "me@backend.com",
-			To: "user1@domain.com",
-			Subject: "Begin test",
-			HTMLBody: "<h1>Hello</h1>...",
-			TextBody: "Hello\n\n...",
+			from: "me@backend.com",
+			to: "user1@domain.com",
+			subject: "Begin test",
+			htmlBody: "<h1>Hello</h1>...",
+			textBody: "Hello\n\n...",
 		  });
 
 		var o = {
