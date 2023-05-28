@@ -128,6 +128,67 @@ func (mg *Mongo) GetRootForBase(dbName string) (tok model.User, err error) {
 	return
 }
 
+func (mg *Mongo) ListAccounts(dbName string) ([]model.Account, error) {
+	db := mg.Client.Database(dbName)
+
+	cur, err := db.Collection("sb_accounts").Find(mg.Ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(mg.Ctx)
+
+	var list []model.Account
+
+	for cur.Next(mg.Ctx) {
+		var v LocalAccount
+		err := cur.Decode(&v)
+		if err != nil {
+			return nil, err
+		}
+
+		list = append(list, fromLocalAccount(v))
+	}
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+func (mg *Mongo) ListUsers(dbName, accountID string) ([]model.User, error) {
+	db := mg.Client.Database(dbName)
+
+	id, err := primitive.ObjectIDFromHex(accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := bson.M{FieldAccountID: id}
+
+	cur, err := db.Collection("sb_tokens").Find(mg.Ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(mg.Ctx)
+
+	var list []model.User
+
+	for cur.Next(mg.Ctx) {
+		var v LocalToken
+		err := cur.Decode(&v)
+		if err != nil {
+			return nil, err
+		}
+
+		list = append(list, fromLocalToken(v))
+	}
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
 func (mg *Mongo) FindUserByEmail(dbName, email string) (tok model.User, err error) {
 	db := mg.Client.Database(dbName)
 

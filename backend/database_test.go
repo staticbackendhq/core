@@ -26,7 +26,7 @@ func newTask(title string, done bool) Task {
 		Title: title,
 		Done:  done,
 		Comments: []Comment{
-			Comment{Comment: "comment 1", Date: time.Now()},
+			{Comment: "comment 1", Date: time.Now()},
 		},
 	}
 }

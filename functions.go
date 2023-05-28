@@ -103,6 +103,8 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 		Auth:      auth,
 		BaseName:  conf.Name,
 		DataStore: backend.DB,
+		Search:    backend.Search,
+		Volatile:  backend.Cache,
 		Data:      fn,
 		Email:     backend.Emailer,
 	}

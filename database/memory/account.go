@@ -93,3 +93,24 @@ func (m *Memory) GetFirstUserFromAccountID(dbName, accountID string) (tok model.
 	tok = matches[0]
 	return
 }
+
+func (m *Memory) ListAccounts(dbName string) ([]model.Account, error) {
+	accounts, err := all[model.Account](m, dbName, "sb_accounts")
+	if err != nil {
+		return nil, err
+	}
+	return accounts, nil
+}
+
+func (m *Memory) ListUsers(dbName, accountID string) ([]model.User, error) {
+	tokens, err := all[model.User](m, dbName, "sb_tokens")
+	if err != nil {
+		return nil, err
+	}
+
+	matches := filter(tokens, func(t model.User) bool {
+		return t.AccountID == accountID
+	})
+
+	return matches, nil
+}

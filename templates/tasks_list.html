@@ -1,0 +1,56 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6">
+		<h2 class="title is-2">
+			Schedule jobs
+		</h2>
+		<p class="subtitle is-5">
+			You can create recurring job that call a function or an URL.
+		</p>
+		<p class="py-3">
+			<a href="/ui/tasks/new" class="button is-primary">
+				Create a schedule job
+			</a>
+		</p>
+
+		<table class="table is-bordered is-striped">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Type</th>
+				<th>Interval</th>
+				<th>Last run</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Data}}
+			<tr>
+				<td>
+					<a href="/ui/tasks/{{.ID}}">
+						{{.Name}}
+					</a>
+				</td>
+				<td>{{.Type}}</td>
+				<td>{{.Interval}}</td>
+				<td>
+					{{if .LastRun}}
+						{{.LastRun.Format "2006/01/02 15:04" }}
+					{{else}}
+						never
+					{{end}}
+				</td>
+				<td>
+					[todo: delete]
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+		</table>
+	</div>
+</body>
+
+{{template "foot"}}

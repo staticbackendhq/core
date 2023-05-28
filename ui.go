@@ -87,7 +87,7 @@ func (x ui) auth(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, ckPk)
 
-	http.Redirect(w, r, "/ui/db", http.StatusSeeOther)
+	http.Redirect(w, r, "/ui/accounts", http.StatusSeeOther)
 }
 
 func (x ui) logins(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +186,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	// we remove the "system" collection
 	var names []string
 	for _, name := range allNames {
-		if strings.HasPrefix(name, "sb_") {
+		if strings.Contains(name, "sb_") {
 			continue
 		}
 
@@ -238,6 +238,8 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	fmt.Println("DEBUG", col)
+
 	var list model.PagedResult
 	if !strings.HasPrefix(col, "sb_") {
 		if len(filter) == 0 {
@@ -267,6 +269,8 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data.SortDescending = "0"
 	}
+
+	fmt.Println("DEBUG", data.Docs)
 
 	render(w, r, "db_cols.html", data, nil, x.log)
 }
@@ -572,4 +576,121 @@ func (x *ui) fsDel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/ui/fs", http.StatusSeeOther)
+}
+
+func (x ui) accounts(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	accounts, err := backend.DB.ListAccounts(conf.Name)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	render(w, r, "accounts_list.html", accounts, nil, nil)
+}
+
+func (x ui) users(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	id := getURLPart(r.URL.Path, 3)
+
+	users, err := backend.DB.ListUsers(conf.Name, id)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	render(w, r, "users_list.html", users, nil, nil)
+}
+
+func (x ui) tasks(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	allTasks, err := backend.DB.ListTasksByBase(conf.Name)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	render(w, r, "tasks_list.html", allTasks, nil, x.log)
+}
+
+func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		conf, _, err := middleware.Extract(r, false)
+		if err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
+
+		task := model.Task{
+			Name:     r.Form.Get("name"),
+			Type:     r.Form.Get("type"),
+			Value:    r.Form.Get("value"),
+			Interval: r.Form.Get("interval"),
+			BaseName: conf.Name,
+		}
+
+		fmt.Println("DEBUG task.name", task.Name)
+
+		if err := backend.DB.AddTask(conf.Name, task); err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
+
+		http.Redirect(w, r, "/ui/tasks", http.StatusSeeOther)
+		return
+	}
+
+	render(w, r, "tasks_new.html", nil, nil, nil)
+}
+
+func (x ui) myAccount(w http.ResponseWriter, r *http.Request) {
+	conf, _, err := middleware.Extract(r, false)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
+
+		url, err := getStripePortalURL(conf.TenantID)
+		if err != nil {
+			renderErr(w, r, err, x.log)
+			return
+		}
+
+		http.Redirect(w, r, url, http.StatusSeeOther)
+		return
+	}
+
+	tenant, err := backend.DB.FindTenant(conf.TenantID)
+	if err != nil {
+		renderErr(w, r, err, x.log)
+		return
+	}
+
+	render(w, r, "customer.html", tenant, nil, x.log)
 }

@@ -13,57 +13,22 @@ type LocalTask struct {
 	Name     string             `bson:"name" json:"name"`
 	Type     string             `bson:"type" json:"type"`
 	Value    string             `bson:"value" json:"value"`
-	Meta     interface{}        `bson:"meta" json:"meta"`
+	Meta     string             `bson:"meta" json:"meta"`
 	Interval string             `bson:"invertal" json:"interval"`
 	LastRun  time.Time          `bson:"last" json:"last"`
 
 	BaseName string `bson:"-" json:"base"`
 }
 
-type LocalMetaMessage struct {
-	Data    string `bson:"data" json:"data"`
-	Channel string `bson:"channel" json:"channel"`
-}
-
-func (mg *Mongo) ListTasks() ([]model.Task, error) {
-	bases, err := mg.ListDatabases()
-	if err != nil {
-		return nil, err
+func toLocalTask(t model.Task) LocalTask {
+	return LocalTask{
+		Name:     t.Name,
+		Type:     t.Type,
+		Value:    t.Value,
+		Meta:     t.Meta,
+		Interval: t.Interval,
+		LastRun:  t.LastRun,
 	}
-
-	filter := bson.M{}
-
-	//TODO: Might be worth doing this concurrently
-	var results []model.Task
-
-	for _, base := range bases {
-		db := mg.Client.Database(base.Name)
-		cur, err := db.Collection("sb_tasks").Find(mg.Ctx, filter)
-		if err != nil {
-			return nil, err
-		}
-		defer cur.Close(mg.Ctx)
-
-		var tasks []model.Task
-
-		for cur.Next(mg.Ctx) {
-			var t LocalTask
-			if err := cur.Decode(&t); err != nil {
-				return nil, err
-			}
-
-			t.BaseName = base.Name
-
-			tasks = append(tasks, fromLocalTask(t))
-		}
-		if err := cur.Err(); err != nil {
-			return nil, err
-		}
-
-		results = append(results, tasks...)
-	}
-
-	return results, nil
 }
 
 func fromLocalTask(lt LocalTask) model.Task {
@@ -77,4 +42,81 @@ func fromLocalTask(lt LocalTask) model.Task {
 		LastRun:  lt.LastRun,
 		BaseName: lt.BaseName,
 	}
+}
+
+type LocalMetaMessage struct {
+	Data    string `bson:"data" json:"data"`
+	Channel string `bson:"channel" json:"channel"`
+}
+
+func (mg *Mongo) ListTasks() ([]model.Task, error) {
+	bases, err := mg.ListDatabases()
+	if err != nil {
+		return nil, err
+	}
+
+	//TODO: Might be worth doing this concurrently
+	var results []model.Task
+
+	for _, base := range bases {
+		tasks, err := mg.ListTasksByBase(base.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, tasks...)
+	}
+
+	return results, nil
+}
+
+func (mg *Mongo) ListTasksByBase(dbName string) ([]model.Task, error) {
+	db := mg.Client.Database(dbName)
+
+	cur, err := db.Collection("sb_tasks").Find(mg.Ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(mg.Ctx)
+
+	var tasks []model.Task
+
+	for cur.Next(mg.Ctx) {
+		var t LocalTask
+		if err := cur.Decode(&t); err != nil {
+			return nil, err
+		}
+
+		t.BaseName = dbName
+
+		tasks = append(tasks, fromLocalTask(t))
+	}
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+func (mg *Mongo) AddTask(dbName string, task model.Task) error {
+	db := mg.Client.Database(dbName)
+	if _, err := db.Collection("sb_tasks").InsertOne(mg.Ctx, toLocalTask(task)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (mg *Mongo) DeleteTask(dbName, id string) error {
+	db := mg.Client.Database(dbName)
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{FieldID: oid}
+	if _, err := db.Collection("sb_tasks").DeleteOne(mg.Ctx, filter); err != nil {
+		return err
+	}
+	return nil
 }

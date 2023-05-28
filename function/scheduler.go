@@ -1,6 +1,7 @@
 package function
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
@@ -95,10 +96,13 @@ func (ts *TaskScheduler) execFunction(auth model.Auth, task model.Task) {
 func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 	token := auth.ReconstructToken()
 
-	meta, ok := task.Meta.(model.MetaMessage)
-	if !ok {
-		ts.log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %s", task.ID)
-		return
+	var meta model.MetaMessage
+
+	if len(task.Meta) > 0 {
+		if err := json.Unmarshal([]byte(task.Meta), &meta); err != nil {
+			ts.log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %s", task.ID)
+			return
+		}
 	}
 
 	msg := model.Command{

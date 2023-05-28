@@ -1,0 +1,43 @@
+{{ template "head" .}}
+
+<body>
+	{{template "navbar" .}}
+
+	<div class="container p-6">
+		<h2 class="title is-2">
+			Accounts & Users
+		</h2>
+		<p class="subtitle is-5">
+			Your users are regrouped into Account (can be seen as a Team).
+		</p>
+		<p class="subtitle is-5">
+			To configure external login providers <a href="/ui/logins">click here</a>.
+		</p>
+
+
+		<table class="table is-bordered is-striped">
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Email</th>
+				<th>Created</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Data}}
+			<tr>
+				<td>
+					<a href="/ui/users/{{.ID}}">
+						{{.ID}}
+					</a>
+				</td>
+				<td>{{.Email}}</td>
+				<td>{{.Created}}</td>
+			</tr>
+			{{end}}
+		</tbody>
+		</table>
+	</div>
+</body>
+
+{{template "foot"}}
