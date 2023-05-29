@@ -37,3 +37,11 @@ func NewJSFetcthOptionArg() JSFetchOptionsArg {
 	}
 	return defaultOptions
 }
+
+type JSSendMailArg struct {
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Subject  string `json:"subject"`
+	HTMLBody string `json:"htmlBody"`
+	TextBody string `json:"textBody"`
+}
