@@ -45,14 +45,3 @@ type JSSendMailArg struct {
 	HTMLBody string `json:"htmlBody"`
 	TextBody string `json:"textBody"`
 }
-
-func NewJSSendMailArg() JSSendMailArg {
-	sma := JSSendMailArg{
-		From:     "",
-		To:       "",
-		Subject:  "",
-		HTMLBody: "",
-		TextBody: "",
-	}
-	return sma
-}

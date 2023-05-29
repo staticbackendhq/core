@@ -12,7 +12,6 @@ search/testdata
 **/*.fts
 **/*.db
 
-dev.db
 __debug_bin
 
 dist/

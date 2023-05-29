@@ -423,7 +423,7 @@ func (env *ExecutionEnvironment) addSendMail(vm *goja.Runtime) error {
 			return vm.ToValue(Result{Content: "argument missmatch: you need only one arguments(object) for sendMail"})
 		}
 
-		sma := NewJSSendMailArg()
+		sma := JSSendMailArg{}
 
 		if err := vm.ExportTo(call.Argument(0), &sma); err != nil {
 			return vm.ToValue(Result{Content: "argument should be an object"})
