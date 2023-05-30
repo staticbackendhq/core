@@ -12,6 +12,8 @@ search/testdata
 **/*.fts
 **/*.db
 
+__debug_bin
+
 dist/
 
 # Binaries for programs and plugins

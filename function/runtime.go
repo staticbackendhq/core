@@ -11,6 +11,7 @@ import (
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
+	"github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/search"
@@ -23,6 +24,7 @@ type ExecutionEnvironment struct {
 	BaseName  string
 	DataStore database.Persister
 	Volatile  cache.Volatilizer
+	Email     email.Mailer
 	Search    *search.Search
 	Data      model.ExecData
 
@@ -49,6 +51,9 @@ func (env *ExecutionEnvironment) Execute(data interface{}) error {
 		return err
 	}
 	if err := env.addSearch(vm); err != nil {
+		return err
+	}
+	if err := env.addSendMail(vm); err != nil {
 		return err
 	}
 
@@ -405,6 +410,45 @@ func (env *ExecutionEnvironment) addDatabaseFunctions(vm *goja.Runtime) error {
 
 		return vm.ToValue(Result{OK: true, Content: deleted})
 	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (env *ExecutionEnvironment) addSendMail(vm *goja.Runtime) error {
+	smf := func(call goja.FunctionCall) goja.Value {
+
+		if len(call.Arguments) != 1 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need only one arguments(object) for sendMail"})
+		}
+
+		sma := JSSendMailArg{}
+
+		if err := vm.ExportTo(call.Argument(0), &sma); err != nil {
+			return vm.ToValue(Result{Content: "argument should be an object"})
+		}
+
+		data := email.SendMailData{
+			FromName: "",
+			From:     sma.From,
+			To:       sma.To,
+			ToName:   "",
+			Subject:  sma.Subject,
+			HTMLBody: sma.HTMLBody,
+			TextBody: sma.TextBody,
+			ReplyTo:  "",
+			Body:     "",
+		}
+
+		err := env.Email.Send(data)
+		if err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("send mail error: %v", err)})
+		}
+		return vm.ToValue(Result{OK: true})
+	}
+
+	err := vm.Set("sendMail", smf)
 	if err != nil {
 		return err
 	}
