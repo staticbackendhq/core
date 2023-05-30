@@ -140,20 +140,37 @@ func (c *Cache) Publish(msg model.Command) error {
 	defer cancel()
 
 	// Publish the event to system so server-side function can trigger
-	go func(sysmsg model.Command) {
-		sysmsg.IsSystemEvent = true
-		b, err := json.Marshal(sysmsg)
-		if err != nil {
-			c.log.Error().Err(err).Msg("error marshaling the system msg")
-			return
-		}
+	// but only for non system msg
+	if !msg.IsSystemEvent && msg.Channel != "sbsys" {
+		go func(sysmsg model.Command) {
+			sysmsg.IsSystemEvent = true
+			b, err := json.Marshal(sysmsg)
+			if err != nil {
+				c.log.Error().Err(err).Msg("error marshaling the system msg")
+				return
+			}
 
-		sysctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-		defer cancel()
-		if err := c.Rdb.Publish(sysctx, "sbsys", string(b)).Err(); err != nil {
-			c.log.Error().Err(err).Msg("error publishing to system channel")
-		}
-	}(msg)
+			sysctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			defer cancel()
+			if err := c.Rdb.Publish(sysctx, "sbsys", string(b)).Err(); err != nil {
+				c.log.Error().Err(err).Msg("error publishing to system channel")
+			}
+		}(msg)
+	}
+
+	subs, err := c.Rdb.PubSubNumSub(c.Ctx, msg.Channel).Result()
+	if err != nil {
+		c.log.Error().Err(err).Msgf("error getting db subscribers for %s", msg.Channel)
+		return err
+	}
+
+	count, ok := subs[msg.Channel]
+	if !ok {
+		c.log.Warn().Msgf("cannot find channel in subs: %s", msg.Channel)
+		return nil
+	} else if count == 0 {
+		return nil
+	}
 
 	return c.Rdb.Publish(ctx, msg.Channel, string(b)).Err()
 }
@@ -161,20 +178,6 @@ func (c *Cache) Publish(msg model.Command) error {
 // PublishDocument publishes a database update message (created, updated, deleted)
 // All subscribers will get notified
 func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
-	subs, err := c.Rdb.PubSubNumSub(c.Ctx, channel).Result()
-	if err != nil {
-		c.log.Error().Err(err).Msgf("error getting db subscribers for %s", channel)
-		return
-	}
-
-	count, ok := subs[channel]
-	if !ok {
-		c.log.Warn().Msgf("cannot find channel in subs: %s", channel)
-		return
-	} else if count == 0 {
-		return
-	}
-
 	b, err := json.Marshal(v)
 	if err != nil {
 		c.log.Error().Err(err).Msg("error publishing db doc")

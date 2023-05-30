@@ -1,5 +1,49 @@
 # Changelog for StaticBackend
 
+### May 26, 2023 v1.5.0-alpha
+
+Features:
+
+* Delete multiple documents based on a query filter.
+* Implemented a SQLite data provider.
+* Implemented a simple full-text search engine.
+* Added accounts & users and a jobs (schedule tasks) UI pages
+
+Bug fixes:
+
+* Fixed all issues reported by golangci-lint
+
+### Dec 16, 2022 v1.4.3
+
+Features:
+
+* Added a Count function to count documents with optiona query filters.
+* Implemented in and !in operators for PostgreSQL data provider.
+* Static files are now embeded in the core, making the CLI able to serve the 
+dashboard without and still have a single file install.
+
+### Sep 26, 2022 v1.4.2
+
+Features:
+
+* Added way to get multiple documents by ids.
+* Fixed go doc and added examples.
+
+Bug fixes:
+
+* Added publish document events in BulkUpdate function.
+
+
+### Sep 24, 2022 v1.4.1
+
+Features:
+
+* Importable Go package: `backend`
+
+Bug fixes:
+
+* Bug with duplicate name in the storage service.
+
 ### Sep 04, 2022 v1.4.0
 
 Features:

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/staticbackendhq/core/cache/observer"
 	"github.com/staticbackendhq/core/internal"
@@ -16,6 +17,7 @@ type CacheDev struct {
 	data     map[string]string
 	log      *logger.Logger
 	observer observer.Observer
+	m        *sync.RWMutex
 }
 
 // NewDevCache returns a memory-based Volatilizer
@@ -24,11 +26,15 @@ func NewDevCache(log *logger.Logger) *CacheDev {
 		data:     make(map[string]string),
 		observer: observer.NewObserver(log),
 		log:      log,
+		m:        &sync.RWMutex{},
 	}
 }
 
 // Get gets a value by its id
 func (d *CacheDev) Get(key string) (val string, err error) {
+	d.m.RLock()
+	defer d.m.RUnlock()
+
 	val, ok := d.data[key]
 	if !ok {
 		err = errors.New("key not found in cache")
@@ -38,6 +44,9 @@ func (d *CacheDev) Get(key string) (val string, err error) {
 
 // Set sets a value for a key
 func (d *CacheDev) Set(key string, value string) error {
+	d.m.Lock()
+	defer d.m.Unlock()
+
 	d.data[key] = value
 	return nil
 }
@@ -122,34 +131,36 @@ func (d *CacheDev) Publish(msg model.Command) error {
 	}
 
 	// Publish the event to system so server-side function can trigger
-	go func(sysmsg model.Command) {
-		sysmsg.IsSystemEvent = true
-		b, err := json.Marshal(sysmsg)
-		if err != nil {
-			d.log.Error().Err(err).Msg("error marshaling the system msg")
-			return
-		}
-		if err := d.observer.Publish("sbsys", string(b)); err != nil {
-			d.log.Error().Err(err).Msg("error occurred during publishing to 'sbsys' channel")
-		}
-	}(msg)
+	// but only for non system msg
+	if !msg.IsSystemEvent && msg.Channel != "sbsys" {
+		go func(sysmsg model.Command) {
+			sysmsg.IsSystemEvent = true
+			b, err := json.Marshal(sysmsg)
+			if err != nil {
+				d.log.Error().Err(err).Msg("error marshaling the system msg")
+				return
+			}
+			if err := d.observer.Publish("sbsys", string(b)); err != nil {
+				d.log.Error().Err(err).Msg("error occurred during publishing to 'sbsys' channel")
+			}
+		}(msg)
+	}
 
+	subs := d.observer.PubNumSub(msg.Channel)
+
+	count, ok := subs[msg.Channel]
+	if !ok {
+		d.log.Warn().Msgf("cannot find channel in subs: %s", msg.Channel)
+		return nil
+	} else if count == 0 {
+		return nil
+	}
 	return d.observer.Publish(msg.Channel, string(b))
 }
 
 // PublishDocument publishes a database update message (created, updated, deleted)
 // All subscribers will get notified
 func (d *CacheDev) PublishDocument(channel, typ string, v any) {
-	subs := d.observer.PubNumSub(channel)
-
-	count, ok := subs[channel]
-	if !ok {
-		d.log.Warn().Msgf("cannot find channel in subs: %s", channel)
-		return
-	} else if count == 0 {
-		return
-	}
-
 	b, err := json.Marshal(v)
 	if err != nil {
 		d.log.Error().Err(err).Msg("error publishing db doc")
@@ -169,6 +180,10 @@ func (d *CacheDev) PublishDocument(channel, typ string, v any) {
 
 // HasPermission determines if a session token has permission to a collection
 func (d *CacheDev) HasPermission(token, repo, payload string) bool {
+	if repo == "sbsys" {
+		return true
+	}
+
 	var me model.Auth
 	if err := d.GetTyped(token, &me); err != nil {
 		return false

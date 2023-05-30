@@ -65,7 +65,7 @@ func createTenantAndDatabase() error {
 
 	base = model.DatabaseConfig{
 		TenantID: cus.ID,
-		Name:     "dev-memory-pk",
+		Name:     "dev_memory_pk",
 		IsActive: true,
 	}
 

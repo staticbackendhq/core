@@ -24,10 +24,10 @@ alltest:
 	@go clean -testcache && go test --race --cover ./...
 
 thistest:
-	go test -run $(TESTNAME) --cover ./...
+	go test -run $(TESTNAME) --cover
 
 test-core: cleanup
-	@go clean -testcache && go test --race --cover
+	@go clean -testcache && go test --cover
 
 test-pg:
 	@cd database/postgresql && go test --race --cover

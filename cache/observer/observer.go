@@ -75,12 +75,12 @@ func (o *memObserver) Publish(channel string, msg interface{}) error {
 		return errors.New("not subscribers for chan: " + channel)
 	}
 	for _, sub := range o.Subscriptions[channel] {
-		sub := sub
+		//s := sub
 
-		go func() {
+		go func(msub *memSubscriber, msg any) {
 			timer := time.NewTimer(15 * time.Second)
 			select {
-			case sub.msgCh <- msg:
+			case msub.msgCh <- msg:
 				if !timer.Stop() {
 					<-timer.C
 				}
@@ -88,7 +88,7 @@ func (o *memObserver) Publish(channel string, msg interface{}) error {
 				o.log.Error().Msg("the previous message is not read; dropping this message")
 				timer.Stop()
 			}
-		}()
+		}(sub, msg)
 
 	}
 	return nil

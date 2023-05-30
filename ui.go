@@ -238,8 +238,6 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Println("DEBUG", col)
-
 	var list model.PagedResult
 	if !strings.HasPrefix(col, "sb_") {
 		if len(filter) == 0 {
@@ -269,8 +267,6 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data.SortDescending = "0"
 	}
-
-	fmt.Println("DEBUG", data.Docs)
 
 	render(w, r, "db_cols.html", data, nil, x.log)
 }
@@ -648,8 +644,6 @@ func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
 			Interval: r.Form.Get("interval"),
 			BaseName: conf.Name,
 		}
-
-		fmt.Println("DEBUG task.name", task.Name)
 
 		if err := backend.DB.AddTask(conf.Name, task); err != nil {
 			renderErr(w, r, err, x.log)

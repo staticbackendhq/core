@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -92,6 +93,9 @@ func getByID[T any](m *Memory, dbName, col, id string, v T) error {
 
 	repo, ok := m.DB[key]
 	if !ok {
+		if strings.HasPrefix(col, "sb_") {
+			return nil
+		}
 		return errCollectionNotFound
 	}
 
@@ -109,6 +113,9 @@ func all[T any](m *Memory, dbName, col string) (list []T, err error) {
 
 	repo, ok := m.DB[key]
 	if !ok {
+		if strings.HasPrefix(col, "sb_") {
+			return []T{}, nil
+		}
 		return nil, errCollectionNotFound
 	}
 

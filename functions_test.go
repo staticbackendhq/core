@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/staticbackendhq/core/model"
 )
@@ -207,4 +208,6 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 	if foundError {
 		t.Errorf("found error in function exec log: %v", errorLines)
 	}
+
+	time.Sleep(500 * time.Millisecond)
 }
