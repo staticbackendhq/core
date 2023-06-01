@@ -13,8 +13,6 @@ func (m *Memory) CreateTenant(customer model.Tenant) (model.Tenant, error) {
 }
 
 func (m *Memory) CreateDatabase(base model.DatabaseConfig) (model.DatabaseConfig, error) {
-	base.ID = m.NewID()
-
 	if err := create(m, "sb", "apps", base.ID, base); err != nil {
 		return base, err
 	}

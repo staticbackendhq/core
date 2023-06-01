@@ -32,11 +32,10 @@ func (sl *SQLite) CreateTenant(customer model.Tenant) (c model.Tenant, err error
 func (sl *SQLite) CreateDatabase(base model.DatabaseConfig) (b model.DatabaseConfig, err error) {
 	b = base
 
-	id := sl.NewID()
 	_, err = sl.DB.Exec(`
 	INSERT INTO sb_apps(id, customer_id, name, allowed_domain, is_active, monthly_email_sent, created)
 	VALUES($1, $2, $3, $4, $5, $6, $7);
-	`, id, base.TenantID,
+	`, base.ID, base.TenantID,
 		base.Name,
 		strings.Join(base.AllowedDomain, "|"),
 		base.IsActive,
@@ -46,8 +45,6 @@ func (sl *SQLite) CreateDatabase(base model.DatabaseConfig) (b model.DatabaseCon
 	if err != nil {
 		return
 	}
-
-	b.ID = id
 
 	err = sl.createSystemTables(base.Name)
 	return

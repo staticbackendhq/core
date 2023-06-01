@@ -82,6 +82,7 @@ func deleteAndSetupTestAccount() {
 	}
 
 	base := model.DatabaseConfig{
+		ID:            dbName,
 		TenantID:      cus.ID,
 		Name:          dbName,
 		AllowedDomain: []string{"localhost"},
