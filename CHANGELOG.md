@@ -1,5 +1,15 @@
 # Changelog for StaticBackend
 
+### June 1st, 2023 v1.5.0-alpha.0
+
+Features:
+
+* `sendMail` added to server-side function runtime
+
+Bug fixes
+
+* Fixed issue with the memory data provider (introduced by the linter fixes)
+
 ### May 26, 2023 v1.5.0-alpha
 
 Features:
