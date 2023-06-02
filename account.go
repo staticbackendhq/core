@@ -361,6 +361,17 @@ func (a *accounts) deleteUser(w http.ResponseWriter, r *http.Request) {
 
 	id := getURLPart(r.URL.Path, 3)
 
+	u, err := backend.DB.GetUserByID(conf.Name, auth.AccountID, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	if auth.Role < u.Role {
+		http.Error(w, "permission level not high enough", http.StatusUnauthorized)
+		return
+	}
+
 	if err := backend.DB.RemoveUser(auth, conf.Name, id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

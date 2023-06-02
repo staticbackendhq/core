@@ -18,7 +18,7 @@ func TestCreateUserAccountAndToken(t *testing.T) {
 		Token:     "123",
 		Email:     "unit@test.com",
 		Password:  "4321",
-		Role:      0,
+		Role:      50,
 		Created:   time.Now(),
 	}
 

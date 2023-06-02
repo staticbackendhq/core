@@ -114,3 +114,8 @@ func (m *Memory) ListUsers(dbName, accountID string) ([]model.User, error) {
 
 	return matches, nil
 }
+
+func (m *Memory) GetUserByID(dbName, accountID, userID string) (user model.User, err error) {
+	err = getByID(m, dbName, "sb_tokens", userID, &user)
+	return
+}

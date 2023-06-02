@@ -49,6 +49,8 @@ type Persister interface {
 	DeleteTenant(dbName, email string) error
 
 	// system user account functions
+	// GetUserByID returns a User matching the accountID and userID
+	GetUserByID(dbName, accountID, userID string) (model.User, error)
 	// FindUser find a user by its ID
 	FindUser(dbName, userID, token string) (model.User, error)
 	// FindRootUser validates that those credentials are the root user for a database
