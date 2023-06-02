@@ -78,7 +78,7 @@ func (pg *PostgreSQL) ListUsers(dbName, accountID string) ([]model.User, error) 
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
-	WHERE account_id = $1
+	WHERE account_id = $1;
 	`, dbName)
 
 	rows, err := pg.DB.Query(qry, accountID)

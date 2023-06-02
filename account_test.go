@@ -16,8 +16,16 @@ func TestUserAddRemoveFromAccount(t *testing.T) {
 		t.Fatal(GetResponseBody(t, resp))
 	}
 
+	// adding user with same email should return an error
+	resp2 := dbReq(t, acct.addUser, "POST", "/account/users", u)
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode <= 299 {
+		t.Fatal(GetResponseBody(t, resp2))
+	}
+
 	// check if users is created
-	users, err := backend.DB.ListUsers(pubKey, testAccountID)
+	users, err := backend.DB.ListUsers(dbName, testAccountID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,14 +42,14 @@ func TestUserAddRemoveFromAccount(t *testing.T) {
 		t.Fatal("unable to find new user")
 	}
 
-	resp2 := dbReq(t, acct.deleteUser, "DELETE", "/account/users/"+newUserID, nil)
-	defer resp2.Body.Close()
+	resp3 := dbReq(t, acct.deleteUser, "DELETE", "/account/users/"+newUserID, nil)
+	defer resp3.Body.Close()
 
-	if resp2.StatusCode > 299 {
-		t.Fatal(GetResponseBody(t, resp2))
+	if resp3.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp3))
 	}
 
-	users, err = backend.DB.ListUsers(pubKey, testAccountID)
+	users, err = backend.DB.ListUsers(dbName, testAccountID)
 	if err != nil {
 		t.Fatal(err)
 	}
