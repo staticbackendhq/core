@@ -323,33 +323,42 @@ func (a *accounts) addUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data model.Login
-	if err := parseBody(r.Body, &data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	} else if !strings.Contains(data.Email, "@") || !strings.Contains(data.Email, ".") {
-		http.Error(w, "invalid email", http.StatusBadRequest)
-		return
+	if r.Method == http.MethodPost {
+		var data model.Login
+		if err := parseBody(r.Body, &data); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		} else if !strings.Contains(data.Email, "@") || !strings.Contains(data.Email, ".") {
+			http.Error(w, "invalid email", http.StatusBadRequest)
+			return
+		}
+
+		data.Email = strings.ToLower(data.Email)
+
+		if exists, err := backend.DB.UserEmailExists(conf.Name, data.Email); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if exists {
+			http.Error(w, "email already in use", http.StatusBadRequest)
+			return
+		}
+
+		mship := backend.Membership(conf)
+		_, _, err = mship.CreateUser(auth.AccountID, data.Email, data.Password, 0)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		respond(w, http.StatusOK, true)
 	}
-
-	data.Email = strings.ToLower(data.Email)
-
-	if exists, err := backend.DB.UserEmailExists(conf.Name, data.Email); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	} else if exists {
-		http.Error(w, "email already in use", http.StatusBadRequest)
-		return
-	}
-
-	mship := backend.Membership(conf)
-	_, _, err = mship.CreateUser(auth.AccountID, data.Email, data.Password, 0)
+	users, err := backend.DB.ListUsers(conf.Name, auth.AccountID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	respond(w, http.StatusOK, true)
+	respond(w, http.StatusOK, users)
 }
 
 func (a *accounts) deleteUser(w http.ResponseWriter, r *http.Request) {
