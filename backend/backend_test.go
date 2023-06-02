@@ -23,7 +23,11 @@ func TestMain(t *testing.M) {
 	// this simulate how a Go program would import
 	// the backend package
 
-	cfg := config.AppConfig{
+	// Config can be loaded from environemnt variables
+	// config.Current = config.LoadConfig()
+
+	// manually load config
+	config.Current = config.AppConfig{
 		AppEnv:           "dev",
 		FromCLI:          "yes",
 		Port:             "8099",
@@ -34,7 +38,7 @@ func TestMain(t *testing.M) {
 	}
 
 	// initializes all core services basesd on config
-	backend.Setup(cfg)
+	backend.Setup(config.Current)
 
 	setup()
 

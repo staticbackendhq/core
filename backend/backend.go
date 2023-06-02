@@ -5,15 +5,18 @@
 // a [github.com/staticbackendhq/core/config.AppConfig]. You may create
 // environment variables and load the config directly by confing.Load function.
 //
+//	// You may load the configuration from environment variables
+//	// config.Current = config.LoadConfig()
+//
 //	// this sample uses the in-memory database provider built-in
 //	// you can use PostgreSQL or MongoDB
-//	cfg := config.AppConfig{
+//	config.Current = config.AppConfig{
 //	  AppEnv:      "dev",
 //	  DataStore:   "mem",
 //	  DatabaseURL: "mem",
 //	  LocalStorageURL: "http://localhost:8099",
 //	}
-//	backend.Setup(cfg)
+//	backend.Setup(config.Current)
 //
 // The building blocks of [StaticBackend] are exported as variables and can be
 // used directly accessing their interface's functions. For instance
