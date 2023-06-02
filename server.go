@@ -179,6 +179,8 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/account/init", middleware.Chain(http.HandlerFunc(acct.create), stdPub...))
 	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
 	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))
+	http.Handle("/account/users/", middleware.Chain(http.HandlerFunc(acct.deleteUser), stdAuth...))
+	http.Handle("/account/users", middleware.Chain(http.HandlerFunc(acct.addUser), stdAuth...))
 
 	// stripe webhooks
 	swh := stripeWebhook{log: log}

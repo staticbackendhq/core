@@ -1,6 +1,8 @@
 package sqlite
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestFindToken(t *testing.T) {
 	tok, err := datastore.FindUser(confDBName, adminToken.ID, adminToken.Token)

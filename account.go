@@ -315,3 +315,56 @@ func getStripePortalURL(customerID string) (string, error) {
 
 	return s.URL, nil
 }
+
+func (a *accounts) addUser(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var data model.Login
+	if err := parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} else if !strings.Contains(data.Email, "@") || !strings.Contains(data.Email, ".") {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
+
+	data.Email = strings.ToLower(data.Email)
+
+	if exists, err := backend.DB.UserEmailExists(conf.Name, data.Email); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	} else if exists {
+		http.Error(w, "email already in use", http.StatusBadRequest)
+		return
+	}
+
+	mship := backend.Membership(conf)
+	_, _, err = mship.CreateUser(auth.AccountID, data.Email, data.Password, 0)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
+
+func (a *accounts) deleteUser(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id := getURLPart(r.URL.Path, 3)
+
+	if err := backend.DB.RemoveUser(auth, conf.Name, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
+}
