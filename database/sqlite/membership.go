@@ -120,3 +120,15 @@ func (sl *SQLite) ResetPassword(dbName, email, code, password string) error {
 	}
 	return nil
 }
+
+func (sl *SQLite) RemoveUser(auth model.Auth, dbName, userID string) error {
+	qry := fmt.Sprintf(`
+	DELETE FROM %s_sb_tokens
+	WHERE account_id = $1 AND id = $2;
+	`, dbName)
+
+	if _, err := sl.DB.Exec(qry, auth.AccountID, userID); err != nil {
+		return err
+	}
+	return nil
+}

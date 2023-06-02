@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -67,4 +68,21 @@ func (m *Memory) UserSetPassword(dbName, tokenID, password string) error {
 
 	tok.Password = password
 	return create(m, dbName, "sb_tokens", tok.ID, tok)
+}
+
+func (m *Memory) RemoveUser(auth model.Auth, dbName, userID string) error {
+	key := fmt.Sprintf("%s_sb_tokens", dbName)
+	docs, ok := m.DB[key]
+	if !ok {
+		return errors.New("cannot find repo")
+	}
+
+	if _, ok := docs[userID]; !ok {
+		return errors.New("user not found: ")
+	}
+
+	delete(docs, userID)
+
+	m.DB[key] = docs
+	return nil
 }

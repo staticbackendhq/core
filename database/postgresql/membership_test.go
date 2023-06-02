@@ -18,7 +18,7 @@ func TestCreateUserAccountAndToken(t *testing.T) {
 		Token:     "123",
 		Email:     "unit@test.com",
 		Password:  "4321",
-		Role:      0,
+		Role:      50,
 		Created:   time.Now(),
 	}
 
@@ -105,5 +105,58 @@ func TestUserSetPassword(t *testing.T) {
 		t.Fatal(err)
 	} else if tok.Password != expected {
 		t.Errorf("expected password to be %s got %s", expected, tok.Password)
+	}
+}
+
+func TestUserAddRemoveFromAccount(t *testing.T) {
+	u := model.User{
+		AccountID: adminAuth.AccountID,
+		Email:     "user2@test.com",
+		Password:  "1234user2",
+		Role:      0,
+		Token:     "user2-token",
+	}
+
+	newUserID, err := datastore.CreateUser(confDBName, u)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	users, err := datastore.ListUsers(confDBName, adminAuth.AccountID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found := false
+	for _, user := range users {
+		if user.ID == newUserID {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected new user id to be in account user")
+	}
+
+	if err := datastore.RemoveUser(adminAuth, confDBName, newUserID); err != nil {
+		t.Fatal(err)
+	}
+
+	users, err = datastore.ListUsers(confDBName, adminAuth.AccountID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found = false
+	for _, user := range users {
+		if user.ID == newUserID {
+			found = true
+			break
+		}
+	}
+
+	if found {
+		t.Error("new user is still in account users?")
 	}
 }

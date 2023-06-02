@@ -117,3 +117,15 @@ func (pg *PostgreSQL) ResetPassword(dbName, email, code, password string) error 
 	}
 	return nil
 }
+
+func (pg *PostgreSQL) RemoveUser(auth model.Auth, dbName, userID string) error {
+	qry := fmt.Sprintf(`
+	DELETE FROM %s.sb_tokens
+	WHERE account_id = $1 AND id = $2;
+	`, dbName)
+
+	if _, err := pg.DB.Exec(qry, auth.AccountID, userID); err != nil {
+		return err
+	}
+	return nil
+}

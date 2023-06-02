@@ -74,7 +74,8 @@ func (u User) Register(email, password string) (string, error) {
 		return "", errors.New("invalid email")
 	}
 
-	jwtBytes, tok, err := u.CreateAccountAndUser(email, password, 0)
+	// account creator have the role=50 (Account Admin)
+	jwtBytes, tok, err := u.CreateAccountAndUser(email, password, 50)
 	if err != nil {
 		return "", err
 	}

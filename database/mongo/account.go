@@ -230,3 +230,22 @@ func (mg *Mongo) ResetPassword(dbName, email, code, password string) error {
 	}
 	return nil
 }
+
+func (mg *Mongo) GetUserByID(dbName, accountID, userID string) (user model.User, err error) {
+	db := mg.Client.Database(dbName)
+
+	aid, err := primitive.ObjectIDFromHex(accountID)
+	if err != nil {
+		return
+	}
+
+	uid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return
+	}
+
+	filter := bson.M{FieldID: uid, FieldAccountID: aid}
+	sr := db.Collection("sb_tokens").FindOne(mg.Ctx, filter)
+	err = sr.Decode(&user)
+	return
+}
