@@ -111,6 +111,8 @@ func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 		Data:    meta.Data,
 		Channel: meta.Channel,
 		Token:   token,
+		Auth:    auth,
+		Base:    task.BaseName,
 	}
 
 	if err := ts.Volatile.Publish(msg); err != nil {
