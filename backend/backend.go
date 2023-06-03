@@ -233,32 +233,11 @@ func Setup(cfg config.AppConfig) {
 
 	sub := &function.Subscriber{Log: Log}
 	sub.PubSub = Cache
-	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
+	sub.GetExecEnv = func(msg model.Command) (function.ExecutionEnvironment, error) {
 		var exe function.ExecutionEnvironment
 
-		var conf model.DatabaseConfig
-		// for public websocket (experimental)
-		if strings.HasPrefix(token, "__tmp__experimental_public") {
-			pk := strings.Replace(token, "__tmp__experimental_public_", "", -1)
-			pairs := strings.Split(pk, "_")
-			Log.Info().Msgf("checking for base in cache: %s", pairs[0])
-			if err := Cache.GetTyped(pairs[0], &conf); err != nil {
-				Log.Error().Err(err).Msg("cannot find base for public websocket")
-				return exe, err
-			}
-		} else if err := Cache.GetTyped("base:"+token, &conf); err != nil {
-			Log.Error().Err(err).Msg("cannot find base")
-			return exe, err
-		}
-
-		var auth model.Auth
-		if err := Cache.GetTyped(token, &auth); err != nil {
-			Log.Error().Err(err).Msg("cannot find auth")
-			return exe, err
-		}
-
-		exe.Auth = auth
-		exe.BaseName = conf.Name
+		exe.Auth = msg.Auth
+		exe.BaseName = msg.Base
 		exe.DataStore = DB
 		exe.Volatile = Cache
 		exe.Search = Search

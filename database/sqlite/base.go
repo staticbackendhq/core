@@ -103,7 +103,7 @@ func (sl *SQLite) CreateDocument(auth model.Auth, dbName, col string, doc map[st
 	inserted[FieldID] = id
 	inserted[FieldAccountID] = auth.AccountID
 
-	sl.PublishDocument("db-"+col, model.MsgTypeDBCreated, inserted)
+	sl.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBCreated, inserted)
 
 	return
 }
@@ -300,7 +300,7 @@ func (sl *SQLite) UpdateDocument(auth model.Auth, dbName, col, id string, doc ma
 		return nil, err
 	}
 
-	sl.PublishDocument("db-"+col, model.MsgTypeDBUpdated, updated)
+	sl.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, updated)
 
 	return updated, nil
 }
@@ -359,7 +359,7 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 			sl.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
 		}
 		for _, doc := range docs {
-			sl.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
+			sl.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
 		}
 	}()
 	return
@@ -390,7 +390,7 @@ func (sl *SQLite) IncrementValue(auth model.Auth, dbName, col, id, field string,
 		return err
 	}
 
-	sl.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
+	sl.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
 
 	return nil
 }
@@ -409,7 +409,7 @@ func (sl *SQLite) DeleteDocument(auth model.Auth, dbName, col, id string) (int64
 		return 0, err
 	}
 
-	sl.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+	sl.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, id)
 	return res.RowsAffected()
 }
 
@@ -453,7 +453,7 @@ func (sl *SQLite) DeleteDocuments(auth model.Auth, dbName, col string, filters m
 
 	go func() {
 		for _, id := range ids {
-			sl.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+			sl.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, id)
 		}
 	}()
 

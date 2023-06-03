@@ -10,7 +10,7 @@ import (
 
 type Subscriber struct {
 	PubSub     cache.Volatilizer
-	GetExecEnv func(token string) (ExecutionEnvironment, error)
+	GetExecEnv func(msg model.Command) (ExecutionEnvironment, error)
 	Log        *logger.Logger
 }
 
@@ -44,7 +44,7 @@ func (sub *Subscriber) process(msg model.Command) {
 }
 
 func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
-	exe, err := sub.GetExecEnv(msg.Token)
+	exe, err := sub.GetExecEnv(msg)
 	if err != nil {
 		sub.Log.Error().Err(err).Msgf("cannot retrieve base from token: %s", msg.Token)
 		return

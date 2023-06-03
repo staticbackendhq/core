@@ -160,7 +160,7 @@ func (d *CacheDev) Publish(msg model.Command) error {
 
 // PublishDocument publishes a database update message (created, updated, deleted)
 // All subscribers will get notified
-func (d *CacheDev) PublishDocument(channel, typ string, v any) {
+func (d *CacheDev) PublishDocument(auth model.Auth, dbName, channel, typ string, v any) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		d.log.Error().Err(err).Msg("error publishing db doc")
@@ -171,6 +171,8 @@ func (d *CacheDev) PublishDocument(channel, typ string, v any) {
 		Channel: channel,
 		Data:    string(b),
 		Type:    typ,
+		Auth:    auth,
+		Base:    dbName,
 	}
 
 	if err := d.Publish(msg); err != nil {

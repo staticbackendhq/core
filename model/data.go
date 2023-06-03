@@ -72,6 +72,8 @@ type Command struct {
 	Data          string `json:"data"`
 	Channel       string `json:"channel"`
 	Token         string `json:"token"`
+	Auth          Auth   `json:"auth"`
+	Base          string `json:"base"`
 	IsSystemEvent bool   `json:"-"`
 }
 

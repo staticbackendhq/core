@@ -88,7 +88,7 @@ func (pg *PostgreSQL) CreateDocument(auth model.Auth, dbName, col string, doc ma
 	inserted[FieldID] = id
 	inserted[FieldAccountID] = auth.AccountID
 
-	pg.PublishDocument("db-"+col, model.MsgTypeDBCreated, inserted)
+	pg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBCreated, inserted)
 
 	return
 }
@@ -285,7 +285,7 @@ func (pg *PostgreSQL) UpdateDocument(auth model.Auth, dbName, col, id string, do
 		return nil, err
 	}
 
-	pg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, updated)
+	pg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, updated)
 
 	return updated, nil
 }
@@ -342,7 +342,7 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 			pg.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
 		}
 		for _, doc := range docs {
-			pg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
+			pg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
 		}
 	}()
 	return
@@ -366,7 +366,7 @@ func (pg *PostgreSQL) IncrementValue(auth model.Auth, dbName, col, id, field str
 		return err
 	}
 
-	pg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, updated)
+	pg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, updated)
 
 	return nil
 }
@@ -385,7 +385,7 @@ func (pg *PostgreSQL) DeleteDocument(auth model.Auth, dbName, col, id string) (i
 		return 0, err
 	}
 
-	pg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+	pg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, id)
 	return res.RowsAffected()
 }
 
@@ -428,7 +428,7 @@ func (pg *PostgreSQL) DeleteDocuments(auth model.Auth, dbName, col string, filte
 
 	go func() {
 		for _, id := range ids {
-			pg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+			pg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, id)
 		}
 	}()
 

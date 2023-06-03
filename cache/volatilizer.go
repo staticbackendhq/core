@@ -3,7 +3,7 @@ package cache
 import "github.com/staticbackendhq/core/model"
 
 // PublishDocumentEvent used to publish database events
-type PublishDocumentEvent func(channel, typ string, v interface{})
+type PublishDocumentEvent func(auth model.Auth, dbName, channel, typ string, v interface{})
 
 // Volatilizer is the cache and pub/sub interface
 type Volatilizer interface {
@@ -24,7 +24,7 @@ type Volatilizer interface {
 	// Publish publishes a message to a channel
 	Publish(msg model.Command) error
 	// PublishDocument publish a database message to a channel
-	PublishDocument(channel, typ string, v any)
+	PublishDocument(auth model.Auth, dbname, channel, typ string, v any)
 	// QueueWork add a work queue item
 	QueueWork(key, value string) error
 	// DequeueWork dequeue work item (if available)
