@@ -21,7 +21,12 @@ type LocalTask struct {
 }
 
 func toLocalTask(t model.Task) LocalTask {
+	id, err := primitive.ObjectIDFromHex(t.ID)
+	if err != nil {
+	}
+
 	return LocalTask{
+		ID:       id,
 		Name:     t.Name,
 		Type:     t.Type,
 		Value:    t.Value,
@@ -98,12 +103,16 @@ func (mg *Mongo) ListTasksByBase(dbName string) ([]model.Task, error) {
 	return tasks, nil
 }
 
-func (mg *Mongo) AddTask(dbName string, task model.Task) error {
+func (mg *Mongo) AddTask(dbName string, task model.Task) (string, error) {
 	db := mg.Client.Database(dbName)
-	if _, err := db.Collection("sb_tasks").InsertOne(mg.Ctx, toLocalTask(task)); err != nil {
-		return err
+
+	task.ID = mg.NewID()
+	v := toLocalTask(task)
+	if _, err := db.Collection("sb_tasks").InsertOne(mg.Ctx, v); err != nil {
+		return "", err
 	}
-	return nil
+
+	return task.ID, nil
 }
 
 func (mg *Mongo) DeleteTask(dbName, id string) error {

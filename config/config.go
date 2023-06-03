@@ -5,6 +5,10 @@ import "os"
 var Current AppConfig
 
 type AppConfig struct {
+	// PrimaryInstance indicates if this instance runs the job scheduler
+	// Only one instance can have this flag on.
+	PrimaryInstance bool
+
 	// Port web server port
 	Port string
 
@@ -71,7 +75,7 @@ type AppConfig struct {
 	AWSCDNURL string
 
 	// KeepPermissionInName if "yes" will keep the repo permission in repo name
-	KeepPermissionInName string
+	KeepPermissionInName bool
 
 	// LogConsoleLevel could be use to specify the minimum log level is wanted
 	LogConsoleLevel string
@@ -84,6 +88,7 @@ type AppConfig struct {
 
 func LoadConfig() AppConfig {
 	return AppConfig{
+		PrimaryInstance:       os.Getenv("PRIMARY_INSTANCE") == "yes",
 		Port:                  os.Getenv("PORT"),
 		AppEnv:                os.Getenv("APP_ENV"),
 		AppSecret:             os.Getenv("APP_SECRET"),
@@ -112,7 +117,7 @@ func LoadConfig() AppConfig {
 		AWSRegion:             os.Getenv("AWS_REGION"),
 		AWSCDNURL:             os.Getenv("AWS_CDN_URL"),
 		AWSS3Bucket:           os.Getenv("AWS_S3_BUCKET"),
-		KeepPermissionInName:  os.Getenv("KEEP_PERM_COL_NAME"),
+		KeepPermissionInName:  os.Getenv("KEEP_PERM_COL_NAME") == "",
 		LogConsoleLevel:       os.Getenv("LOG_CONSOLE_LEVEL"),
 		LogFilename:           os.Getenv("LOG_FILENAME"),
 	}

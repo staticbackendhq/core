@@ -166,6 +166,9 @@ var (
 	// Storage exposes file storage functionalities. It wraps the blob
 	// storage as well as the database storage.
 	Storage func(model.Auth, model.DatabaseConfig) FileStore
+
+	// Scheduler to execute schedule job (only on PrimaryInstance)
+	Scheduler *function.TaskScheduler
 )
 
 func init() {
@@ -251,6 +254,20 @@ func Setup(cfg config.AppConfig) {
 
 	// start system events subscriber
 	go sub.Start()
+
+	// for primary instance, we start the job scheduler
+	if cfg.PrimaryInstance {
+		runner := &function.TaskScheduler{
+			Volatile:  Cache,
+			DataStore: DB,
+			Search:    Search,
+			Email:     Emailer,
+			Log:       Log,
+		}
+
+		Scheduler = runner
+		go runner.Start()
+	}
 
 	Membership = newUser
 	Storage = newFile

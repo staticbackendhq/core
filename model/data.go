@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
@@ -50,20 +49,21 @@ func init() {
 const (
 	SystemID = "sb"
 
-	MsgTypeError     = "error"
-	MsgTypeOk        = "ok"
-	MsgTypeEcho      = "echo"
-	MsgTypeInit      = "init"
-	MsgTypeAuth      = "auth"
-	MsgTypeToken     = "token"
-	MsgTypeJoin      = "join"
-	MsgTypeJoined    = "joined"
-	MsgTypePresence  = "presence"
-	MsgTypeChanIn    = "chan_in"
-	MsgTypeChanOut   = "chan_out"
-	MsgTypeDBCreated = "db_created"
-	MsgTypeDBUpdated = "db_updated"
-	MsgTypeDBDeleted = "db_deleted"
+	MsgTypeError        = "error"
+	MsgTypeOk           = "ok"
+	MsgTypeEcho         = "echo"
+	MsgTypeInit         = "init"
+	MsgTypeAuth         = "auth"
+	MsgTypeToken        = "token"
+	MsgTypeJoin         = "join"
+	MsgTypeJoined       = "joined"
+	MsgTypePresence     = "presence"
+	MsgTypeChanIn       = "chan_in"
+	MsgTypeChanOut      = "chan_out"
+	MsgTypeDBCreated    = "db_created"
+	MsgTypeDBUpdated    = "db_updated"
+	MsgTypeDBDeleted    = "db_deleted"
+	MsgTypeFunctionCall = "fn_call"
 )
 
 type Command struct {
@@ -86,7 +86,8 @@ func (msg Command) IsDBEvent() bool {
 }
 
 func CleanCollectionName(col string) string {
-	if strings.EqualFold(config.Current.KeepPermissionInName, "yes") {
+	// by default, permissions are added to collection name
+	if config.Current.KeepPermissionInName {
 		return col
 	}
 
