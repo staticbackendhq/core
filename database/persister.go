@@ -49,6 +49,8 @@ type Persister interface {
 	DeleteTenant(dbName, email string) error
 
 	// system user account functions
+	// GetUserByID returns a User matching the accountID and userID
+	GetUserByID(dbName, accountID, userID string) (model.User, error)
 	// FindUser find a user by its ID
 	FindUser(dbName, userID, token string) (model.User, error)
 	// FindRootUser validates that those credentials are the root user for a database
@@ -79,6 +81,8 @@ type Persister interface {
 	SetUserRole(dbName, email string, role int) error
 	// UserSetPassword user initiated password reset
 	UserSetPassword(dbName, userID, password string) error
+	// RemoveUser permanently removes a user from an account
+	RemoveUser(auth model.Auth, dbName, userID string) error
 
 	// base CRUD
 	// CreateDocument creates a record in a collection

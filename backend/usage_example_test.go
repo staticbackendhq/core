@@ -22,11 +22,14 @@ func (x EntityDemo) String() string {
 }
 
 func Example() {
-	// we create a config.Config using the in-memory database engine
-	// you'd use PostgreSQL or Mongo in your real configuration
-	// Also note that the config package has a Load() function that loads
-	// config from environment variables.
-	cfg := config.AppConfig{
+	// we initiate config.Current as type config.AppConfig
+	// using the in-memory database engine.
+	// You'd use PostgreSQL or Mongo in your real configuration
+
+	// Also note that the config package has a LoadConfig() function that loads
+	// config from environment variables i.e.:
+	// config.Current = LoadConfig()
+	config.Current = config.AppConfig{
 		AppEnv:          "dev",
 		Port:            "8099",
 		DatabaseURL:     "mem",
@@ -35,7 +38,7 @@ func Example() {
 	}
 
 	// the Setup function will initialize all services based on config
-	backend.Setup(cfg)
+	backend.Setup(config.Current)
 
 	// StaticBackend is multi-tenant by default, so you'll minimaly need
 	// at least one Tenant with their Database for your app

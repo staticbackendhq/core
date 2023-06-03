@@ -78,7 +78,7 @@ func (pg *PostgreSQL) ListUsers(dbName, accountID string) ([]model.User, error) 
 	qry := fmt.Sprintf(`
 	SELECT * 
 	FROM %s.sb_tokens
-	WHERE account_id = $1
+	WHERE account_id = $1;
 	`, dbName)
 
 	rows, err := pg.DB.Query(qry, accountID)
@@ -113,6 +113,19 @@ func (pg *PostgreSQL) FindUserByEmail(dbName, email string) (tok model.User, err
 	row := pg.DB.QueryRow(qry, email)
 
 	err = scanToken(row, &tok)
+	return
+}
+
+func (pg *PostgreSQL) GetUserByID(dbName, accountID, userID string) (user model.User, err error) {
+	qry := fmt.Sprintf(`
+	SELECT * 
+	FROM %s.sb_tokens
+	WHERE id = $1 AND account_id = $2;
+`, dbName)
+
+	row := pg.DB.QueryRow(qry, userID, accountID)
+
+	err = scanToken(row, &user)
 	return
 }
 

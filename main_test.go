@@ -24,16 +24,18 @@ const (
 )
 
 var (
-	extexec    *extras
-	funexec    *functions
-	wsURL      string
-	pubKey     string
-	adminToken string
-	userToken  string
-	rootToken  string
+	extexec       *extras
+	funexec       *functions
+	wsURL         string
+	pubKey        string
+	adminToken    string
+	userToken     string
+	rootToken     string
+	testAccountID string
 
 	mship *membership
 	db    *Database
+	acct  *accounts
 )
 
 func TestMain(m *testing.M) {
@@ -42,6 +44,8 @@ func TestMain(m *testing.M) {
 	backend.Setup(config.Current)
 
 	db = &Database{cache: backend.Cache, log: backend.Log}
+
+	acct = &accounts{log: backend.Log}
 
 	mship = &membership{log: backend.Log}
 
@@ -82,6 +86,7 @@ func deleteAndSetupTestAccount() {
 	}
 
 	base := model.DatabaseConfig{
+		ID:            dbName,
 		TenantID:      cus.ID,
 		Name:          dbName,
 		AllowedDomain: []string{"localhost"},
@@ -105,6 +110,8 @@ func deleteAndSetupTestAccount() {
 	adminToken = string(token)
 
 	rootToken = fmt.Sprintf("%s|%s|%s", dbToken.ID, dbToken.AccountID, dbToken.Token)
+
+	testAccountID = dbToken.AccountID
 
 	token, _, err = usrSvc.CreateUser(dbToken.AccountID, userEmail, userPassword, 0)
 	if err != nil {

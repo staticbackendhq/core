@@ -237,14 +237,13 @@ func (m *Memory) DeleteDocuments(auth model.Auth, dbName, col string, filters ma
 	}
 
 	for _, doc := range filtered {
-
 		if !canWrite(auth, col, doc) {
 			continue
 		}
 
 		docID := fmt.Sprintf("%v", doc["id"])
 		delete(docs, docID)
-		n = 1
+		n += 1
 	}
 
 	m.DB[key] = docs
