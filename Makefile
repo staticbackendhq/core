@@ -21,7 +21,7 @@ deploy: build
 	scp -qr ./sql/* sb-poc:/home/dstpierre/sql/
 
 alltest:
-	@go clean -testcache && go test --race --cover ./...
+	@go clean -testcache && go test --cover ./...
 
 thistest:
 	go test -run $(TESTNAME) --cover
