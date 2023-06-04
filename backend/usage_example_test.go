@@ -30,11 +30,12 @@ func Example() {
 	// config from environment variables i.e.:
 	// config.Current = LoadConfig()
 	config.Current = config.AppConfig{
-		AppEnv:          "dev",
-		Port:            "8099",
-		DatabaseURL:     "mem",
-		DataStore:       "mem",
-		LocalStorageURL: "http://localhost:8099",
+		AppEnv:           "dev",
+		Port:             "8099",
+		DatabaseURL:      "mem",
+		DataStore:        "mem",
+		LocalStorageURL:  "http://localhost:8099",
+		NoFullTextSearch: true,
 	}
 
 	// the Setup function will initialize all services based on config
