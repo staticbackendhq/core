@@ -118,6 +118,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -167,7 +168,7 @@ var (
 	// storage as well as the database storage.
 	Storage func(model.Auth, model.DatabaseConfig) FileStore
 
-	// Scheduler to execute schedule job (only on PrimaryInstance)
+	// Scheduler to execute schedule jobs (only on PrimaryInstance)
 	Scheduler *function.TaskScheduler
 )
 
@@ -256,7 +257,9 @@ func Setup(cfg config.AppConfig) {
 	go sub.Start()
 
 	// for primary instance, we start the job scheduler
-	if cfg.PrimaryInstance {
+	if hostname, err := os.Hostname(); err != nil {
+		Log.Warn().Err(err).Msg("cannot determine if it's primary instance")
+	} else if strings.EqualFold(hostname, cfg.PrimaryInstanceHostname) {
 		runner := &function.TaskScheduler{
 			Volatile:  Cache,
 			DataStore: DB,
@@ -267,6 +270,7 @@ func Setup(cfg config.AppConfig) {
 
 		Scheduler = runner
 		go runner.Start()
+		Log.Info().Msg("job scheduler / runner started on primary instance")
 	}
 
 	Membership = newUser

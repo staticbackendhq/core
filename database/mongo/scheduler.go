@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"log"
 	"time"
 
 	"github.com/staticbackendhq/core/model"
@@ -23,6 +24,7 @@ type LocalTask struct {
 func toLocalTask(t model.Task) LocalTask {
 	id, err := primitive.ObjectIDFromHex(t.ID)
 	if err != nil {
+		log.Println("unable to parse ObjectID in mongo.Scheduler.toLocalTask: ", err)
 	}
 
 	return LocalTask{
