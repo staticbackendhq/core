@@ -240,15 +240,16 @@ func Setup(cfg config.AppConfig) {
 
 	sub := &function.Subscriber{Log: Log}
 	sub.PubSub = Cache
-	sub.GetExecEnv = func(msg model.Command) (function.ExecutionEnvironment, error) {
-		var exe function.ExecutionEnvironment
-
-		exe.Auth = msg.Auth
-		exe.BaseName = msg.Base
-		exe.DataStore = DB
-		exe.Volatile = Cache
-		exe.Search = Search
-		exe.Email = Emailer
+	sub.GetExecEnv = func(msg model.Command) (*function.ExecutionEnvironment, error) {
+		exe := &function.ExecutionEnvironment{
+			Auth:      msg.Auth,
+			BaseName:  msg.Base,
+			DataStore: DB,
+			Volatile:  Cache,
+			Search:    Search,
+			Email:     Emailer,
+			Log:       Log,
+		}
 
 		return exe, nil
 	}

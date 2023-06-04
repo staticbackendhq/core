@@ -199,6 +199,12 @@ func (c *Cache) PublishDocument(auth model.Auth, dbName, channel, typ string, v 
 
 // HasPermission determines if a session token has permission to a collection
 func (c *Cache) HasPermission(token, repo, payload string) bool {
+	// sbsys is a reserved channel used internally, no need to check for
+	// permissions
+	if repo == "sbsys" {
+		return true
+	}
+
 	var me model.Auth
 	if err := c.GetTyped(token, &me); err != nil {
 		return false

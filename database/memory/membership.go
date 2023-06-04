@@ -83,6 +83,8 @@ func (m *Memory) RemoveUser(auth model.Auth, dbName, userID string) error {
 
 	delete(docs, userID)
 
+	mx.Lock()
 	m.DB[key] = docs
+	mx.Unlock()
 	return nil
 }

@@ -107,6 +107,7 @@ func (f *functions) exec(w http.ResponseWriter, r *http.Request) {
 		Volatile:  backend.Cache,
 		Data:      fn,
 		Email:     backend.Emailer,
+		Log:       backend.Log,
 	}
 
 	if err := env.Execute(r); err != nil {

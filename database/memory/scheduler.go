@@ -50,6 +50,8 @@ func (m *Memory) DeleteTask(dbName, id string) error {
 
 	delete(tasks, id)
 
+	mx.Lock()
 	m.DB[key] = tasks
+	mx.Unlock()
 	return nil
 }

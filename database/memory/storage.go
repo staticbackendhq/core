@@ -29,7 +29,9 @@ func (m *Memory) DeleteFile(dbName, fileID string) error {
 
 	delete(files, fileID)
 
+	mx.Lock()
 	m.DB[key] = files
+	mx.Unlock()
 	return nil
 }
 

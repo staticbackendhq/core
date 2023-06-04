@@ -104,7 +104,7 @@ func (ts *TaskScheduler) execFunction(auth model.Auth, task model.Task) {
 		Search:    ts.Search,
 		Email:     ts.Email,
 		Data:      fn,
-		log:       ts.Log,
+		Log:       ts.Log,
 	}
 
 	var meta model.MetaMessage

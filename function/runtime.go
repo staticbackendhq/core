@@ -29,7 +29,7 @@ type ExecutionEnvironment struct {
 	Data      model.ExecData
 
 	CurrentRun model.ExecHistory
-	log        *logger.Logger
+	Log        *logger.Logger
 }
 
 type Result struct {
@@ -604,6 +604,6 @@ func (env *ExecutionEnvironment) complete(err error) {
 
 	//TODO: this needs to be regrouped and ran un batch
 	if err := env.DataStore.RanFunction(env.BaseName, env.Data.ID, env.CurrentRun); err != nil {
-		env.log.Error().Err(err).Msg("error logging function complete")
+		env.Log.Error().Err(err).Msg("error logging function complete")
 	}
 }

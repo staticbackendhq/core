@@ -223,7 +223,9 @@ func (m *Memory) DeleteDocument(auth model.Auth, dbName, col, id string) (n int6
 
 	delete(docs, id)
 
+	mx.Lock()
 	m.DB[key] = docs
+	mx.Unlock()
 
 	m.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, doc)
 
@@ -259,7 +261,9 @@ func (m *Memory) DeleteDocuments(auth model.Auth, dbName, col string, filters ma
 		m.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, doc)
 	}
 
+	mx.Lock()
 	m.DB[key] = docs
+	mx.Unlock()
 	return n, nil
 }
 

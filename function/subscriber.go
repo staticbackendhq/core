@@ -10,7 +10,7 @@ import (
 
 type Subscriber struct {
 	PubSub     cache.Volatilizer
-	GetExecEnv func(msg model.Command) (ExecutionEnvironment, error)
+	GetExecEnv func(msg model.Command) (*ExecutionEnvironment, error)
 	Log        *logger.Logger
 }
 
@@ -82,7 +82,7 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
 		}
 
 		exe.Data = fn
-		go func(ex ExecutionEnvironment) {
+		go func(ex *ExecutionEnvironment) {
 			if err := ex.Execute(msg); err != nil {
 				sub.Log.Error().Err(err).Msgf(`executing "%s" function failed"`, ex.Data.FunctionName)
 			}

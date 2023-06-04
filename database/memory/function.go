@@ -93,7 +93,9 @@ func (m *Memory) DeleteFunction(dbName, name string) error {
 
 	delete(list, exists.ID)
 
+	mx.Lock()
 	m.DB[key] = list
+	mx.Unlock()
 
 	return nil
 }
