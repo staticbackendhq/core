@@ -1,12 +1,25 @@
 # Changelog for StaticBackend
 
+### June 4th, 2023 v1.5.0-beta.1
+
+Features:
+
+* added HTTP request as schedule task type
+* added auth and basename on event message vs. the old cache workaround
+
+Bug fixes:
+
+* fixed schedule task runner
+* fixed adding tasks while system is running
+
+
 ### June 1st, 2023 v1.5.0-alpha.0
 
 Features:
 
 * `sendMail` added to server-side function runtime
 
-Bug fixes
+Bug fixes:
 
 * Fixed issue with the memory data provider (introduced by the linter fixes)
 
