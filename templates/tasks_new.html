@@ -26,6 +26,7 @@
 							<select name="type">
 								<option value="function">Function</option>
 								<option value="message">Send message (topic for PubSub)</option>
+								<option value="http">HTTP request</option>
 							</select>
 						</div>
 					</div>
@@ -52,6 +53,13 @@
 					<div class="control">
 						<input type="text" class="input" name="meta" >
 					</div>
+					<p class="help">
+						For HTTP request: 
+						{method: "POST", ct: "application/json", data: '{"field": true}'}
+						<br /><br />
+						A <strong>{taskname}-http-response</strong> message will be 
+						published with the response body as data to the handle function.
+					</p>
 				</div>
 
 				<div class="field">

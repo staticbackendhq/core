@@ -32,6 +32,7 @@ type ExecHistory struct {
 const (
 	TaskTypeFunction = "function"
 	TaskTypeMessage  = "message"
+	TaskTypeHTTP     = "http"
 )
 
 type Task struct {
@@ -47,6 +48,9 @@ type Task struct {
 }
 
 type MetaMessage struct {
-	Data    string `json:"data"`
-	Channel string `json:"channel"`
+	Data        string `json:"data"`
+	Channel     string `json:"channel"`
+	HTTPMethod  string `json:"method"`
+	ContentType string `json:"ct"`
+	HTTPHeaders string `jsno:"headers"`
 }

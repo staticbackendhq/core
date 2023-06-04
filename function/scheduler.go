@@ -2,6 +2,11 @@ package function
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
@@ -86,6 +91,8 @@ func (ts *TaskScheduler) run(task model.Task) {
 		ts.execFunction(auth, task)
 	case model.TaskTypeMessage:
 		ts.sendMessage(auth, task)
+	case model.TaskTypeHTTP:
+		ts.httpRequest(auth, task)
 	}
 }
 
@@ -147,6 +154,90 @@ func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 		Type:    task.Value,
 		Data:    meta.Data,
 		Channel: meta.Channel,
+		Token:   token,
+		Auth:    auth,
+		Base:    task.BaseName,
+	}
+
+	if err := ts.Volatile.Publish(msg); err != nil {
+		ts.Log.Error().Err(err).Msgf("error publishing message from task: %s", task.ID)
+	}
+}
+
+func (ts *TaskScheduler) httpRequest(auth model.Auth, task model.Task) {
+	token := auth.ReconstructToken()
+
+	var meta model.MetaMessage
+	headers := make(map[string]string)
+
+	if len(task.Meta) > 0 {
+		if err := json.Unmarshal([]byte(task.Meta), &meta); err != nil {
+			ts.Log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %s", task.ID)
+			return
+		}
+
+		if err := json.Unmarshal([]byte(meta.HTTPHeaders), &headers); err != nil {
+			ts.Log.Err(err).Msg("unable to parse HTTP headers from meta data")
+			return
+		}
+	}
+
+	if len(meta.ContentType) == 0 {
+		meta.ContentType = "application/x-www-form-urlencoded"
+	}
+
+	if len(meta.HTTPMethod) == 0 {
+		meta.HTTPMethod = "POST"
+	}
+
+	body := ""
+	if meta.ContentType == "application/json" {
+		body = meta.Data
+	} else {
+		var v map[string]any
+		if err := json.Unmarshal([]byte(meta.Data), &v); err != nil {
+			ts.Log.Warn().Err(err).Msg("unable to parse meta data")
+			return
+		}
+
+		data := url.Values{}
+		for key, val := range v {
+			data.Add(key, fmt.Sprintf("%v", val))
+		}
+
+		body = data.Encode()
+	}
+
+	req, err := http.NewRequest(meta.HTTPMethod, task.Value, strings.NewReader(body))
+	if err != nil {
+		ts.Log.Err(err).Msg("unable to construct the HTTP request")
+		return
+	}
+
+	req.Header.Add("Content-Type", meta.ContentType)
+
+	for key, val := range headers {
+		req.Header.Add(key, val)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		ts.Log.Err(err).Msg("error executing HTTP request")
+		return
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ts.Log.Err(err).Msg("unable to read HTTP response body")
+		return
+	}
+
+	msg := model.Command{
+		SID:     "system",
+		Type:    model.MsgTypeHTTPResponse,
+		Channel: fmt.Sprintf(`%s-http-response`, task.Name),
+		Data:    string(b),
 		Token:   token,
 		Auth:    auth,
 		Base:    task.BaseName,

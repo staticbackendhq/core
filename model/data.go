@@ -64,6 +64,7 @@ const (
 	MsgTypeDBUpdated    = "db_updated"
 	MsgTypeDBDeleted    = "db_deleted"
 	MsgTypeFunctionCall = "fn_call"
+	MsgTypeHTTPResponse = "http_response"
 )
 
 type Command struct {
