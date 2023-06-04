@@ -33,11 +33,12 @@ func (m *Memory) ListTasksByBase(dbName string) ([]model.Task, error) {
 	return tasks, nil
 }
 
-func (m *Memory) AddTask(dbName string, task model.Task) error {
-	id := m.NewID()
+func (m *Memory) AddTask(dbName string, task model.Task) (id string, err error) {
+	id = m.NewID()
 	task.ID = id
 
-	return create(m, dbName, "sb_tasks", id, task)
+	err = create(m, dbName, "sb_tasks", id, task)
+	return
 }
 
 func (m *Memory) DeleteTask(dbName, id string) error {
@@ -49,6 +50,8 @@ func (m *Memory) DeleteTask(dbName, id string) error {
 
 	delete(tasks, id)
 
+	mx.Lock()
 	m.DB[key] = tasks
+	mx.Unlock()
 	return nil
 }

@@ -49,15 +49,17 @@ func (pg *PostgreSQL) ListTasksByBase(dbName string) (results []model.Task, err 
 	return
 }
 
-func (sl *PostgreSQL) AddTask(dbName string, task model.Task) error {
+func (pg *PostgreSQL) AddTask(dbName string, task model.Task) (id string, err error) {
 	qry := fmt.Sprintf(`
 	INSERT INTO %s.sb_tasks(id, name, type, value, meta, interval, last_run)
 	VALUES($1, $2, $3, $4, $5, $6, $7);
 	`, dbName)
 
-	_, err := sl.DB.Exec(
+	id = pg.NewID()
+
+	_, err = pg.DB.Exec(
 		qry,
-		sl.NewID(),
+		id,
 		task.ID,
 		task.Type,
 		task.Value,
@@ -65,10 +67,7 @@ func (sl *PostgreSQL) AddTask(dbName string, task model.Task) error {
 		task.Interval,
 		task.LastRun,
 	)
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 func (sl *PostgreSQL) DeleteTask(dbName, id string) error {

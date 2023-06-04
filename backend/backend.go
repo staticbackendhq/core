@@ -118,6 +118,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -166,6 +167,9 @@ var (
 	// Storage exposes file storage functionalities. It wraps the blob
 	// storage as well as the database storage.
 	Storage func(model.Auth, model.DatabaseConfig) FileStore
+
+	// Scheduler to execute schedule jobs (only on PrimaryInstance)
+	Scheduler *function.TaskScheduler
 )
 
 func init() {
@@ -236,42 +240,39 @@ func Setup(cfg config.AppConfig) {
 
 	sub := &function.Subscriber{Log: Log}
 	sub.PubSub = Cache
-	sub.GetExecEnv = func(token string) (function.ExecutionEnvironment, error) {
-		var exe function.ExecutionEnvironment
-
-		var conf model.DatabaseConfig
-		// for public websocket (experimental)
-		if strings.HasPrefix(token, "__tmp__experimental_public") {
-			pk := strings.Replace(token, "__tmp__experimental_public_", "", -1)
-			pairs := strings.Split(pk, "_")
-			Log.Info().Msgf("checking for base in cache: %s", pairs[0])
-			if err := Cache.GetTyped(pairs[0], &conf); err != nil {
-				Log.Error().Err(err).Msg("cannot find base for public websocket")
-				return exe, err
-			}
-		} else if err := Cache.GetTyped("base:"+token, &conf); err != nil {
-			Log.Error().Err(err).Msg("cannot find base")
-			return exe, err
+	sub.GetExecEnv = func(msg model.Command) (*function.ExecutionEnvironment, error) {
+		exe := &function.ExecutionEnvironment{
+			Auth:      msg.Auth,
+			BaseName:  msg.Base,
+			DataStore: DB,
+			Volatile:  Cache,
+			Search:    Search,
+			Email:     Emailer,
+			Log:       Log,
 		}
-
-		var auth model.Auth
-		if err := Cache.GetTyped(token, &auth); err != nil {
-			Log.Error().Err(err).Msg("cannot find auth")
-			return exe, err
-		}
-
-		exe.Auth = auth
-		exe.BaseName = conf.Name
-		exe.DataStore = DB
-		exe.Volatile = Cache
-		exe.Search = Search
-		exe.Email = Emailer
 
 		return exe, nil
 	}
 
 	// start system events subscriber
 	go sub.Start()
+
+	// for primary instance, we start the job scheduler
+	if hostname, err := os.Hostname(); err != nil {
+		Log.Warn().Err(err).Msg("cannot determine if it's primary instance")
+	} else if strings.EqualFold(hostname, cfg.PrimaryInstanceHostname) {
+		runner := &function.TaskScheduler{
+			Volatile:  Cache,
+			DataStore: DB,
+			Search:    Search,
+			Email:     Emailer,
+			Log:       Log,
+		}
+
+		Scheduler = runner
+		go runner.Start()
+		Log.Info().Msg("job scheduler / runner started on primary instance")
+	}
 
 	Membership = newUser
 	Storage = newFile

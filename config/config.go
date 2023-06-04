@@ -5,6 +5,10 @@ import "os"
 var Current AppConfig
 
 type AppConfig struct {
+	// PrimaryInstanceHostname indicates the name of the instance that should run
+	// the scheduler. Only one instance can run the scheduler.
+	PrimaryInstanceHostname string
+
 	// Port web server port
 	Port string
 
@@ -71,7 +75,7 @@ type AppConfig struct {
 	AWSCDNURL string
 
 	// KeepPermissionInName if "yes" will keep the repo permission in repo name
-	KeepPermissionInName string
+	KeepPermissionInName bool
 
 	// LogConsoleLevel could be use to specify the minimum log level is wanted
 	LogConsoleLevel string
@@ -84,36 +88,37 @@ type AppConfig struct {
 
 func LoadConfig() AppConfig {
 	return AppConfig{
-		Port:                  os.Getenv("PORT"),
-		AppEnv:                os.Getenv("APP_ENV"),
-		AppSecret:             os.Getenv("APP_SECRET"),
-		AppURL:                os.Getenv("APP_URL"),
-		FromCLI:               os.Getenv("SB_FROM_CLI"),
-		DataStore:             os.Getenv("DATA_STORE"),
-		DatabaseURL:           os.Getenv("DATABASE_URL"),
-		MailProvider:          os.Getenv("MAIL_PROVIDER"),
-		FromEmail:             os.Getenv("FROM_EMAIL"),
-		FromName:              os.Getenv("FROM_NAME"),
-		StorageProvider:       os.Getenv("STORAGE_PROVIDER"),
-		LocalStorageURL:       os.Getenv("LOCAL_STORAGE_URL"),
-		RedisURL:              os.Getenv("REDIS_URL"),
-		RedisHost:             os.Getenv("REDIS_HOST"),
-		RedisPassword:         os.Getenv("REDIS_PASSWORD"),
-		StripeKey:             os.Getenv("STRIPE_KEY"),
-		StripePriceIDIdea:     os.Getenv("STRIPE_PRICEID_IDEA"),
-		StripePriceIDLaunch:   os.Getenv("STRIPE_PRICEID_LAUNCH"),
-		StripePriceIDTraction: os.Getenv("STRIPE_PRICEID_TRACTION"),
-		StripePriceIDGrowth:   os.Getenv("STRIPE_PRICEID_GROWTH"),
-		StripeWebhookSecret:   os.Getenv("STRIPE_WEBHOOK_SECRET"),
-		TwilioAccountID:       os.Getenv("TWILIO_ACCOUNTSID"),
-		TwilioAuthToken:       os.Getenv("TWILIO_AUTHTOKEN"),
-		TwilioTestCellNumber:  os.Getenv("MY_CELL"),
-		TwilioNumber:          os.Getenv("TWILIO_NUMBER"),
-		AWSRegion:             os.Getenv("AWS_REGION"),
-		AWSCDNURL:             os.Getenv("AWS_CDN_URL"),
-		AWSS3Bucket:           os.Getenv("AWS_S3_BUCKET"),
-		KeepPermissionInName:  os.Getenv("KEEP_PERM_COL_NAME"),
-		LogConsoleLevel:       os.Getenv("LOG_CONSOLE_LEVEL"),
-		LogFilename:           os.Getenv("LOG_FILENAME"),
+		PrimaryInstanceHostname: os.Getenv("PRIMARY_INSTANCE_HOSTNAME"),
+		Port:                    os.Getenv("PORT"),
+		AppEnv:                  os.Getenv("APP_ENV"),
+		AppSecret:               os.Getenv("APP_SECRET"),
+		AppURL:                  os.Getenv("APP_URL"),
+		FromCLI:                 os.Getenv("SB_FROM_CLI"),
+		DataStore:               os.Getenv("DATA_STORE"),
+		DatabaseURL:             os.Getenv("DATABASE_URL"),
+		MailProvider:            os.Getenv("MAIL_PROVIDER"),
+		FromEmail:               os.Getenv("FROM_EMAIL"),
+		FromName:                os.Getenv("FROM_NAME"),
+		StorageProvider:         os.Getenv("STORAGE_PROVIDER"),
+		LocalStorageURL:         os.Getenv("LOCAL_STORAGE_URL"),
+		RedisURL:                os.Getenv("REDIS_URL"),
+		RedisHost:               os.Getenv("REDIS_HOST"),
+		RedisPassword:           os.Getenv("REDIS_PASSWORD"),
+		StripeKey:               os.Getenv("STRIPE_KEY"),
+		StripePriceIDIdea:       os.Getenv("STRIPE_PRICEID_IDEA"),
+		StripePriceIDLaunch:     os.Getenv("STRIPE_PRICEID_LAUNCH"),
+		StripePriceIDTraction:   os.Getenv("STRIPE_PRICEID_TRACTION"),
+		StripePriceIDGrowth:     os.Getenv("STRIPE_PRICEID_GROWTH"),
+		StripeWebhookSecret:     os.Getenv("STRIPE_WEBHOOK_SECRET"),
+		TwilioAccountID:         os.Getenv("TWILIO_ACCOUNTSID"),
+		TwilioAuthToken:         os.Getenv("TWILIO_AUTHTOKEN"),
+		TwilioTestCellNumber:    os.Getenv("MY_CELL"),
+		TwilioNumber:            os.Getenv("TWILIO_NUMBER"),
+		AWSRegion:               os.Getenv("AWS_REGION"),
+		AWSCDNURL:               os.Getenv("AWS_CDN_URL"),
+		AWSS3Bucket:             os.Getenv("AWS_S3_BUCKET"),
+		KeepPermissionInName:    os.Getenv("KEEP_PERM_COL_NAME") == "",
+		LogConsoleLevel:         os.Getenv("LOG_CONSOLE_LEVEL"),
+		LogFilename:             os.Getenv("LOG_FILENAME"),
 	}
 }

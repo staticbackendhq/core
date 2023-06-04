@@ -41,7 +41,7 @@ func (mg *Mongo) CreateDocument(auth model.Auth, dbName, col string, doc map[str
 
 	cleanMap(doc)
 
-	mg.PublishDocument("db-"+col, model.MsgTypeDBCreated, doc)
+	mg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBCreated, doc)
 
 	go mg.ensureIndex(dbName, model.CleanCollectionName(col))
 
@@ -398,7 +398,7 @@ func (mg *Mongo) UpdateDocument(auth model.Auth, dbName, col, id string, doc map
 
 	cleanMap(result)
 
-	mg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, result)
+	mg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, result)
 
 	return result, nil
 }
@@ -453,7 +453,7 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 			mg.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
 		}
 		for _, doc := range docs {
-			mg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, doc)
+			mg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
 		}
 	}()
 	return res.ModifiedCount, err
@@ -488,7 +488,7 @@ func (mg *Mongo) IncrementValue(auth model.Auth, dbName, col, id, field string, 
 		return err
 	}
 
-	mg.PublishDocument("db-"+col, model.MsgTypeDBUpdated, updated)
+	mg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, updated)
 
 	return nil
 }
@@ -515,7 +515,7 @@ func (mg *Mongo) DeleteDocument(auth model.Auth, dbName, col, id string) (int64,
 		return 0, err
 	}
 
-	mg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+	mg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, id)
 
 	return res.DeletedCount, nil
 }
@@ -555,7 +555,7 @@ func (mg *Mongo) DeleteDocuments(auth model.Auth, dbName, col string, filters ma
 		}
 
 		for _, id := range ids {
-			mg.PublishDocument("db-"+col, model.MsgTypeDBDeleted, id)
+			mg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, id)
 		}
 	}()
 

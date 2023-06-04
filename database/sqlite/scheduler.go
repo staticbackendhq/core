@@ -49,15 +49,17 @@ func (sl *SQLite) ListTasksByBase(dbName string) (results []model.Task, err erro
 	return
 }
 
-func (sl *SQLite) AddTask(dbName string, task model.Task) error {
+func (sl *SQLite) AddTask(dbName string, task model.Task) (id string, err error) {
 	qry := fmt.Sprintf(`
 	INSERT INTO %s_sb_tasks(id, name, type, value, meta, interval, last_run)
 	VALUES($1, $2, $3, $4, $5, $6, $7);
 	`, dbName)
 
-	_, err := sl.DB.Exec(
+	id = sl.NewID()
+
+	_, err = sl.DB.Exec(
 		qry,
-		sl.NewID(),
+		id,
 		task.Name,
 		task.Type,
 		task.Value,
@@ -65,10 +67,7 @@ func (sl *SQLite) AddTask(dbName string, task model.Task) error {
 		task.Interval,
 		task.LastRun,
 	)
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
 
 func (sl *SQLite) DeleteTask(dbName, id string) error {

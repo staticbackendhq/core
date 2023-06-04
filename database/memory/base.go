@@ -27,6 +27,9 @@ func (m *Memory) CreateDocument(auth model.Auth, dbName, col string, doc map[str
 	if err := create(m, dbName, col, id, doc); err != nil {
 		return nil, err
 	}
+
+	m.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBCreated, doc)
+
 	return doc, nil
 }
 
@@ -147,6 +150,9 @@ func (m *Memory) UpdateDocument(auth model.Auth, dbName, col, id string, doc map
 	}
 
 	err = create(m, dbName, col, id, exists)
+
+	m.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, exists)
+
 	return
 }
 
@@ -194,6 +200,8 @@ func (m *Memory) IncrementValue(auth model.Auth, dbName, col, id, field string, 
 
 	doc[field] = i
 
+	m.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
+
 	return create(m, dbName, col, id, doc)
 }
 
@@ -215,7 +223,12 @@ func (m *Memory) DeleteDocument(auth model.Auth, dbName, col, id string) (n int6
 
 	delete(docs, id)
 
+	mx.Lock()
 	m.DB[key] = docs
+	mx.Unlock()
+
+	m.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, doc)
+
 	n = 1
 	return
 }
@@ -244,9 +257,13 @@ func (m *Memory) DeleteDocuments(auth model.Auth, dbName, col string, filters ma
 		docID := fmt.Sprintf("%v", doc["id"])
 		delete(docs, docID)
 		n += 1
+
+		m.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBDeleted, doc)
 	}
 
+	mx.Lock()
 	m.DB[key] = docs
+	mx.Unlock()
 	return n, nil
 }
 

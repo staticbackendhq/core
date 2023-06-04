@@ -8,6 +8,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,8 @@ func init() {
 	gob.Register([]any{})
 	gob.Register(time.Time{})
 }
+
+var mx *sync.RWMutex = &sync.RWMutex{}
 
 type Memory struct {
 	DB              map[string]map[string][]byte
@@ -84,14 +87,19 @@ func create[T any](m *Memory, dbName, col, id string, v T) error {
 
 	repo[id] = mustEnc(v)
 
+	mx.Lock()
 	m.DB[key] = repo
+	mx.Unlock()
 	return nil
 }
 
 func getByID[T any](m *Memory, dbName, col, id string, v T) error {
 	key := fmt.Sprintf("%s_%s", dbName, col)
 
+	mx.Lock()
 	repo, ok := m.DB[key]
+	mx.Unlock()
+
 	if !ok {
 		if strings.HasPrefix(col, "sb_") {
 			return nil
@@ -111,7 +119,10 @@ func getByID[T any](m *Memory, dbName, col, id string, v T) error {
 func all[T any](m *Memory, dbName, col string) (list []T, err error) {
 	key := fmt.Sprintf("%s_%s", dbName, col)
 
+	mx.Lock()
 	repo, ok := m.DB[key]
+	mx.Unlock()
+
 	if !ok {
 		if strings.HasPrefix(col, "sb_") {
 			return []T{}, nil

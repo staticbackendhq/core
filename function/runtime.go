@@ -29,7 +29,7 @@ type ExecutionEnvironment struct {
 	Data      model.ExecData
 
 	CurrentRun model.ExecHistory
-	log        *logger.Logger
+	Log        *logger.Logger
 }
 
 type Result struct {
@@ -118,6 +118,20 @@ func (env *ExecutionEnvironment) prepareArguments(vm *goja.Runtime, data interfa
 
 		args = append(args, vm.ToValue(r.URL.Query()))
 		args = append(args, vm.ToValue(r.Header))
+
+		return args, nil
+	}
+
+	msg, ok := data.(model.Command)
+	if ok {
+		var v any
+		if err := json.Unmarshal([]byte(msg.Data), &v); err != nil {
+			return args, err
+		}
+
+		args = append(args, vm.ToValue(msg.Channel))
+		args = append(args, vm.ToValue(msg.Type))
+		args = append(args, vm.ToValue(v))
 
 		return args, nil
 	}
@@ -500,6 +514,8 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) error {
 			Data:    string(b),
 			Channel: channel,
 			Token:   env.Auth.ReconstructToken(),
+			Auth:    env.Auth,
+			Base:    env.BaseName,
 		}
 
 		if err := env.Volatile.Publish(msg); err != nil {
@@ -588,6 +604,6 @@ func (env *ExecutionEnvironment) complete(err error) {
 
 	//TODO: this needs to be regrouped and ran un batch
 	if err := env.DataStore.RanFunction(env.BaseName, env.Data.ID, env.CurrentRun); err != nil {
-		env.log.Error().Err(err).Msg("error logging function complete")
+		env.Log.Error().Err(err).Msg("error logging function complete")
 	}
 }

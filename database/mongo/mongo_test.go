@@ -31,7 +31,7 @@ var (
 	adminAuth    model.Auth
 )
 
-func fakePubDocEvent(channel, typ string, v interface{}) {
+func fakePubDocEvent(auth model.Auth, dbName, channel, typ string, v interface{}) {
 	//no event pub in those tests
 }
 

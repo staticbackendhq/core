@@ -10,7 +10,7 @@ import (
 
 type Subscriber struct {
 	PubSub     cache.Volatilizer
-	GetExecEnv func(token string) (ExecutionEnvironment, error)
+	GetExecEnv func(msg model.Command) (*ExecutionEnvironment, error)
 	Log        *logger.Logger
 }
 
@@ -44,7 +44,7 @@ func (sub *Subscriber) process(msg model.Command) {
 }
 
 func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
-	exe, err := sub.GetExecEnv(msg.Token)
+	exe, err := sub.GetExecEnv(msg)
 	if err != nil {
 		sub.Log.Error().Err(err).Msgf("cannot retrieve base from token: %s", msg.Token)
 		return
@@ -52,9 +52,9 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
 
 	var ids []string
 
-	key := fmt.Sprintf("%s:%s", exe.BaseName, msg.Type)
+	key := fmt.Sprintf("%s:%s", exe.BaseName, msg.Channel)
 	if err := sub.PubSub.GetTyped(key, &ids); err != nil {
-		funcs, err := exe.DataStore.ListFunctionsByTrigger(exe.BaseName, msg.Type)
+		funcs, err := exe.DataStore.ListFunctionsByTrigger(exe.BaseName, msg.Channel)
 		if err != nil {
 			sub.Log.Error().Err(err).Msg("error getting functions by trigger")
 			return
@@ -82,7 +82,7 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
 		}
 
 		exe.Data = fn
-		go func(ex ExecutionEnvironment) {
+		go func(ex *ExecutionEnvironment) {
 			if err := ex.Execute(msg); err != nil {
 				sub.Log.Error().Err(err).Msgf(`executing "%s" function failed"`, ex.Data.FunctionName)
 			}

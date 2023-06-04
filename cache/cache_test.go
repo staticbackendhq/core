@@ -198,7 +198,7 @@ func TestCachePublishDocument(t *testing.T) {
 
 			time.Sleep(10 * time.Millisecond) // need to wait for proper subscriber startup
 
-			tc.cache.PublishDocument(payload.Channel, payload.Type, documentMap)
+			tc.cache.PublishDocument(model.Auth{}, "", payload.Channel, payload.Type, documentMap)
 			timer := time.NewTimer(5 * time.Second)
 			defer timer.Stop()
 			select {

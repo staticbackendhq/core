@@ -177,7 +177,7 @@ func (c *Cache) Publish(msg model.Command) error {
 
 // PublishDocument publishes a database update message (created, updated, deleted)
 // All subscribers will get notified
-func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
+func (c *Cache) PublishDocument(auth model.Auth, dbName, channel, typ string, v interface{}) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		c.log.Error().Err(err).Msg("error publishing db doc")
@@ -188,6 +188,8 @@ func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 		Channel: channel,
 		Data:    string(b),
 		Type:    typ,
+		Auth:    auth,
+		Base:    dbName,
 	}
 
 	if err := c.Publish(msg); err != nil {
@@ -197,6 +199,12 @@ func (c *Cache) PublishDocument(channel, typ string, v interface{}) {
 
 // HasPermission determines if a session token has permission to a collection
 func (c *Cache) HasPermission(token, repo, payload string) bool {
+	// sbsys is a reserved channel used internally, no need to check for
+	// permissions
+	if repo == "sbsys" {
+		return true
+	}
+
 	var me model.Auth
 	if err := c.GetTyped(token, &me); err != nil {
 		return false

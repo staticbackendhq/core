@@ -642,13 +642,18 @@ func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
 			Type:     r.Form.Get("type"),
 			Value:    r.Form.Get("value"),
 			Interval: r.Form.Get("interval"),
+			Meta:     r.Form.Get("meta"),
 			BaseName: conf.Name,
 		}
 
-		if err := backend.DB.AddTask(conf.Name, task); err != nil {
+		taskID, err := backend.DB.AddTask(conf.Name, task)
+		if err != nil {
 			renderErr(w, r, err, x.log)
 			return
 		}
+
+		task.ID = taskID
+		backend.Scheduler.AddOnTheFly(task)
 
 		http.Redirect(w, r, "/ui/tasks", http.StatusSeeOther)
 		return
