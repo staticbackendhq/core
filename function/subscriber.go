@@ -9,9 +9,10 @@ import (
 )
 
 type Subscriber struct {
-	PubSub     cache.Volatilizer
-	GetExecEnv func(msg model.Command) (*ExecutionEnvironment, error)
-	Log        *logger.Logger
+	PubSub            cache.Volatilizer
+	GetExecEnv        func(msg model.Command) (*ExecutionEnvironment, error)
+	Log               *logger.Logger
+	IsPrimaryInstance bool
 }
 
 // Start starts the system event subscription.
@@ -26,7 +27,11 @@ func (sub *Subscriber) Start() {
 	for {
 		select {
 		case msg := <-receiver:
-			go sub.process(msg)
+			// only handle function execution on the primary instance
+			// otherwise it would cause duplication work.
+			if sub.IsPrimaryInstance {
+				go sub.process(msg)
+			}
 		case <-close:
 			sub.Log.Info().Msg("system event channel closed?!?")
 		}

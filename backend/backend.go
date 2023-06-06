@@ -254,13 +254,20 @@ func Setup(cfg config.AppConfig) {
 		return exe, nil
 	}
 
+	isPrimary := false
+	if hostname, err := os.Hostname(); err != nil {
+		Log.Warn().Err(err).Msg("cannot determine if it's primary instance")
+	} else if strings.EqualFold(hostname, cfg.PrimaryInstanceHostname) {
+		isPrimary = true
+	}
+
+	sub.IsPrimaryInstance = isPrimary
+
 	// start system events subscriber
 	go sub.Start()
 
 	// for primary instance, we start the job scheduler
-	if hostname, err := os.Hostname(); err != nil {
-		Log.Warn().Err(err).Msg("cannot determine if it's primary instance")
-	} else if strings.EqualFold(hostname, cfg.PrimaryInstanceHostname) {
+	if isPrimary {
 		runner := &function.TaskScheduler{
 			Volatile:  Cache,
 			DataStore: DB,
