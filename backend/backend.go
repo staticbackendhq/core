@@ -255,7 +255,10 @@ func Setup(cfg config.AppConfig) {
 	}
 
 	isPrimary := false
-	if hostname, err := os.Hostname(); err != nil {
+	if len(cfg.PrimaryInstanceHostname) == 0 {
+		// if no value is provided, like on GH action for tests, we assume primary
+		isPrimary = true
+	} else if hostname, err := os.Hostname(); err != nil {
 		Log.Warn().Err(err).Msg("cannot determine if it's primary instance")
 	} else if strings.EqualFold(hostname, cfg.PrimaryInstanceHostname) {
 		isPrimary = true
