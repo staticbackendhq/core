@@ -84,6 +84,8 @@ type AppConfig struct {
 	LogFilename string
 	// NoFullTextSearch prevents full-text search index from initializing
 	NoFullTextSearch bool
+	// ActivateFlag when set, the /account/init can bypass Stripe if matching val
+	ActivateFlag string
 }
 
 func LoadConfig() AppConfig {
@@ -120,5 +122,6 @@ func LoadConfig() AppConfig {
 		KeepPermissionInName:    os.Getenv("KEEP_PERM_COL_NAME") == "",
 		LogConsoleLevel:         os.Getenv("LOG_CONSOLE_LEVEL"),
 		LogFilename:             os.Getenv("LOG_FILENAME"),
+		ActivateFlag:            os.Getenv("ACTIVATE_FLAG"),
 	}
 }
