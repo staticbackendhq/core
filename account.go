@@ -28,6 +28,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	var email string
 	fromCLI := true
 	memoryMode := false
+	bypassStripe := false
 
 	// the CLI do a GET for the account initialization, we can then
 	// base the rest of the flow on the fact that the web UI POST data
@@ -51,6 +52,11 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		if len(r.URL.Query().Get("ui")) > 0 {
 			fromCLI = false
 		}
+
+		// allow a flag to bypass Stripe
+		if len(config.Current.ActivateFlag) > 0 {
+			bypassStripe = strings.EqualFold(r.URL.Query().Get("x"), config.Current.ActivateFlag)
+		}
 	}
 
 	// TODO: cheap email validation
@@ -71,7 +77,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	stripeCustomerID, subID := "", ""
 	active := true
 
-	if config.Current.AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
+	if !bypassStripe && config.Current.AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
 		active = false
 
 		cusParams := &stripe.CustomerParams{
@@ -105,6 +111,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 	// create the account
 
+	// the ID is hard-coded, but is overwritten on all db provider, except the
+	// memory provider.
 	cust := model.Tenant{
 		ID:             "cust-local-dev", // easier for CLI/memory flow
 		Email:          email,
@@ -168,7 +176,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	signUpURL := "no need to sign up in dev mode"
-	if config.Current.AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
+	if !bypassStripe && config.Current.AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
 		params := &stripe.BillingPortalSessionParams{
 			Customer:  stripe.String(stripeCustomerID),
 			ReturnURL: stripe.String("https://staticbackend.com/stripe"),
@@ -219,7 +227,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		TextBody: emailFuncs.StripHTML(body),
 	}
 
-	if memoryMode {
+	if memoryMode && !bypassStripe {
 		fmt.Printf(`
 Start sending requests with the following credentials:
 
@@ -248,7 +256,7 @@ Refer to the documentation at https://staticbackend.com/docs
 		if err := backend.Cache.Set("dev-root-token", rootToken); err != nil {
 			backend.Log.Error().Err(err)
 		}
-	} else {
+	} else if !bypassStripe {
 		err = backend.Emailer.Send(ed)
 		if err != nil {
 			a.log.Error().Err(err).Msg("error sending email")
@@ -261,6 +269,19 @@ Refer to the documentation at https://staticbackend.com/docs
 
 	if fromCLI {
 		respond(w, http.StatusOK, signUpURL)
+		return
+	} else if bypassStripe {
+		// we return a JSON response instead of the email
+		data := new(struct {
+			PublicKey     string `json:"pk"`
+			RootToken     string `json:"rootToken"`
+			AdminPassword string `json:"pw"`
+		})
+		data.PublicKey = bc.ID
+		data.RootToken = rootToken
+		data.AdminPassword = pw
+
+		respond(w, http.StatusOK, data)
 		return
 	}
 
