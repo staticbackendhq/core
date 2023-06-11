@@ -61,3 +61,12 @@ func TestUserAddRemoveFromAccount(t *testing.T) {
 		}
 	}
 }
+
+func TestAddNewDatabase(t *testing.T) {
+	resp := dbReq(t, acct.addDatabase, "GET", "/account/add-db", nil)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+}

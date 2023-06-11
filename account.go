@@ -129,48 +129,8 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// make sure the DB name is unique
-	retry := 10
-	dbName := internal.RandStringRunes(12)
-	if memoryMode {
-		dbName = "dev_memory_pk"
-	}
-	for {
-		exists, err = backend.DB.DatabaseExists(dbName)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		} else if exists {
-			retry--
-			dbName = internal.RandStringRunes(12)
-			continue
-		}
-		break
-	}
-
-	base := model.DatabaseConfig{
-		ID:            dbName, // easier for CLI/memory flow
-		TenantID:      cust.ID,
-		Name:          dbName,
-		IsActive:      active,
-		AllowedDomain: []string{"localhost"},
-	}
-
-	bc, err := backend.DB.CreateDatabase(base)
+	bc, pw, err := a.createNewDatabase(cust.ID, email, active, memoryMode)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// we create an admin user
-	// we make sure to switch DB
-	pw := internal.RandStringRunes(6)
-	if memoryMode {
-		pw = "devpw1234"
-	}
-
-	mship := backend.Membership(base)
-	if _, _, err := mship.CreateAccountAndUser(email, pw, 100); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -190,7 +150,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		signUpURL = s.URL
 	}
 
-	token, err := backend.DB.FindUserByEmail(dbName, email)
+	token, err := backend.DB.FindUserByEmail(bc.Name, email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -291,6 +251,124 @@ Refer to the documentation at https://staticbackend.com/docs
 	}
 
 	render(w, r, "login.html", nil, &Flash{Type: "sucess", Message: "We've emailed you all the information you need to get started."}, a.log)
+}
+
+func (a *accounts) addDatabase(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if auth.Role != 100 {
+		http.Error(w, "you cannot perform this action", http.StatusNotAcceptable)
+		return
+	}
+
+	bc, pw, err := a.createNewDatabase(conf.TenantID, auth.Email, conf.IsActive, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	cust, err := backend.DB.FindTenant(conf.TenantID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(config.Current.StripeKey) > 0 && len(cust.SubscriptionID) > 0 {
+		curSub, err := sub.Get(cust.SubscriptionID, nil)
+		if err != nil {
+			a.log.Err(err).Msgf("trying to get stripe cust %s sub %s", cust.StripeID, cust.SubscriptionID)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		qty := curSub.Quantity + 1
+
+		params := &stripe.SubscriptionParams{
+			Customer: stripe.String(cust.StripeID),
+			Items: []*stripe.SubscriptionItemsParams{
+				&stripe.SubscriptionItemsParams{
+					Quantity: stripe.Int64(qty),
+				},
+			},
+		}
+		//result, err := subscription.New(params)
+		if _, err := sub.Update(cust.SubscriptionID, params); err != nil {
+			a.log.Err(err).Msgf("unable to update stripe cust %s sub %s quantity", cust.ID, cust.SubscriptionID)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	token, err := backend.DB.FindUserByEmail(bc.Name, auth.Email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rootToken := fmt.Sprintf("%s|%s|%s", token.ID, token.AccountID, token.Token)
+
+	data := new(struct {
+		PublicKey     string `json:"pk"`
+		RootToken     string `json:"rootToken"`
+		AdminPassword string `json:"pw"`
+	})
+	data.PublicKey = bc.ID
+	data.RootToken = rootToken
+	data.AdminPassword = pw
+
+	respond(w, http.StatusOK, data)
+}
+
+func (a *accounts) createNewDatabase(tenantID, email string, active, memoryMode bool) (model.DatabaseConfig, string, error) {
+	base := model.DatabaseConfig{}
+
+	// make sure the DB name is unique
+	retry := 10
+	dbName := internal.RandStringRunes(12)
+	if memoryMode {
+		dbName = "dev_memory_pk"
+	}
+	for {
+		exists, err := backend.DB.DatabaseExists(dbName)
+		if err != nil {
+			return base, "", err
+		} else if exists {
+			retry--
+			dbName = internal.RandStringRunes(12)
+			continue
+		}
+		break
+	}
+
+	base = model.DatabaseConfig{
+		ID:            dbName, // easier for CLI/memory flow
+		TenantID:      tenantID,
+		Name:          dbName,
+		IsActive:      active,
+		AllowedDomain: []string{"localhost"},
+	}
+
+	bc, err := backend.DB.CreateDatabase(base)
+	if err != nil {
+		return base, "", err
+	}
+
+	// we create an admin user
+	// we make sure to switch DB
+	pw := internal.RandStringRunes(6)
+	if memoryMode {
+		pw = "devpw1234"
+	}
+
+	mship := backend.Membership(bc)
+	if _, _, err := mship.CreateAccountAndUser(email, pw, 100); err != nil {
+		return bc, "", err
+	}
+
+	return bc, pw, nil
 }
 
 func (a *accounts) auth(w http.ResponseWriter, r *http.Request) {
