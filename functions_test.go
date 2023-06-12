@@ -1,6 +1,7 @@
 package staticbackend
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
@@ -313,6 +314,122 @@ func TestFunctionTriggerByDBChanges(t *testing.T) {
 	}
 
 	chkResp := dbReq(t, db.get, "GET", "/db/coltrigger/"+v.ID, nil)
+	defer chkResp.Body.Close()
+
+	if chkResp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, chkResp))
+	} else if err := parseBody(chkResp.Body, &v); err != nil {
+		t.Fatal(err)
+	} else if v.FromFn != "yes this works" {
+		t.Errorf("expected FromFn to be 'yes this works' got %s", v.FromFn)
+	}
+
+	time.Sleep(500 * time.Millisecond)
+}
+
+func TestFunctionTriggerByPublishingMsg(t *testing.T) {
+	code := `
+	function handle(channel, type, data) {
+		// we only want db_created in this function
+		if (type != "do-something-custom") return;
+
+		data.FromFn = "yes this works";
+		log("ch: " + channel);
+		log("id: " + data.id);
+		const res = update("coltriggerpub", data.id, data);;
+		if (!res.ok) {
+			log("ERROR: " + res.content);
+			return;
+		}
+		log("document updated via function triggered by db_created msg");
+	}
+	`
+
+	data := model.ExecData{
+		FunctionName: "fn-pubmsg-trigger",
+		Code:         code,
+		TriggerTopic: "custom-channel",
+	}
+	addResp := dbReq(t, funexec.add, "POST", "/", data, true)
+	defer addResp.Body.Close()
+	if addResp.StatusCode != http.StatusOK {
+		t.Fatal(GetResponseBody(t, addResp))
+	}
+
+	v := new(struct {
+		ID     string `json:"id"`
+		Name   string
+		FromFn string
+	})
+	v.Name = "test"
+
+	dbResp := dbReq(t, db.add, "POST", "/db/coltriggerpub", v)
+	defer dbResp.Body.Close()
+	if dbResp.StatusCode >= 299 {
+		t.Fatal(GetResponseBody(t, dbResp))
+	} else if err := parseBody(dbResp.Body, &v); err != nil {
+		t.Fatal(err)
+	}
+
+	pubData := new(struct {
+		Channel string `json:"channel"`
+		Type    string `json:"type"`
+		Data    string `json:"data"`
+	})
+	pubData.Channel = "custom-channel"
+	pubData.Type = "do-something-custom"
+
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pubData.Data = string(b)
+
+	pubResp := dbReq(t, publishMessage, "POST", "/publish", pubData)
+	defer pubResp.Body.Close()
+	if pubResp.StatusCode >= 299 {
+		t.Fatal(GetResponseBody(t, pubResp))
+	}
+
+	// give sometimes for the event to propagate
+	time.Sleep(650 * time.Millisecond)
+
+	infoResp := dbReq(t, funexec.info, "GET", "/fn/info/fn-pubmsg-trigger", nil, true)
+	defer infoResp.Body.Close()
+
+	if infoResp.StatusCode >= 299 {
+		t.Fatal(GetResponseBody(t, infoResp))
+	}
+
+	var checkFn model.ExecData
+	if err := parseBody(infoResp.Body, &checkFn); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(checkFn.History)
+
+	var errorLines []string
+	foundError := false
+	for _, h := range checkFn.History {
+		for _, line := range h.Output {
+			if strings.Contains(line, "ERROR") {
+				errorLines = h.Output
+				foundError = true
+				break
+			}
+		}
+
+		if foundError {
+			break
+		}
+	}
+
+	if foundError {
+		t.Errorf("found error in function exec log: %v", errorLines)
+	}
+
+	chkResp := dbReq(t, db.get, "GET", "/db/coltriggerpub/"+v.ID, nil)
 	defer chkResp.Body.Close()
 
 	if chkResp.StatusCode > 299 {

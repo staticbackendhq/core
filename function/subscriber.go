@@ -2,6 +2,8 @@ package function
 
 import (
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/logger"
@@ -13,6 +15,8 @@ type Subscriber struct {
 	GetExecEnv        func(msg model.Command) (*ExecutionEnvironment, error)
 	Log               *logger.Logger
 	IsPrimaryInstance bool
+
+	relax sync.Map
 }
 
 // Start starts the system event subscription.
@@ -44,6 +48,33 @@ func (sub *Subscriber) process(msg model.Command) {
 		model.MsgTypeDBCreated,
 		model.MsgTypeDBUpdated,
 		model.MsgTypeDBDeleted:
+		sub.handleRealtimeEvents(msg)
+	default:
+		// for user triggered events, we enforce a max of 5 msg / 60 secs
+		v, ok := sub.relax.Load(msg.Auth.UserID)
+		if !ok {
+			v = int64(0)
+
+			go func(key string) {
+				time.Sleep(60 * time.Second)
+				sub.relax.Delete(key)
+			}(msg.Auth.UserID)
+		}
+
+		n, ok := v.(int64)
+		if !ok {
+			sub.Log.Warn().Msgf("subscriber.process(): unable to cast %v into int64", v)
+			return
+		} else if n >= 5 {
+			sub.Log.Warn().Msgf("user exeeded amount of allowed message in 60 second: %d", n)
+			//TODO: This silently returns, should this app owner get some
+			// notification about their users flooding the system?
+			return
+		}
+
+		n += 1
+		sub.relax.Store(msg.Auth.UserID, n)
+
 		sub.handleRealtimeEvents(msg)
 	}
 }

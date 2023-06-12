@@ -218,6 +218,9 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/fn/exec/", middleware.Chain(http.HandlerFunc(f.exec), stdAuth...))
 	http.Handle("/fn", middleware.Chain(http.HandlerFunc(f.list), stdRoot...))
 
+	// pubsub
+	http.Handle("/publish-message", middleware.Chain(http.HandlerFunc(publishMessage), stdRoot...))
+
 	// extras routes
 	ex := &extras{log: log}
 	http.Handle("/extra/resizeimg", middleware.Chain(http.HandlerFunc(ex.resizeImage), stdAuth...))
@@ -350,6 +353,41 @@ func sudoCache(w http.ResponseWriter, r *http.Request) {
 		}
 		respond(w, http.StatusOK, true)
 	}
+}
+
+func publishMessage(w http.ResponseWriter, r *http.Request) {
+	conf, auth, err := middleware.Extract(r, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	data := new(struct {
+		Channel string `json:"channel"`
+		Type    string `json:"type"`
+		Data    string `json:"data"`
+	})
+	if parseBody(r.Body, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	msg := model.Command{
+		SID:     "user-msg",
+		Type:    data.Type,
+		Data:    data.Data,
+		Channel: data.Channel,
+		Token:   auth.Token,
+		Auth:    auth,
+		Base:    conf.Name,
+	}
+
+	if err := backend.Cache.Publish(msg); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, true)
 }
 
 func getURLPart(s string, idx int) string {
