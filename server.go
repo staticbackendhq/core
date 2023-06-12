@@ -367,7 +367,7 @@ func publishMessage(w http.ResponseWriter, r *http.Request) {
 		Type    string `json:"type"`
 		Data    string `json:"data"`
 	})
-	if parseBody(r.Body, &data); err != nil {
+	if err := parseBody(r.Body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
