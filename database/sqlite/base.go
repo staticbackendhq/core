@@ -278,6 +278,15 @@ func (sl *SQLite) GetDocumentsByIDs(auth model.Auth, dbName, col string, ids []s
 }
 
 func (sl *SQLite) UpdateDocument(auth model.Auth, dbName, col, id string, doc map[string]interface{}) (map[string]interface{}, error) {
+	orig, err := sl.GetDocumentByID(auth, dbName, col, id)
+	if err != nil {
+		return nil, err
+	}
+
+	for key, val := range doc {
+		orig[key] = val
+	}
+
 	where := secureWrite(auth, col)
 
 	qry := fmt.Sprintf(`
@@ -286,7 +295,7 @@ func (sl *SQLite) UpdateDocument(auth model.Auth, dbName, col, id string, doc ma
 		%s AND id = $3
 	`, dbName, model.CleanCollectionName(col), where)
 
-	b, err := json.Marshal(doc)
+	b, err := json.Marshal(orig)
 	if err != nil {
 		return nil, err
 	}
@@ -297,6 +306,7 @@ func (sl *SQLite) UpdateDocument(auth model.Auth, dbName, col, id string, doc ma
 
 	updated, err := sl.GetDocumentByID(auth, dbName, col, id)
 	if err != nil {
+		fmt.Println("DEBUG: in getbyid", err)
 		return nil, err
 	}
 

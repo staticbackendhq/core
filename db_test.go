@@ -148,6 +148,54 @@ func TestDBCreate(t *testing.T) {
 	}
 }
 
+func TestDBUpdateShouldNotOverwriteDoc(t *testing.T) {
+	task :=
+		Task{
+			Title:   "item created",
+			Created: time.Now(),
+		}
+
+	resp := dbReq(t, db.add, "POST", "/db/tasks", task)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var saved Task
+	if err := parseBody(resp.Body, &saved); err != nil {
+		t.Fatal(err)
+	} else if task.Title != saved.Title {
+		t.Errorf("expected title to be %s go %s", task.Title, saved.Title)
+	}
+
+	update := new(struct {
+		Done bool `json:"done"`
+	})
+	update.Done = true
+
+	uresp := dbReq(t, db.update, "PUT", "/db/tasks/"+saved.ID, update)
+	defer uresp.Body.Close()
+
+	if uresp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, uresp))
+	}
+
+	resp = dbReq(t, db.get, "GET", "/db/tasks/"+saved.ID, nil)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var afterUpdate Task
+	if err := parseBody(resp.Body, &afterUpdate); err != nil {
+		t.Fatal(err)
+	} else if task.Title != afterUpdate.Title {
+		t.Errorf("expected title to be '%s' got '%s'", task.Title, afterUpdate.Title)
+	}
+}
+
 func TestDBListCollections(t *testing.T) {
 	req := httptest.NewRequest("GET", "/sudolistall", nil)
 	w := httptest.NewRecorder()
