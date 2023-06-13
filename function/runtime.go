@@ -491,19 +491,19 @@ func (*ExecutionEnvironment) clean(doc map[string]interface{}) error {
 }
 
 func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) error {
-	err := vm.Set("send", func(call goja.FunctionCall) goja.Value {
+	err := vm.Set("publish", func(call goja.FunctionCall) goja.Value {
 		if len(call.Arguments) != 3 {
-			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for send(type, data, channel)"})
+			return vm.ToValue(Result{Content: "argument missmatch: you need 3 arguments for send(channel, type, data)"})
 		}
 
 		var typ, channel string
-		if err := vm.ExportTo(call.Argument(0), &typ); err != nil {
+		if err := vm.ExportTo(call.Argument(0), &channel); err != nil {
 			return vm.ToValue(Result{Content: "the first argument should be a string"})
-		} else if err := vm.ExportTo(call.Argument(2), &channel); err != nil {
+		} else if err := vm.ExportTo(call.Argument(1), &typ); err != nil {
 			return vm.ToValue(Result{Content: "the third argument should be a string"})
 		}
 
-		b, err := json.Marshal(call.Argument(1).Export())
+		b, err := json.Marshal(call.Argument(2).Export())
 		if err != nil {
 			return vm.ToValue(Result{Content: fmt.Sprintf("error converting your data: %v", err)})
 		}
@@ -525,7 +525,95 @@ func (env *ExecutionEnvironment) addVolatileFunctions(vm *goja.Runtime) error {
 		return vm.ToValue(Result{OK: true})
 	})
 	if err != nil {
-		return nil
+		return err
+	}
+
+	err = vm.Set("cacheGet", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) != 1 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need 1 argument for cacheGet(key)"})
+		}
+
+		var key string
+		if err := vm.ExportTo(call.Argument(0), &key); err != nil {
+			return vm.ToValue(Result{Content: "the first argument should be a string"})
+		}
+
+		val, _ := env.Volatile.Get(key)
+
+		return vm.ToValue(Result{OK: true, Content: val})
+	})
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("cacheSet", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) != 2 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for cacheSet(key, value)"})
+		}
+
+		var key, value string
+		if err := vm.ExportTo(call.Argument(0), &key); err != nil {
+			return vm.ToValue(Result{Content: "the first argument should be a string"})
+		} else if err := vm.ExportTo(call.Argument(1), &value); err != nil {
+			return vm.ToValue(Result{Content: "the 2nd argument should be a string"})
+		}
+
+		if err := env.Volatile.Set(key, value); err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error while setting cache value: %v", err)})
+		}
+
+		return vm.ToValue(Result{OK: true})
+	})
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("inc", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) != 2 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for inc(key, n)"})
+		}
+
+		var key string
+		var n int64
+		if err := vm.ExportTo(call.Argument(0), &key); err != nil {
+			return vm.ToValue(Result{Content: "the first argument should be a string"})
+		} else if err := vm.ExportTo(call.Argument(1), &n); err != nil {
+			return vm.ToValue(Result{Content: "the 2nd argument should be a number"})
+		}
+
+		total, err := env.Volatile.Inc(key, n)
+		if err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error while incrementing cache value: %v", err)})
+		}
+
+		return vm.ToValue(Result{OK: true, Content: total})
+	})
+	if err != nil {
+		return err
+	}
+
+	err = vm.Set("dec", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) != 2 {
+			return vm.ToValue(Result{Content: "argument missmatch: you need 2 arguments for dec(key, n)"})
+		}
+
+		var key string
+		var n int64
+		if err := vm.ExportTo(call.Argument(0), &key); err != nil {
+			return vm.ToValue(Result{Content: "the first argument should be a string"})
+		} else if err := vm.ExportTo(call.Argument(1), &n); err != nil {
+			return vm.ToValue(Result{Content: "the 2nd argument should be a number"})
+		}
+
+		total, err := env.Volatile.Dec(key, n)
+		if err != nil {
+			return vm.ToValue(Result{Content: fmt.Sprintf("error while decrementing cache value: %v", err)})
+		}
+
+		return vm.ToValue(Result{OK: true, Content: total})
+	})
+	if err != nil {
+		return err
 	}
 	return nil
 }

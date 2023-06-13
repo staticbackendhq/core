@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/model"
 )
 
@@ -441,4 +442,121 @@ func TestFunctionTriggerByPublishingMsg(t *testing.T) {
 	}
 
 	time.Sleep(500 * time.Millisecond)
+}
+
+func TestFunctionWithVolatilizerHelpers(t *testing.T) {
+	code := `
+	function handle(channel, type, body) {
+		// set some value in the cache
+		let res = cacheSet("ok-unit-test", "init value");
+		if (!res.ok) {
+			log(res.content);
+			return;
+		}
+
+		res = cacheGet("ok-unit-test");
+		if (!res.ok) {
+			log(res.content);
+			return;
+		} else if (res.content != "init value") {
+			log("error, cache value isn't :init value:");
+			return;
+		}
+
+		cacheSet()
+
+		res = inc("some-counter", 10);
+		if (!res.ok) {
+			log(res.content);
+			return;
+		}
+
+		res = dec("some-counter", 2);
+		if (!res.ok) {
+			log(res.content);
+			return;
+		}
+
+		res = publish("test-channel", "some-type", {a: "which data"});
+		if (!res.ok) {
+			log(res.content);
+			return;
+		}
+	}
+	`
+
+	data := model.ExecData{
+		FunctionName: "fn-cache-tests",
+		Code:         code,
+		TriggerTopic: "trigger-from-unit-test",
+	}
+	addResp := dbReq(t, funexec.add, "POST", "/", data, true)
+	defer addResp.Body.Close()
+	if addResp.StatusCode != http.StatusOK {
+		t.Fatal(GetResponseBody(t, addResp))
+	}
+
+	// let's send this message to trigger the function
+	b, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := model.Command{
+		SID:     "unit-test",
+		Type:    "manual-msg",
+		Data:    string(b),
+		Channel: "trigger-from-unit-test",
+		Token:   adminToken,
+		Auth:    model.Auth{}, // don't need auth for this test
+		Base:    dbName,
+	}
+
+	if err := backend.Cache.Publish(msg); err != nil {
+		t.Fatal(err)
+	}
+
+	// give sometimes for the event to propagate
+	time.Sleep(650 * time.Millisecond)
+
+	infoResp := dbReq(t, funexec.info, "GET", "/fn/info/fn-cache-tests", nil, true)
+	defer infoResp.Body.Close()
+
+	if infoResp.StatusCode >= 299 {
+		t.Fatal(GetResponseBody(t, infoResp))
+	}
+
+	var checkFn model.ExecData
+	if err := parseBody(infoResp.Body, &checkFn); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(checkFn.History)
+
+	var errorLines []string
+	foundError := false
+	for _, h := range checkFn.History {
+		for _, line := range h.Output {
+			if strings.Contains(line, "ERROR") {
+				errorLines = h.Output
+				foundError = true
+				break
+			}
+		}
+
+		if foundError {
+			break
+		}
+	}
+
+	if foundError {
+		t.Errorf("found error in function exec log: %v", errorLines)
+	}
+
+	var total int64
+	if err := backend.Cache.GetTyped("some-counter", &total); err != nil {
+		t.Fatal(err)
+	} else if total != 8 {
+		t.Errorf("expected total to be 8 got %d", total)
+	}
 }

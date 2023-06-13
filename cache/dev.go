@@ -74,7 +74,11 @@ func (d *CacheDev) SetTyped(key string, v any) error {
 // Inc increments a value (non-atomic)
 func (d *CacheDev) Inc(key string, by int64) (n int64, err error) {
 	if err = d.GetTyped(key, &n); err != nil {
-		return
+		if err.Error() == "key not found in cache" {
+			n = 0
+		} else {
+			return
+		}
 	}
 
 	n += by
