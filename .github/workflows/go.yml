@@ -41,6 +41,9 @@ jobs:
 
     - name: Remove full-text index DB
       run: rm -rf sb.fts && rm -rf backend/sb.fts
+    
+    - name: Clear all cache keys
+      run: docker exec core_redis_1 echo FLUSHDB | redis-cli
 
     - name: Test (Mongo data store)
       run: make alltest
