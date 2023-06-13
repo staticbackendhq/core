@@ -43,7 +43,7 @@ jobs:
       run: rm -rf sb.fts && rm -rf backend/sb.fts
     
     - name: Clear all cache keys
-      run: docker exec core_redis_1 echo FLUSHDB | redis-cli
+      run: docker exec core_redis_1 redis-cli FLUSHDB
 
     - name: Test (Mongo data store)
       run: make alltest
