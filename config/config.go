@@ -84,6 +84,9 @@ type AppConfig struct {
 	LogFilename string
 	// NoFullTextSearch prevents full-text search index from initializing
 	NoFullTextSearch bool
+	// FullTextIndexFile fully qualify file path for the search index
+	// Hint: this is usually on a disk that do not vanish on each deployment.
+	FullTextIndexFile string
 	// ActivateFlag when set, the /account/init can bypass Stripe if matching val
 	ActivateFlag string
 }
@@ -122,6 +125,7 @@ func LoadConfig() AppConfig {
 		KeepPermissionInName:    os.Getenv("KEEP_PERM_COL_NAME") == "",
 		LogConsoleLevel:         os.Getenv("LOG_CONSOLE_LEVEL"),
 		LogFilename:             os.Getenv("LOG_FILENAME"),
+		FullTextIndexFile:       os.Getenv("FTS_INDEX_FILE"),
 		ActivateFlag:            os.Getenv("ACTIVATE_FLAG"),
 	}
 }

@@ -185,3 +185,9 @@ func (s *Search) receivedIndexEvent(data string) {
 		log.Println(err)
 	}
 }
+
+func (s *Search) Close() {
+	if err := s.index.Close(); err != nil {
+		log.Println(err)
+	}
+}

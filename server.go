@@ -282,6 +282,9 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	})
 	g.Go(func() error {
 		<-gCtx.Done()
+		if !c.NoFullTextSearch {
+			backend.Search.Close()
+		}
 		return httpsvr.Shutdown(context.Background())
 	})
 

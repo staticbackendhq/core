@@ -228,7 +228,10 @@ func Setup(cfg config.AppConfig) {
 	}
 
 	if !cfg.NoFullTextSearch {
-		ftsFilename := "sb.fts"
+		ftsFilename := cfg.FullTextIndexFile
+		if len(ftsFilename) == 0 {
+			ftsFilename = "sb.fts"
+		}
 		src, err := search.New(ftsFilename, Cache)
 		if err != nil {
 			Log.Fatal().Err(err).Msg("unable to start full-text search")
