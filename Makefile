@@ -66,6 +66,5 @@ pkg: build
 	@cd cmd && CGO_ENABLED=0 GOARCH=amd64 GOOS=darwin go build -o ../dist/binary-for-mac-64-bit
 	@echo "building windows binaries"
 	@cd cmd && CGO_ENABLED=0 GOARCH=amd64 GOOS=windows go build -o ../dist/binary-for-windows-64-bit.exe
-	@cd cmd && CGO_ENABLED=0 GOARCH=386 GOOS=windows go build -o ../dist/binary-for-windows-32-bit.exe
 	@echo "compressing binaries"
 	@gzip dist/*
