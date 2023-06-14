@@ -1,5 +1,18 @@
 # Changelog for StaticBackend
 
+### June 14, 2023 v1.5.0
+
+Features:
+
+* Added endpoint to publish message from clients
+* Added an endpoint to add a database to a tenant
+* Added `cacheGet`, `cacheSet`, `inc`, `dec`, and `publish` to server-side runtime.
+
+Bug fixes:
+
+* Clear cache keys in the CI/CD process between database engine changes
+* Fixed a bug with the SQLite update overwritting document instead of patching them
+
 ### June 4th, 2023 v1.5.0-beta.1
 
 Features:
