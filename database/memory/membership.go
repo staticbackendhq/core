@@ -21,6 +21,8 @@ func (m *Memory) CreateAccount(dbName, email string) (id string, err error) {
 }
 
 func (m *Memory) CreateUser(dbName string, tok model.User) (id string, err error) {
+	tok.Created = time.Now()
+
 	id = m.NewID()
 	tok.ID = id
 

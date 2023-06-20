@@ -44,6 +44,8 @@ func (mg *Mongo) CreateAccount(dbName, email string) (id string, err error) {
 func (mg *Mongo) CreateUser(dbName string, tok model.User) (id string, err error) {
 	db := mg.Client.Database(dbName)
 
+	tok.Created = time.Now()
+
 	tok.ID = primitive.NewObjectID().Hex()
 
 	itok := toLocalToken(tok)

@@ -20,6 +20,8 @@ func (sl *SQLite) CreateAccount(dbName, email string) (id string, err error) {
 }
 
 func (sl *SQLite) CreateUser(dbName string, tok model.User) (id string, err error) {
+	tok.Created = time.Now()
+
 	id = sl.NewID()
 
 	qry := fmt.Sprintf(`

@@ -19,6 +19,8 @@ func (pg *PostgreSQL) CreateAccount(dbName, email string) (id string, err error)
 }
 
 func (pg *PostgreSQL) CreateUser(dbName string, tok model.User) (id string, err error) {
+	tok.Created = time.Now()
+
 	qry := fmt.Sprintf(`
 		INSERT INTO %s.sb_tokens(account_id, email, password, token, role, reset_code, created)
 		VALUES($1, $2, $3, $4, $5, $6, $7)

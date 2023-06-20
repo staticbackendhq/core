@@ -2,6 +2,7 @@ package staticbackend
 
 import (
 	"testing"
+	"time"
 
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/model"
@@ -34,6 +35,9 @@ func TestUserAddRemoveFromAccount(t *testing.T) {
 	for _, user := range users {
 		if user.Email == "newuser@test.com" {
 			newUserID = user.ID
+			if !user.Created.After(time.Now().Add(-2 * time.Minute)) {
+				t.Errorf("expected user to have a recent creation date, got %v", user.Created)
+			}
 			break
 		}
 	}

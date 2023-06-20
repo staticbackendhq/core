@@ -108,7 +108,6 @@ func (c *Cache) Subscribe(send chan model.Command, token, channel string, close 
 			var msg model.Command
 			if err := json.Unmarshal([]byte(m.Payload), &msg); err != nil {
 				c.log.Error().Err(err).Msg("error parsing JSON message")
-				_ = pubsub.Close()
 				return
 			}
 
