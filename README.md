@@ -1,129 +1,181 @@
-<p align="center">
-	<img src="https://staticbackend.com/img/logo-sb-no-text.png"  alt="StaticBackend logo">
-	<br />
-	<a href="https://discord.gg/vgh2PTp9ZB">
-		<img src="https://img.shields.io/discord/872035652944928838?logoColor=%23DD0000">
-	</a>
-	<a href="https://twitter.com/staticbackend">
-		<img src="https://img.shields.io/twitter/follow/staticbackend?color=DD0000&style=social">
-	</a>
-	
-</p>
+# <img src="https://staticbackend.com/img/logo-sb-no-text.png" style="height: 35px" alt="StaticBackend logo" /> StaticBackend
 
-p.s. If you'd like to contribute to an active Go project, you've found a nice 
-one in my biased opinion.
+<a href="https://discord.gg/vgh2PTp9ZB">
+	<img src="https://img.shields.io/discord/872035652944928838?logoColor=%23DD0000">
+</a>
+<a href="https://twitter.com/staticbackend">
+	<img src="https://img.shields.io/twitter/follow/staticbackend?color=DD0000&style=social">
+</a>
 
-# StaticBackend - simple backend for your apps
+[StaticBackend](https://staticbackend.com) is a simple backend server API that 
+helps you create web applications. It handles most of the building blocks you'll 
+need on the backend.
 
-[StaticBackend](https://staticbackend.com) is a simple backend API that handles 
-user management, database, file storage, forms, real-time experiences via 
-channel/topic-based communication, and server-side functions for web and mobile 
-applications.
+- [x] Authentication ([docs →](https://staticbackend.com/docs))
+- [x] Account->users management ([docs →](https://staticbackend.com/docs/users))
+- [x] Database CRUD, queries and full-text search ([docs →](https://staticbackend.com/docs/database))
+- [x] Realtime/Websockets ([docs →](https://staticbackend.com/docs/websocket))
+- [x] File storage ([docs →](https://staticbackend.com/docs/storage))
+- [x] server-side functions ([docs →](https://staticbackend.com/docs/functions))
+- [x] Schedule jobs
+- [x] Send mails/sms ([docs →](https://staticbackend.com/docs/sendmail))
+- [x] Caching ([docs →](https://staticbackend.com/docs/cache))
+- [x] Handle forms ([docs →](https://staticbackend.com/docs/forms))
+- [x] Resize images & convert URL to PDF ([docs →](https://staticbackend.com/docs/extras/))
 
-You can think of it as a lightweight and stable backend API you may self-host. 
-Less vendor lock-in, and your data stays in your control.
 
-You may use its building blocks from one or a combination of:
+## Table of content
 
-* Client-side JavaScript
-* Server-side client libraries (Node, Go, Python)
-* Import a Go package directly in your Go programs
-
-### Table of content
-
-* [Import as Go package](#import-as-go-package)
-* [What can you build](#what-can-you-build)
-* [How it works / dev workflow](#how-it-works--dev-workflow)
-* [Get started with the self-hosted version](#get-started-with-the-self-hosted-version)
+* [Install](#install)
+	* [Local development](#local-development)
+	* [Frontend client](#frontend-client)
+	* [Backend clients](#backend-clients)
+	* [Go package](#go-package)
+* [Usage](#usage)
+	* [JavaScript example](#javascript-example)
+	* [Go client example](#go-client-example)
+	* [Go package example](#go-package-example)
 * [Documentation](#documentation)
-* [Librairies & CLI](#librairies--cli)
-* [Examples](#examples)
-* [Deploying in production](#deploying-in-production)
-* [Feedback & contributing](#feedback--contributing)
-* [help](#help)
+* [Deployment](#deployment)
+	* [Render](#render)
+	* [Heroku](#heroku)
+	* [Docker](#docker)
+* [Get support](#get-support)
+* [Contributing](#contributing)
+* [How you can help](#how-you-can-help)
 
+## Install
 
-## Import as Go package
+You'll want to install different pieces depending on what you want to build. 
+Here's what you can install:
 
-As of v1.4.1 StaticBackend offers an importable Go package removing the need 
-to self-host the backend API separately while keeping all functionalities from 
-your Go program.
+### Local development
 
-### Installing
+Our [CLI](https://github.com/staticbackendhq/cli) includes a fully functional 
+development server. You don't need to install anything else.
+
+```sh
+$ npm install -g @staticbackend/cli
+```
+
+*You may 
+[install the CLI manually](https://staticbackend.com/getting-started/cli) as 
+well.*
+
+This will install as the `backend` program. Start the development server with:
+
+```sh
+$ backend server
+```
+
+This command creates a new application and an admin user for you. You'll 
+receive a PublicKey and a RootToken.
+
+All HTTP request to the API requires a public key. The root token allows you 
+to sign in to the dashboard for this application as the owner.
+
+### Frontend client
+
+Add the library to your dependencies:
+
+```sh
+$ npm install @staticbackend/js
+```
+
+Inside your module:
+
+```javascript
+import { Backend } from "@staticbackend/js";
+const bkn = new Backend("dev_memory_pk", "dev");
+```
+
+**dev_memory_pk** is the default local development public key and **dev** is the 
+default region / host for the instance you're targetting.
+
+You may also include the library inside a `<script` tag if you're not using 
+a module system:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@staticbackend/js@1.5.0/dist/backend.min.js"></script>
+<script>
+	const bkn = new sb.Backend("dev_memory_pk", "dev");
+</script>
+```
+
+### Backend clients
+
+We've pre-built backend client libraries you may use directly:
+
+**Node**:
+
+```sh
+$ npm install @staticbackend/backend
+```
+
+**Go**:
+
+```sh
+$ go get github.com/staticbackendhq/backend-go
+```
+
+[View the Go package documentation](https://pkg.go.dev/github.com/staticbackendhq/backend-go)
+
+**Python**:
+
+```sh
+$ pip install staticbackend
+```
+
+### Go package
+
+You can import a Go package directly into your Go program and build your 
+application with the same building blocks without hosting the API separately.
 
 ```sh
 $ go get github.com/staticbackendhq/core/backend
 ```
 
-### Example usage
+[View the Go package document](https://pkg.go.dev/github.com/staticbackendhq/core/backend)
 
-```go
-// using the cache & pub/sub
-backend.Cache.Set("key", "value")
+## Usage
 
-msg := model.Command{Type: "chan_out", Channel: "#lobby", Data: "hello world"}
-backend.Cache.Publish(msg)
+You may build web and mobile applications using StaticBackend as your main 
+backend API.
 
-// use the generic Collection for strongly-typed CRUD and querying
-type Task struct {
-	ID string `json:"id"`
-	Title string `json:"title"`
-}
-// auth is the currently authenticated user performing the action.
-// base is the current tenant's database to execute action
-// "tasks" is the collection name
-tasks := backend.Collection[Task](auth, base, "tasks")
-newTask, err := tasks.Create(Task{Title: "testing"})
-// newTask.ID is filled with the unique ID of the created task in DB
+StaticBackend is a multi-tenant platform allowing you to host multiple isolated 
+applications.
+
+You need an instance of the backend API running via the CLI for local 
+development or running as a normal process with required dependencies.
+
+You create your first application before you can start.
+
+Using the CLI:
+
+```sh
+$ backend server
 ```
 
-View a [full example in the doc](https://pkg.go.dev/github.com/staticbackendhq/core/backend#example-package).
+Using the source code:
 
-### Documentation for the `backend` Go package
-
-Refer to the 
-[Go documentation](https://pkg.go.dev/github.com/staticbackendhq/core/backend) 
-to know about all functions and examples.
-
-## What can you build
-
-I built StaticBackend with the mindset of someone tired of writing the same code 
-over and over on the backend. If your application needs one or all of 
-user management, database, file storage, real-time interactions, it should be 
-a good fit.
-
-I'm personally using it to build SaaS:
-
-Abandoned projects:
-
-* [En Pyjama - an online course platform for kids](https://enpyjama.com)
-* [Vivid - Automatic video clips for podcasts](https://vivid.fm)
-* [Tangara - one page checkout for creators](https://tangara.io)
-
-It can be used from client-side and/or server-side.
-
-## How it works / dev workflow
-
-The main idea is that StaticBackend is your backend API for your applications. 
-It handles common web/mobile building blocks so you do not have to 
-re-implement them.
-
-_Note that it can also be used from your backend code as well._
-
-Once you have an instance running and your first app created, you may install 
-the JavaScript client-side library for example:
-
-```shell
-$> npm install @staticbackend/js
+```sh
+$ git clone https://github.com/staticbackendhq/core
+$ cd core
+$ cp .local.env .env
+$ make start
 ```
 
-Let's create a user account and get a session `token` and create a `task` 
-document in the `tasks` collection:
+Visit [http://localhost:8099](http://localhost:8099) and create an application.
+
+### Javascript example
+
+*Note that the Nodejs client library has the same API / function names as the 
+JavaScript library.*
 
 ```javascript
 import { Backend } from "@staticbackend/js";
 
-const bkn = new Backend("your_public-key", "dev");
+const bkn = new Backend("dev_memory_pk", "dev");
 
 let token = "";
 
@@ -153,92 +205,59 @@ createTask = async () => {
 }
 ```
 
-The last `console.log` prints
+### Go client example
 
-```json
-{
-	"id": "123456-unique-id",
-	"accountId": "aaa-bbb-unique-account-id",
-	"desc": "Do something for XYZ",
-	"done": false
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/staticbackendhq/backend-go"
+)
+
+func main() {
+	backend.PublicKey = "dev_memory_pk"
+	backend.Region = "dev"
+
+	token, err := backend.Login("admin@dev.com", "devpw1234")
+	// no err handling in example
+
+	task := new(struct{
+		ID string `json:"id"`
+		AccountID string `json:"accountId"`
+		Title string `json:"title"`
+		Done bool `json:"done"`
+	})
+	task.Title = "A todo item"
+	err = backend.Create(token, "tasks", task, &task)
+	// task.ID and task.AccountID would be filled with proper values
 }
 ```
 
-From there you build your application using the 
-[database](https://staticbackend.com/docs/database/) CRUD and query functions, 
-the [real-time component](https://staticbackend.com/docs/websocket/),
-the [storage API](https://staticbackend.com/docs/storage/), and much more.
+### Go package example
 
-StaticBackend provides commonly used building blocks for web applications.
+```go
+// using the cache & pub/sub
+backend.Cache.Set("key", "value")
 
-You may use server-side libraries for Node, Python and Go or use an HTTP client 
-and use your preferred language.
+msg := model.Command{Type: "chan_out", Channel: "#lobby", Data: "hello world"}
+backend.Cache.Publish(msg)
 
-## Get started with the self-hosted version
-
-### Deploy buttons
-
-**Heroku**: Deploy an instance to your Heroku account.
-
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/staticbackendhq/core)
-
-**Render**: Deploy an instance to your Render account
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
-
-### Docker or manual setup
-
-
-[![Get started with self-hosted version](https://img.youtube.com/vi/vQjfaMxidx4/0.jpg)](https://www.youtube.com/watch?v=vQjfaMxidx4)
-
-_Click on the image above to see a video showing how to get started with the 
-self-hosted version_.
-
-Please refer to this [guide here](https://staticbackend.com/getting-started/self-hosting/).
-
-We also have this 
-[blog post](https://staticbackend.com/blog/get-started-self-hosted-version/) 
-that includes the above video.
-
-If you have Docker & Docker Compose ready, here's how you can have your server 
-up and running in dev mode in 30 seconds:
-
-```shell
-$> git clone git@github.com:staticbackendhq/core.git
-$> cd core
-$> cp .demo.env .env
-$> docker build . -t staticbackend:latest
-$> docker-compose -f docker-compose-demo.yml up
+// use the generic Collection for strongly-typed CRUD and querying
+type Task struct {
+	ID string `json:"id"`
+	Title string `json:"title"`
+}
+// auth is the currently authenticated user performing the action.
+// base is the current tenant's database to execute action
+// "tasks" is the collection name
+tasks := backend.Collection[Task](auth, base, "tasks")
+newTask, err := tasks.Create(Task{Title: "testing"})
+// newTask.ID is filled with the unique ID of the created task in DB
 ```
 
-Test your instance:
-
-```shell
-$> curl -v http://localhost:8099/db/test
-```
-
-You should get an error as follow:
-
-```shell
-< HTTP/1.1 401 Unauthorized
-< Content-Type: text/plain; charset=utf-8
-< Vary: Origin
-< Vary: Access-Control-Request-Method
-< Vary: Access-Control-Request-Headers
-< X-Content-Type-Options: nosniff
-< Date: Tue, 03 Aug 2021 11:40:15 GMT
-< Content-Length: 33
-< 
-invalid StaticBackend public key
-```
-
-This is normal, as you're trying to request protected API, but you're all set.
-
-The next step is to visit [http://localhost:8099](http://localhost:8099) and 
-create your first app. Please note that in dev mode you'll have to look at your 
-docker compose output terminal to see the content of the email after creating 
-your app. This email contains all the keys and your super user account 
-information.
+View a 
+[full example in the doc](https://pkg.go.dev/github.com/staticbackendhq/core/backend#example-package).
 
 ## Documentation
 
@@ -246,53 +265,69 @@ We're trying to have the best experience possible reading our documentation.
 
 Please help us improve if you have any feedback.
 
-**Documentation with example using our libraries or curl**:
+* [Documentation with code samples for client libraries and CURL](https://staticbackend.com/docs)
+* [Go client library package](https://pkg.go.dev/github.com/staticbackendhq/backend-go)
+* [Go importable package](https://pkg.go.dev/github.com/staticbackendhq/core/backend)
+* [Self-host guide](https://staticbackend.com/getting-started/self-hosting)
+* [Install the CLI](https://staticbackend.com/getting-started/cli)
 
-* [Introduction and authentication](https://staticbackend.com/docs/)
-* [User management](https://staticbackend.com/docs/users/)
-* [Social logins (beta)](https://staticbackend.com/docs/social-logins/)
-* [Database](https://staticbackend.com/docs/database/)
-* [Real-time communication](https://staticbackend.com/docs/websocket/)
-* [File storage](https://staticbackend.com/docs/storage/)
-* [Server-side functions](https://staticbackend.com/docs/functions/)
-* [Send emails](https://staticbackend.com/docs/sendmail/)
-* [Caching](https://staticbackend.com/docs/cache/)
-* [Forms](https://staticbackend.com/docs/forms/)
-* [Root token](https://staticbackend.com/docs/root-token/)
-
-## Librairies & CLI
-
-We [provide a CLI](https://staticbackend.com/getting-started/) for local 
-development if you want to get things started without any infrastructure and 
-for prototyping / testing.
-
-You can use the CLI to manage your database, form submissions, and deploy 
-server-side-functions. We have an alpha Web UI as well to manage your resources.
-
-We have a page listing our 
-[client-side and server-side libraries](https://staticbackend.com/docs/libraries/).
-
-## Examples
-
-If you'd like to see specific examples please let us know via the 
-[Discussions](https://github.com/staticbackendhq/core/discussions) tab.
-
-Here's the examples we have created so far:
+**Examples**:
 
 * [To-do list example](https://staticbackend.com/getting-started/)
 * [Realtime collaboration](https://staticbackend.com/blog/realtime-collaboration-example/)
 * [Live chat using server-side function & real-time component](https://staticbackend.com/blog/server-side-functions-task-scheduler-example/)
 * [Jamstack Bostom talk](https://www.youtube.com/watch?v=Uf-K6io9p7w)
 
-## Deploying in production
+## Deployment
 
-We've not written anything yet regarding deploying, but once you have the 
-core` built into a binary and have access to either PostgreSQL or MongoDB, and 
-Redis in production you should be able to deploy it like any other Go server.
+To deploy StaticBackend you'll need the following:
 
-We'll have documentation and an example soon for deploying to DigitalOcean.
+* Either PostgreSQL or MongoDB
+* Redis
 
-## Feedback & contributing
+StaticBackend is a single file binary you can run as a `systemd` daemon.
+
+Here's some quick way to deploy an instance.
+
+### Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+### Heroku
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/staticbackendhq/core)
+
+### Docker
+
+If you have Docker and Docker Compose ready, here's how to run StaticBackend:
+
+```shell
+$ git clone https://github.com/staticbackendhq/core
+$ cd core
+$ cp .demo.env .env
+$ docker build . -t staticbackend:latest
+$ docker-compose -f docker-compose-demo.yml up
+```
+
+Open a browser at [http://localhost:8099](http://localhost:8099) to create 
+your first application.
+
+For production, you'll want to configure environment variables found in `.env` 
+file.
+
+* [Self-hosting guide](https://staticbackend.com/getting-started/self-hosting/)
+* [Video showing how to self-host](https://www.youtube.com/watch?v=vQjfaMxidx4)
+* [Detailed blog post on how to self-host](https://staticbackend.com/blog/get-started-self-hosted-version/)
+
+## Get support
+
+You may use the following channels to get help and support.
+
+* [Discord](https://discord.gg/vgh2PTp9ZB): for any help and joining the conversation.
+* [GitHub issues](https://github.com/staticbackendhq/core/issues): To report bugs / contributing code.
+* [GitHub Discussions](https://github.com/staticbackendhq/core/discussions): For ideas, feature requests and general discussions.
+
+## Contributing
 
 If you have any feedback (good or bad) we'd be more than happy to talk. Please 
 use the [Discussions](https://github.com/staticbackendhq/core/discussions) tab.
@@ -309,9 +344,9 @@ Here are videos made specifically for people wanting to contribute:
 Check the [contributing file](CONTRIBUTING.md) for details.
 
 
-## Help
+## How you can help
 
-If you're looking to help the project, here are some ways:
+If you're looking to help the project, here are multiple ways:
 
 * Use it and share your experiences.
 * Sponsor the development via GitHub sponsors.
