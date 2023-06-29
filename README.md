@@ -1,5 +1,8 @@
 # <img src="https://staticbackend.com/img/logo-sb-no-text.png" style="height: 35px" alt="StaticBackend logo" /> StaticBackend
 
+![build badge](https://github.com/staticbackendhq/core/actions/workflows/go.yml/badge.svg)
+[![GoReportCard](https://goreportcard.com/badge/github.com/staticbackendhq/core)](https://goreportcard.com/report/github.com/staticbackendhq/core)
+[![Go Reference](https://pkg.go.dev/badge/github.com/staticbackendhq/core/backend.svg)](https://pkg.go.dev/github.com/staticbackendhq/core/backend)
 <a href="https://discord.gg/vgh2PTp9ZB">
 	<img src="https://img.shields.io/discord/872035652944928838?logoColor=%23DD0000">
 </a>
