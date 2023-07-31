@@ -158,7 +158,7 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 	var buf []byte
 
 	if err := chromedp.Run(ctx, ex.toBytes(data, &buf)); err != nil {
-		http.Error(w, fmt.Sprintf("htmltox chromedp run %s"err.Error()), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
