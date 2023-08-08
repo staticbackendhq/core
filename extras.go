@@ -52,7 +52,7 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 
 	ext := filepath.Ext(h.Filename)
 
-	//TODO: Remove all but a-zA-Z/ from name
+	// TODO: Remove all but a-zA-Z/ from name
 
 	name := r.Form.Get("name")
 	if len(name) == 0 {
@@ -152,19 +152,13 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 		chromedp.Flag("disable-gpu", true),
 	)*/
 
-	// make sure it can timeout
-	cctx, ccancel := context.WithTimeout(context.Background(), 15*time.Second)
-
-	//HACK:
-	ctx, cancel := chromedp.NewContext(cctx)
-	//ctx, cancel := chromedp.NewContext(context.Background())
+	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
-	defer ccancel()
 
 	var buf []byte
 
 	if err := chromedp.Run(ctx, ex.toBytes(data, &buf)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("htmltox chromedp run %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
@@ -237,7 +231,6 @@ func (ex *extras) toBytes(data ConvertParam, res *[]byte) chromedp.Tasks {
 
 			*res = buf
 			return nil
-
 		}),
 	}
 }

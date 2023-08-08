@@ -111,13 +111,11 @@ func TestSudoSendSMS(t *testing.T) {
 		t.Log(string(b))
 		t.Errorf("expected status 200 got %s", resp.Status)
 	}
-
 }
 
 func TestHtmlToPDF(t *testing.T) {
 	// TODO: this is intermitant and when it failes it's with that
 	// error line:128: context deadline exceeded
-	t.Skip()
 
 	data := ConvertParam{
 		ToPDF: true,
@@ -136,7 +134,6 @@ func TestHtmlToPDF(t *testing.T) {
 		t.Log(string(b))
 		t.Errorf("expected status 200 got %s", resp.Status)
 	}
-
 }
 
 func TestHtmlToPNG(t *testing.T) {
@@ -144,7 +141,6 @@ func TestHtmlToPNG(t *testing.T) {
 	// error: extras_test.go:157: context deadline exceeded
 	//
 	// we need to determine why it's doing this and remove the Skip
-	t.Skip()
 
 	data := ConvertParam{
 		ToPDF:    false,
@@ -164,5 +160,4 @@ func TestHtmlToPNG(t *testing.T) {
 		t.Log(string(b))
 		t.Errorf("expected status 200 got %s", resp.Status)
 	}
-
 }
