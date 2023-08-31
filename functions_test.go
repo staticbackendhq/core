@@ -447,8 +447,12 @@ func TestFunctionTriggerByPublishingMsg(t *testing.T) {
 func TestFunctionWithVolatilizerHelpers(t *testing.T) {
 	// Remove the counter
 	toRemove, err := backend.Cache.Inc("some-counter", 1)
-	if err == nil {
-		backend.Cache.Dec("some-counter", toRemove)
+	if err != nil {
+		t.Fatal(err)
+	} else if toRemove > 0 {
+		if _, err := backend.Cache.Dec("some-counter", toRemove); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	code := `
