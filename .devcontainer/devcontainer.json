@@ -1,6 +1,12 @@
 {
     "image":"mcr.microsoft.com/devcontainers/universal:2",
     "forwardPorts": [8099],
+    "postCreateCommand": [
+        "mkdir /workspaces/setup-chrome",
+        "cd /workspaces/setup-chrome && wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb",
+        "sudo apt update -y",
+        "sudo apt install /workspaces/setup-chrome/google-chrome-stable_current_amd64.deb -y"
+    ],
     "postStartCommand": "cp .codespaces.env .env && docker-compose -f docker-compose-unittest.yml up -d",
     "customizations": {
         "vscode": {
