@@ -133,3 +133,12 @@ func TestEnableExternalLogins(t *testing.T) {
 		t.Errorf("expected 'key' and 'secret' got %v", decrypted["twitter"])
 	}
 }
+
+func TestGetTenantByEmail(t *testing.T) {
+	cus, err := datastore.GetTenantByEmail(adminEmail)
+	if err != nil {
+		t.Fatal(err)
+	} else if cus.Email != adminEmail {
+		t.Errorf("expected same email for found customer")
+	}
+}

@@ -196,6 +196,21 @@ func (mg *Mongo) GetTenantByStripeID(stripeID string) (cus model.Tenant, err err
 	return
 }
 
+func (mg *Mongo) GetTenantByEmail(email string) (cus model.Tenant, err error) {
+	db := mg.Client.Database("sbsys")
+
+	var acct LocalCustomer
+	sr := db.Collection("accounts").FindOne(mg.Ctx, bson.M{"email": email})
+	if err = sr.Decode(&acct); err != nil {
+		return
+	} else if err = sr.Err(); err != nil {
+		return
+	}
+
+	cus = fromLocalCustomer(acct)
+	return
+}
+
 func (mg *Mongo) IncrementMonthlyEmailSent(baseID string) error {
 	db := mg.Client.Database("sbsys")
 

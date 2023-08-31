@@ -225,6 +225,17 @@ func (pg *PostgreSQL) GetTenantByStripeID(stripeID string) (cus model.Tenant, er
 	return
 }
 
+func (pg *PostgreSQL) GetTenantByEmail(email string) (cus model.Tenant, err error) {
+	row := pg.DB.QueryRow(`
+		SELECT * 
+		FROM sb.customers 
+		WHERE email = $1
+	`, email)
+
+	err = scanCustomer(row, &cus)
+	return
+}
+
 func (pg *PostgreSQL) ActivateTenant(tenantID string, active bool) error {
 	tx, err := pg.DB.Begin()
 	if err != nil {
