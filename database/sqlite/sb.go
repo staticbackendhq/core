@@ -215,6 +215,17 @@ func (sl *SQLite) GetTenantByStripeID(stripeID string) (cus model.Tenant, err er
 	return
 }
 
+func (sl *SQLite) GetTenantByEmail(email string) (cus model.Tenant, err error) {
+	row := sl.DB.QueryRow(`
+		SELECT * 
+		FROM sb_customers 
+		WHERE email = $1
+	`, email)
+
+	err = scanCustomer(row, &cus)
+	return
+}
+
 func (sl *SQLite) ActivateTenant(tenantID string, active bool) error {
 	tx, err := sl.DB.Begin()
 	if err != nil {

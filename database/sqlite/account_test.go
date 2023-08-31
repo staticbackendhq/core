@@ -47,3 +47,12 @@ func TestUserEmailExists(t *testing.T) {
 		t.Errorf("email should exists")
 	}
 }
+
+func TestAccountList(t *testing.T) {
+	accts, err := datastore.ListAccounts(confDBName)
+	if err != nil {
+		t.Fatal(err)
+	} else if len(accts) == 0 {
+		t.Errorf("expected at least 1 account, got %d", len(accts))
+	}
+}

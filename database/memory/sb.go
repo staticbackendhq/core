@@ -105,6 +105,25 @@ func (m *Memory) GetTenantByStripeID(stripeID string) (cus model.Tenant, err err
 	return
 }
 
+func (m *Memory) GetTenantByEmail(email string) (cus model.Tenant, err error) {
+	list, err := all[model.Tenant](m, "sb", "customers")
+	if err != nil {
+		return
+	}
+
+	results := filter(list, func(x model.Tenant) bool {
+		return strings.EqualFold(x.Email, email)
+	})
+
+	if len(results) != 1 {
+		err = fmt.Errorf("cannot find customer by email %s", email)
+		return
+	}
+
+	cus = results[0]
+	return
+}
+
 func (m *Memory) ActivateTenant(tenantID string, active bool) error {
 	var cus model.Tenant
 	if err := getByID(m, "sb", "customers", tenantID, &cus); err != nil {

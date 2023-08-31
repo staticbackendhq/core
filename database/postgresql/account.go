@@ -48,7 +48,7 @@ func (pg *PostgreSQL) GetRootForBase(dbName string) (tok model.User, err error) 
 func (pg *PostgreSQL) ListAccounts(dbName string) ([]model.Account, error) {
 	qry := fmt.Sprintf(`
 	SELECT * 
-	FROM %s_sb.accounts
+	FROM %s.sb_accounts
 	ORDER BY created DESC;
 	`, dbName)
 

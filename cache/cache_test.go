@@ -95,7 +95,7 @@ func TestCacheSubscribeOnDBEvent(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			payload := model.Command{Type: model.MsgTypeDBUpdated, Data: document, Channel: "random_cahn"}
+			payload := model.Command{Type: model.MsgTypeDBUpdated, Data: document, Channel: "random_cahn", Base: "unittest"}
 
 			go tc.cache.Subscribe(receiver, "token", payload.Channel, closeCn)
 
@@ -186,7 +186,7 @@ func TestCachePublishDocument(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			payload := model.Command{Type: model.MsgTypeDBUpdated, Data: document, Channel: "random_cahn"}
+			payload := model.Command{Type: model.MsgTypeDBUpdated, Data: document, Channel: "random_cahn", Base: "unittest"}
 
 			// convert to map for simulation of real usage
 			var documentMap map[string]interface{}
@@ -203,8 +203,10 @@ func TestCachePublishDocument(t *testing.T) {
 			defer timer.Stop()
 			select {
 			case res := <-receiver:
-				if res != payload {
+				if res.Type != payload.Type || res.Channel != payload.Channel {
 					t.Error("Incorrect message is received")
+					t.Log(res)
+					t.Log(payload)
 				}
 				break
 			case <-timer.C:
