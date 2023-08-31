@@ -34,6 +34,8 @@ type Persister interface {
 	ListDatabases() ([]model.DatabaseConfig, error)
 	// IncrementMonthlyEmailSent increments the monthly email sending counter
 	IncrementMonthlyEmailSent(baseID string) error
+	// GetTenantByEmail finds a tenant by its main account email
+	GetTenantByEmail(email string) (cus model.Tenant, err error)
 	// GetTenantByStripeID finds a tenant by its Stripe customer ID
 	GetTenantByStripeID(stripeID string) (cus model.Tenant, err error)
 	// ActivateTenant turns the IsActive flag for the tenant and its database

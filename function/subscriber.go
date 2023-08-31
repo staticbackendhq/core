@@ -88,11 +88,18 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command) {
 
 	var ids []string
 
+	// for msg type error, we do nothing
+	if msg.Type == model.MsgTypeError {
+		sub.Log.Err(err).Msg("receiving msg of type error")
+		return
+	}
+
 	key := fmt.Sprintf("%s:%s", exe.BaseName, msg.Channel)
 	if err := sub.PubSub.GetTyped(key, &ids); err != nil {
 		funcs, err := exe.DataStore.ListFunctionsByTrigger(exe.BaseName, msg.Channel)
 		if err != nil {
 			sub.Log.Error().Err(err).Msg("error getting functions by trigger")
+			sub.Log.Debug().Msg("channgel: " + msg.Channel + " type: " + msg.Type)
 			return
 		}
 

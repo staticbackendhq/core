@@ -445,6 +445,12 @@ func TestFunctionTriggerByPublishingMsg(t *testing.T) {
 }
 
 func TestFunctionWithVolatilizerHelpers(t *testing.T) {
+	// Remove the counter
+	toRemove, err := backend.Cache.Inc("some-counter", 1)
+	if err == nil {
+		backend.Cache.Dec("some-counter", toRemove)
+	}
+
 	code := `
 	function handle(channel, type, body) {
 		// set some value in the cache
@@ -463,7 +469,7 @@ func TestFunctionWithVolatilizerHelpers(t *testing.T) {
 			return;
 		}
 
-		cacheSet()
+		// cacheSet()
 
 		res = inc("some-counter", 10);
 		if (!res.ok) {
