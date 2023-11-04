@@ -18,7 +18,7 @@ require (
 	github.com/stripe/stripe-go/v72 v72.94.0
 	go.mongodb.org/mongo-driver v1.7.0
 	golang.org/x/crypto v0.14.0
-	golang.org/x/image v0.5.0
+	golang.org/x/image v0.10.0
 	golang.org/x/sync v0.1.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	modernc.org/sqlite v1.22.1
