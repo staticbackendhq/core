@@ -47,7 +47,7 @@ func WithDB(datastore database.Persister, volatile cache.Volatilizer, g BillingP
 				// let's try to see if they are allow to use a database
 				conf, err = datastore.FindDatabase(key)
 				if err != nil {
-					err = fmt.Errorf("error finding database: %w", err)
+					err = fmt.Errorf("error finding database '%s': %w", key, err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				} else if !conf.IsActive {
