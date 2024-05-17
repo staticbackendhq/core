@@ -2,16 +2,18 @@ package staticbackend
 
 import (
 	"bytes"
-	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"path"
 	"path/filepath"
+	"plugin"
 	"strconv"
 	"time"
 
-	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/chromedp"
 	"github.com/staticbackendhq/core/backend"
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/extra"
 	"github.com/staticbackendhq/core/internal"
 	"github.com/staticbackendhq/core/logger"
@@ -129,7 +131,8 @@ func (ex *extras) sudoSendSMS(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, true)
 }
 
-type ConvertParam struct {
+// ConvertParams is also replicated in the plugin implementation
+type ConvertParams struct {
 	ToPDF    bool   `json:"toPDF"`
 	URL      string `json:"url"`
 	FullPage bool   `json:"fullpage"`
@@ -142,23 +145,22 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data ConvertParam
-	if err := parseBody(r.Body, &data); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	r.Body.Close()
+
+	var data ConvertParams
+	if err := json.Unmarshal(body, &data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	/*opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("disable-gpu", true),
-	)*/
-
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
-
-	var buf []byte
-
-	if err := chromedp.Run(ctx, ex.toBytes(data, &buf)); err != nil {
-		http.Error(w, fmt.Sprintf("htmltox chromedp run %s", err.Error()), http.StatusInternalServerError)
+	buf, err := convertToPDF(body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -208,29 +210,22 @@ func (ex *extras) htmlToX(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, data)
 }
 
-func (ex *extras) toBytes(data ConvertParam, res *[]byte) chromedp.Tasks {
-	return chromedp.Tasks{
-		chromedp.EmulateViewport(1280, 768),
-		chromedp.Navigate(data.URL),
-		chromedp.WaitReady("body"),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			var buf []byte
-			var err error
-			if data.ToPDF {
-				buf, _, err = page.PrintToPDF().Do(ctx)
-			} else {
-				params := page.CaptureScreenshot()
-				// TODO: This should capture full screen ?!?
-				params.CaptureBeyondViewport = data.FullPage
-
-				buf, err = params.Do(ctx)
-			}
-			if err != nil {
-				return err
-			}
-
-			*res = buf
-			return nil
-		}),
+func convertToPDF(body []byte) ([]byte, error) {
+	ppath := path.Join(config.Current.PluginsPath, "topdf.so")
+	p, err := plugin.Open(ppath)
+	if err != nil {
+		return nil, err
 	}
+
+	fn, err := p.Lookup("Do")
+	if err != nil {
+		return nil, err
+	}
+
+	f, ok := fn.(func(data []byte) ([]byte, error))
+	if !ok {
+		return nil, fmt.Errorf("unable to cast ToPDF to func([]byte) ([]byte, error)")
+	}
+
+	return f(body)
 }

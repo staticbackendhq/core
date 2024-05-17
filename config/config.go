@@ -89,6 +89,8 @@ type AppConfig struct {
 	FullTextIndexFile string
 	// ActivateFlag when set, the /account/init can bypass Stripe if matching val
 	ActivateFlag string
+	// PluginsPath is the full qualified path where plugins are stored
+	PluginsPath string
 }
 
 func LoadConfig() AppConfig {
@@ -127,5 +129,6 @@ func LoadConfig() AppConfig {
 		LogFilename:             os.Getenv("LOG_FILENAME"),
 		FullTextIndexFile:       os.Getenv("FTS_INDEX_FILE"),
 		ActivateFlag:            os.Getenv("ACTIVATE_FLAG"),
+		PluginsPath:             os.Getenv("PLUGINS_PATH"),
 	}
 }

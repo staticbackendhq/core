@@ -11,6 +11,7 @@ build:
 	-X github.com/staticbackendhq/core/config.CommitHash=$(shell git log --pretty=format:'%h' -n 1) \
 	-X github.com/staticbackendhq/core/config.Version=$(shell git describe --tags)" \
 	-o staticbackend
+	@cd plugins/topdf && CGO_ENABLE=0 go build -buildmode=plugin -o ../topdf.so
 
 start: build
 	@./cmd/staticbackend
@@ -63,8 +64,11 @@ pkg: build
 	@cd cmd && CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -o ../dist/binary-for-linux-64-bit
 	@cd cmd && CGO_ENABLED=0 GOARCH=386 GOOS=linux go build -o ../dist/binary-for-linux-32-bit
 	@echo "building mac binaries"
-	@cd cmd && CGO_ENABLED=0 GOARCH=amd64 GOOS=darwin go build -o ../dist/binary-for-mac-64-bit
+	@cd cmd && CGO_ENABLED=0 GOARCH=amd64 GOOS=darwin go build -o ../dist/binary-for-intel-mac-64-bit
+	@cd cmd && CGO_ENABLED=0 GOARCH=arm64 GOOS=darwin go build -o ../dist/binary-for-arm-mac-64-bit
 	@echo "building windows binaries"
 	@cd cmd && CGO_ENABLED=0 GOARCH=amd64 GOOS=windows go build -o ../dist/binary-for-windows-64-bit.exe
+	@echo copying plugins
+	@cp plugins/*.so dist/
 	@echo "compressing binaries"
 	@gzip dist/*

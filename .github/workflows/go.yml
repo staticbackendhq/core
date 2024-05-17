@@ -29,6 +29,9 @@ jobs:
 
     - name: Build
       run: make build
+    
+    - name: Set PLUGINS_PATH env var
+      run: export PLUGINS_PATH=$(pwd)/plugins
 
     - name: Test (PostgreSQL data store)
       run: make alltest
