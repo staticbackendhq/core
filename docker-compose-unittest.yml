@@ -10,6 +10,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     volumes: 
+      - ../postgres-data:/var/lib/postgresql/data
       - ./database/postgresql/sql/0001_bootstrap_db.sql:/docker-entrypoint-initdb.d/create_tables.sql
   
   mongo:
