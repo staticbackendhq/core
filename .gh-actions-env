@@ -11,4 +11,4 @@ REDIS_HOST=localhost:6379
 REDIS_PASSWORD=
 LOCAL_STORAGE_URL=http://localhost:8099
 FTS_INDEX_FILE=./sb.fts
-
+PLUGINS_PATH=./plugins
