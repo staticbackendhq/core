@@ -117,7 +117,7 @@ func TestHtmlToPDF(t *testing.T) {
 	// TODO: this is intermitant and when it failes it's with that
 	// error line:128: context deadline exceeded
 
-	data := ConvertParam{
+	data := ConvertParams{
 		ToPDF: true,
 		URL:   "https://staticbackend.com",
 	}
@@ -142,7 +142,7 @@ func TestHtmlToPNG(t *testing.T) {
 	//
 	// we need to determine why it's doing this and remove the Skip
 
-	data := ConvertParam{
+	data := ConvertParams{
 		ToPDF:    false,
 		URL:      "https://staticbackend.com",
 		FullPage: true,
