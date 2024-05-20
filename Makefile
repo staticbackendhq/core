@@ -16,11 +16,6 @@ build:
 start: build
 	@./cmd/staticbackend
 
-deploy: build
-	scp cmd/staticbackend sb-poc:/home/dstpierre/sb
-	scp -qr ./templates/* sb-poc:/home/dstpierre/templates/
-	scp -qr ./sql/* sb-poc:/home/dstpierre/sql/
-
 alltest:
 	@go clean -testcache && go test --cover ./...
 
@@ -43,14 +38,30 @@ test-mem:
 test-sqlite:
 	@cd database/sqlite && go test --cover
 
+test-dbs: test-pg test-mdb test-mem test-sqlite
+	@echo ""
+
+test-backend:
+	@go test --cover ./backend/...
+
+test-cache:
+	@go test --cover ./cache/...
+
+test-storage:
+	@go test --cover ./storage/...
+
 test-intl:
-	@JWT_SECRET=okdevmode go test --race --cover ./internal
+	@go test --cover ./internal
 
 test-extra:
-	@JWT_SECRET=okdevmode go test --race --cover ./extra
+	@go test --cover ./extra
 
 test-search:
 	@cd search && rm -rf testdata && go test --race --cover
+
+test-components: test-backend test-cache test-storage test-intl test-extra test-search
+	@echo ""
+
 
 stripe-dev:
 	stripe listen -p sb --forward-to http://localhost:8099/stripe

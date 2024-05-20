@@ -271,7 +271,6 @@ func (a *accounts) addDatabase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: When running tests, this fails and cannot retrieve the tenant
 	cust, err := backend.DB.FindTenant(conf.TenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

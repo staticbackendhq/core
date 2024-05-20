@@ -67,10 +67,6 @@ func TestUserAddRemoveFromAccount(t *testing.T) {
 }
 
 func TestAddNewDatabase(t *testing.T) {
-	t.Skip()
-
-	//TODO: This test should not fail
-
 	resp := dbReq(t, acct.addDatabase, "GET", "/account/add-db", nil)
 	defer resp.Body.Close()
 
