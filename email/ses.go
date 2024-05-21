@@ -25,7 +25,7 @@ func (AWSSES) Send(data SendMailData) error {
 	charset := "UTF-8"
 
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(config.Current.AWSRegion)},
+		Region: aws.String(config.Current.S3Region)},
 	)
 	if err != nil {
 		return err
