@@ -1,56 +1,31 @@
 package postgresql
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/staticbackendhq/core/database/dbtest"
+)
 
 func TestFindToken(t *testing.T) {
-	tok, err := datastore.FindUser(confDBName, adminToken.ID, adminToken.Token)
-	if err != nil {
-		t.Fatal(err)
-	} else if tok.ID != adminToken.ID {
-		t.Errorf("expected tok.id to be %s got %s", adminToken.ID, tok.ID)
-	}
+	dbtest.FindToken(t, datastore, adminToken)
 }
 
 func TestFindRootToken(t *testing.T) {
-	tok, err := datastore.FindRootUser(confDBName, adminToken.ID, adminToken.AccountID, adminToken.Token)
-	if err != nil {
-		t.Fatal(err)
-	} else if tok.ID != adminToken.ID {
-		t.Errorf("expected token id to be %s got %s", adminToken.ID, tok.ID)
-	}
+	dbtest.FindRootToken(t, datastore, adminToken)
 }
 
 func TestGetRootForBase(t *testing.T) {
-	tok, err := datastore.GetRootForBase(confDBName)
-	if err != nil {
-		t.Fatal(err)
-	} else if tok.ID != adminToken.ID {
-		t.Errorf("expected tok id to be %s got %s", adminToken.ID, tok.ID)
-	}
+	dbtest.GetRootForBase(t, datastore, adminToken)
 }
 
 func TestFindTokenByEmail(t *testing.T) {
-	tok, err := datastore.FindUserByEmail(confDBName, adminEmail)
-	if err != nil {
-		t.Fatal(err)
-	} else if tok.ID != adminToken.ID {
-		t.Errorf("expected tok id to be %s got %s", adminToken.ID, tok.ID)
-	}
+	dbtest.FindTokenByEmail(t, datastore, adminToken)
 }
 
 func TestUserEmailExists(t *testing.T) {
-	if exists, err := datastore.UserEmailExists(confDBName, adminEmail); err != nil {
-		t.Fatal(err)
-	} else if !exists {
-		t.Errorf("email should exists")
-	}
+	dbtest.UserEmailExists(t, datastore)
 }
 
 func TestAccountList(t *testing.T) {
-	accts, err := datastore.ListAccounts(confDBName)
-	if err != nil {
-		t.Fatal(err)
-	} else if len(accts) == 0 {
-		t.Errorf("expected at least 1 account, got %d", len(accts))
-	}
+	dbtest.AccountList(t, datastore)
 }
