@@ -14,7 +14,9 @@ import (
 type S3 struct{}
 
 func (S3) Save(data model.UploadFileData) (string, error) {
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(config.Current.AWSRegion)},
+	)
 	if err != nil {
 		return "", err
 	}
@@ -40,7 +42,9 @@ func (S3) Save(data model.UploadFileData) (string, error) {
 }
 
 func (S3) Delete(fileKey string) error {
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(config.Current.AWSRegion)},
+	)
 	if err != nil {
 		return err
 	}
