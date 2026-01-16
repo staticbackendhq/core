@@ -1,6 +1,6 @@
 module github.com/staticbackendhq/core
 
-go 1.23
+go 1.23.0
 
 require (
 	github.com/aws/aws-sdk-go v1.34.0
@@ -79,13 +79,11 @@ require (
 	go.etcd.io/bbolt v1.4.0 // indirect
 	go.opentelemetry.io/otel v0.15.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/oauth2 v0.0.0-20220628200809-02e64fa58f26 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	lukechampine.com/uint128 v1.2.0 // indirect
 	modernc.org/cc/v3 v3.40.0 // indirect
