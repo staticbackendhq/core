@@ -17,9 +17,9 @@ require (
 	github.com/rs/zerolog v1.27.0
 	github.com/stripe/stripe-go/v72 v72.94.0
 	go.mongodb.org/mongo-driver v1.7.0
-	golang.org/x/crypto v0.21.0
-	golang.org/x/image v0.10.0
-	golang.org/x/sync v0.1.0
+	golang.org/x/crypto v0.23.0
+	golang.org/x/image v0.18.0
+	golang.org/x/sync v0.7.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	modernc.org/sqlite v1.22.1
 )
@@ -76,12 +76,12 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.etcd.io/bbolt v1.3.5 // indirect
 	go.opentelemetry.io/otel v0.15.0 // indirect
-	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220628200809-02e64fa58f26 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.6.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
