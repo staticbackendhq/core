@@ -119,7 +119,7 @@ func TestHtmlToPDF(t *testing.T) {
 
 	data := ConvertParams{
 		ToPDF: true,
-		URL:   "https://staticbackend.com",
+		URL:   "https://staticbackend.dev",
 	}
 
 	resp := dbReq(t, extexec.htmlToX, "POST", "/extras/htmltox", data)
@@ -144,7 +144,7 @@ func TestHtmlToPNG(t *testing.T) {
 
 	data := ConvertParams{
 		ToPDF:    false,
-		URL:      "https://staticbackend.com",
+		URL:      "https://staticbackend.dev",
 		FullPage: true,
 	}
 

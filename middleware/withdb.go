@@ -59,7 +59,7 @@ func WithDB(datastore database.Persister, volatile cache.Volatilizer, g BillingP
 					}
 
 					msg := fmt.Sprintf(
-						"your account is inactive.\n\nActive here: %s\n\nContact us here: support@staticbackend.com",
+						"your account is inactive.\n\nActive here: %s\n\nContact us here: support@staticbackend.dev",
 						url,
 					)
 

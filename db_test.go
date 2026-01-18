@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -84,7 +84,7 @@ func dbReq(t *testing.T, hf func(http.ResponseWriter, *http.Request), method, pa
 
 func GetResponseBody(t *testing.T, resp *http.Response) string {
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal("error reading response body: ", err)
 	}
@@ -215,7 +215,7 @@ func TestDBListCollections(t *testing.T) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		b, err := ioutil.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -249,7 +249,7 @@ func TestListDocumentsInvalidDB(t *testing.T) {
 	resp := w.Result()
 	defer resp.Body.Close()
 	if resp.StatusCode > 299 {
-		b, err := ioutil.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -467,7 +467,7 @@ func TestDBCreateIndex(t *testing.T) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
-		b, err := ioutil.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatal(err)
 		}

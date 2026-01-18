@@ -139,7 +139,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	if !bypassStripe && config.Current.AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
 		params := &stripe.BillingPortalSessionParams{
 			Customer:  stripe.String(stripeCustomerID),
-			ReturnURL: stripe.String("https://staticbackend.com/stripe"),
+			ReturnURL: stripe.String("https://staticbackend.dev/stripe"),
 		}
 		s, err := session.New(params)
 		if err != nil {
@@ -204,7 +204,7 @@ Dev root token:		safe-to-use-in-dev-root-token
 Real root token:	%s
 
 
-Refer to the documentation at https://staticbackend.com/docs
+Refer to the documentation at https://staticbackend.dev/docs
 
 `,
 			bc.ID, email, pw, rootToken,
@@ -405,7 +405,7 @@ func getStripePortalURL(customerID string) (string, error) {
 
 	params := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(cus.StripeID),
-		ReturnURL: stripe.String("https://staticbackend.com/stripe"),
+		ReturnURL: stripe.String("https://staticbackend.dev/stripe"),
 	}
 	s, err := session.New(params)
 	if err != nil {

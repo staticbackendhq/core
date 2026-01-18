@@ -110,14 +110,13 @@
 // set with this middleware, instead of getting the ID from the env variable,
 // you'd define how the user should provide their database ID.
 //
-// [StaticBackend]: https://staticbackend.com/
+// [StaticBackend]: https://staticbackend.dev/
 package backend
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -171,10 +170,6 @@ var (
 	// Scheduler to execute schedule jobs (only on PrimaryInstance)
 	Scheduler *function.TaskScheduler
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 // Setup initializes the core services based on the configuration received.
 func Setup(cfg config.AppConfig) {

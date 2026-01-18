@@ -1,4 +1,4 @@
-# <img src="https://staticbackend.com/img/logo-sb-no-text.png" style="height: 35px" alt="StaticBackend logo" /> StaticBackend
+# <img src="https://staticbackend.dev/img/logo-sb-no-text.png" style="height: 35px" alt="StaticBackend logo" /> StaticBackend
 
 ![build badge](https://github.com/staticbackendhq/core/actions/workflows/go.yml/badge.svg)
 [![GoReportCard](https://goreportcard.com/badge/github.com/staticbackendhq/core)](https://goreportcard.com/report/github.com/staticbackendhq/core)
@@ -10,21 +10,21 @@
 	<img src="https://img.shields.io/twitter/follow/staticbackend?color=DD0000&style=social">
 </a>
 
-[StaticBackend](https://staticbackend.com) is a simple backend server API that 
+[StaticBackend](https://staticbackend.dev) is a simple backend server API that 
 helps you create web applications. It handles most of the building blocks you'll 
 need on the backend.
 
-- [x] Authentication ([docs →](https://staticbackend.com/docs))
-- [x] Account->users management ([docs →](https://staticbackend.com/docs/users))
-- [x] Database CRUD, queries and full-text search ([docs →](https://staticbackend.com/docs/database))
-- [x] Realtime/Websockets ([docs →](https://staticbackend.com/docs/websocket))
-- [x] File storage ([docs →](https://staticbackend.com/docs/storage))
-- [x] server-side functions ([docs →](https://staticbackend.com/docs/functions))
+- [x] Authentication ([docs →](https://staticbackend.dev/docs))
+- [x] Account->users management ([docs →](https://staticbackend.dev/docs/users))
+- [x] Database CRUD, queries and full-text search ([docs →](https://staticbackend.dev/docs/database))
+- [x] Realtime/Websockets ([docs →](https://staticbackend.dev/docs/websocket))
+- [x] File storage ([docs →](https://staticbackend.dev/docs/storage))
+- [x] server-side functions ([docs →](https://staticbackend.dev/docs/functions))
 - [x] Schedule jobs
-- [x] Send mails/sms ([docs →](https://staticbackend.com/docs/sendmail))
-- [x] Caching ([docs →](https://staticbackend.com/docs/cache))
-- [x] Handle forms ([docs →](https://staticbackend.com/docs/forms))
-- [x] Resize images & convert URL to PDF ([docs →](https://staticbackend.com/docs/extras/))
+- [x] Send mails/sms ([docs →](https://staticbackend.dev/docs/sendmail))
+- [x] Caching ([docs →](https://staticbackend.dev/docs/cache))
+- [x] Handle forms ([docs →](https://staticbackend.dev/docs/forms))
+- [x] Resize images & convert URL to PDF ([docs →](https://staticbackend.dev/docs/extras/))
 
 
 ## Table of content
@@ -62,7 +62,7 @@ $ npm install -g @staticbackend/cli
 ```
 
 *You may 
-[install the CLI manually](https://staticbackend.com/getting-started/cli) as 
+[install the CLI manually](https://staticbackend.dev/getting-started/cli) as 
 well.*
 
 This will install as the `backend` program. Start the development server with:
@@ -268,17 +268,17 @@ We're trying to have the best experience possible reading our documentation.
 
 Please help us improve if you have any feedback.
 
-* [Documentation with code samples for client libraries and CURL](https://staticbackend.com/docs)
+* [Documentation with code samples for client libraries and CURL](https://staticbackend.dev/docs)
 * [Go client library package](https://pkg.go.dev/github.com/staticbackendhq/backend-go)
 * [Go importable package](https://pkg.go.dev/github.com/staticbackendhq/core/backend)
-* [Self-host guide](https://staticbackend.com/getting-started/self-hosting)
-* [Install the CLI](https://staticbackend.com/getting-started/cli)
+* [Self-host guide](https://staticbackend.dev/getting-started/self-hosting)
+* [Install the CLI](https://staticbackend.dev/getting-started/cli)
 
 **Examples**:
 
-* [To-do list example](https://staticbackend.com/getting-started/)
-* [Realtime collaboration](https://staticbackend.com/blog/realtime-collaboration-example/)
-* [Live chat using server-side function & real-time component](https://staticbackend.com/blog/server-side-functions-task-scheduler-example/)
+* [To-do list example](https://staticbackend.dev/getting-started/)
+* [Realtime collaboration](https://staticbackend.dev/blog/realtime-collaboration-example/)
+* [Live chat using server-side function & real-time component](https://staticbackend.dev/blog/server-side-functions-task-scheduler-example/)
 * [Jamstack Bostom talk](https://www.youtube.com/watch?v=Uf-K6io9p7w)
 
 ## Deployment
@@ -318,9 +318,9 @@ your first application.
 For production, you'll want to configure environment variables found in `.env` 
 file.
 
-* [Self-hosting guide](https://staticbackend.com/getting-started/self-hosting/)
+* [Self-hosting guide](https://staticbackend.dev/getting-started/self-hosting/)
 * [Video showing how to self-host](https://www.youtube.com/watch?v=vQjfaMxidx4)
-* [Detailed blog post on how to self-host](https://staticbackend.com/blog/get-started-self-hosted-version/)
+* [Detailed blog post on how to self-host](https://staticbackend.dev/blog/get-started-self-hosted-version/)
 
 ## Get support
 

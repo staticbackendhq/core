@@ -1,14 +1,14 @@
 {
   "name": "StaticBackend",
   "description": "Backend API for web/mobile app.",
-	"logo": "https://staticbackend.com/img/logo-small.png",
+	"logo": "https://staticbackend.dev/img/logo-small.png",
   "keywords": [
     "dbaas",
     "backend",
     "backend-api",
     "firebase"
   ],
-  "website": "https://staticbackend.com",
+  "website": "https://staticbackend.dev",
   "repository": "https://github.com/staticbackendhq/core",
 	"scripts": {
 		"postdeploy": "psql ${DATABASE_URL} -f sql/0001_bootstrap_db.sql"
