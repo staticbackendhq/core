@@ -11,16 +11,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Install dependencies for chromedp
       run: sudo apt-get install -y libnspr4 libnss3 libexpat1 libfontconfig1 libuuid1
 
     - name: Start containers (PostgreSQL, MongoDB, Redis)
-      run: docker-compose -f "docker-compose-unittest.yml" up -d
+      run: docker compose -f "docker-compose-unittest.yml" up -d
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: 1.25
 
@@ -43,7 +43,7 @@ jobs:
       run: rm -rf sb.fts && rm -rf backend/sb.fts
     
     - name: Clear all cache keys
-      run: docker exec core_redis_1 redis-cli FLUSHDB
+      run: docker exec core_redis redis-cli FLUSHDB
 
     - name: Test (Mongo data store)
       run: make test-core
