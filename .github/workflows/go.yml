@@ -29,9 +29,11 @@ jobs:
           libxfixes3 \
           libxrandr2 \
           libgbm1 \
-          libasound2 \
+          libasound2t64 \
           libpango-1.0-0 \
-          libcairo2
+          libcairo2 \
+          libxshmfence1 \
+          libglu1-mesa
 
     - name: Start containers (PostgreSQL, MongoDB, Redis)
       run: docker compose -f "docker-compose-unittest.yml" up -d

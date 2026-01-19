@@ -20,11 +20,18 @@ func Do(body []byte) (buf []byte, err error) {
 		return
 	}
 
-	/*opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("disable-gpu", true),
-	)*/
+	// explicitly set flags for Headless/CI environments
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.NoSandbox,
+		chromedp.DisableGPU,
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Headless,
+	)
 
-	ctx, cancel := chromedp.NewContext(context.Background())
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer allocCancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	err = chromedp.Run(ctx, toBytes(data, &buf))
