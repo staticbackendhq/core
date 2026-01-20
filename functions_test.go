@@ -85,14 +85,14 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			return;
 		}
 
-		var getRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d");
+		var getRes = fetch("https://echo.free.beeceptor.com/sb=fn");
 		if (!getRes.ok) {
 			log("ERROR: sending GET request");
 			log(getRes.content);
 			return;
 		}
 
-		var postRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+		var postRes = fetch("https://echo.free.beeceptor.com/sb=fn", {
 			method: "POST",
 			headers: {
 				"Content-Type" : "application/json"
@@ -107,7 +107,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			return;
 		}
 
-		var putRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+		var putRes = fetch("https://echo.free.beeceptor.com/sb=fn", {
 			method: "PUT",
 			headers: {
 				"Content-Type" : "application/json"
@@ -121,7 +121,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			log(putRes.content);
 			return;
 		}
-		var patchRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+		var patchRes = fetch("https://echo.free.beeceptor.com/sb=fn", {
 			method: "PATCH",
 			headers: {
 				"Content-Type" : "application/json"
@@ -135,7 +135,7 @@ func TestFunctionsExecuteDBOperations(t *testing.T) {
 			log(patchRes.content);
 			return;
 		}
-		var delRes = fetch("https://run.mocky.io/v3/427873c5-4baa-4f68-b880-b6e3e45b3d4d", {
+		var delRes = fetch("https://echo.free.beeceptor.com/sb=fn", {
 			method: "DELETE",
 			headers: {
 				"Content-Type" : "application/json"
