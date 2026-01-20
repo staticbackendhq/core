@@ -36,7 +36,9 @@ jobs:
           libglu1-mesa
 
     - name: Start containers (PostgreSQL, MongoDB, Redis)
-      run: docker compose -f "docker-compose-unittest.yml" up -d
+      run: |
+        docker compose -f "docker-compose-unittest.yml" down -v --remove-orphans
+        docker compose -f "docker-compose-unittest.yml" up -d
 
     - name: Set up Go
       uses: actions/setup-go@v5
