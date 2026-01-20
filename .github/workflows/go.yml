@@ -39,6 +39,7 @@ jobs:
       run: |
         docker compose -f "docker-compose-unittest.yml" down -v --remove-orphans
         docker compose -f "docker-compose-unittest.yml" up -d
+        sleep 5
 
     - name: Set up Go
       uses: actions/setup-go@v5
