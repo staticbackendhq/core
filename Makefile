@@ -64,7 +64,7 @@ test-components: test-backend test-cache test-storage test-intl test-extra test-
 
 
 stripe-dev:
-	stripe listen -p sb --forward-to http://localhost:8099/stripe
+	stripe listen --forward-to http://localhost:8099/stripe
 
 docker: build
 	docker build . -t staticbackend:latest

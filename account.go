@@ -77,12 +77,13 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	stripeCustomerID, subID := "", ""
 	active := true
 
-	if !bypassStripe && config.Current.AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
+	if !bypassStripe && len(config.Current.StripeKey) > 0 {
 		active = false
 
 		cusParams := &stripe.CustomerParams{
 			Email: stripe.String(email),
 		}
+		cusParams.Metadata = map[string]string{"app": "sb"}
 		cus, err := customer.New(cusParams)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -98,7 +99,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 					Price: stripe.String(config.Current.StripePriceIDIdea),
 				},
 			},
-			TrialPeriodDays: stripe.Int64(60),
+			TrialPeriodDays: stripe.Int64(30),
 		}
 		newSub, err := sub.New(subParams)
 		if err != nil {
@@ -136,10 +137,10 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	signUpURL := "no need to sign up in dev mode"
-	if !bypassStripe && config.Current.AppEnv == AppEnvProd && len(config.Current.StripeKey) > 0 {
+	if !bypassStripe && len(config.Current.StripeKey) > 0 {
 		params := &stripe.BillingPortalSessionParams{
 			Customer:  stripe.String(stripeCustomerID),
-			ReturnURL: stripe.String("https://staticbackend.dev/stripe"),
+			ReturnURL: stripe.String(config.Current.StripeRedirectFromPortal),
 		}
 		s, err := session.New(params)
 		if err != nil {
