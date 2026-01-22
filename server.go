@@ -20,7 +20,7 @@ import (
 	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/realtime"
 
-	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v84"
 	"golang.org/x/sync/errgroup"
 
 	_ "github.com/lib/pq"

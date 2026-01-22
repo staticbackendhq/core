@@ -14,10 +14,11 @@ import (
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
 
-	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/billingportal/session"
-	"github.com/stripe/stripe-go/v72/customer"
-	"github.com/stripe/stripe-go/v72/sub"
+	"github.com/stripe/stripe-go/v84"
+	bp "github.com/stripe/stripe-go/v84/billingportal/session"
+	"github.com/stripe/stripe-go/v84/checkout/session"
+	"github.com/stripe/stripe-go/v84/customer"
+	"github.com/stripe/stripe-go/v84/subscription"
 )
 
 type accounts struct {
@@ -74,16 +75,20 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stripeCustomerID, subID := "", ""
+	stripeCustomerID := ""
 	active := true
+	signUpURL := "no need to sign up in dev mode"
 
 	if !bypassStripe && len(config.Current.StripeKey) > 0 {
 		active = false
 
+		mdata := make(map[string]string)
+		mdata["sb"] = "yes"
+
 		cusParams := &stripe.CustomerParams{
-			Email: stripe.String(email),
+			Email:    stripe.String(email),
+			Metadata: mdata,
 		}
-		cusParams.Metadata = map[string]string{"app": "sb"}
 		cus, err := customer.New(cusParams)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -92,22 +97,30 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 
 		stripeCustomerID = cus.ID
 
-		subParams := &stripe.SubscriptionParams{
-			Customer: stripe.String(cus.ID),
-			Items: []*stripe.SubscriptionItemsParams{
+		csParams := &stripe.CheckoutSessionParams{
+			Customer:   stripe.String(cus.ID),
+			SuccessURL: stripe.String(fmt.Sprintf("%s/success", config.Current.StripeRedirectFromPortal)),
+			CancelURL:  stripe.String(fmt.Sprintf("%s/cancel", config.Current.StripeRedirectFromPortal)),
+			Mode:       stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+			LineItems: []*stripe.CheckoutSessionLineItemParams{
 				{
-					Price: stripe.String(config.Current.StripePriceIDIdea),
+					Price:    stripe.String(config.Current.StripePriceIDIdea),
+					Quantity: stripe.Int64(1),
 				},
 			},
-			TrialPeriodDays: stripe.Int64(30),
+			SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
+				TrialPeriodDays: stripe.Int64(30),
+			},
 		}
-		newSub, err := sub.New(subParams)
+
+		cs, err := session.New(csParams)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		subID = newSub.ID
+		signUpURL = cs.URL
+
 	}
 
 	// create the account
@@ -118,7 +131,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		ID:             "cust-local-dev", // easier for CLI/memory flow
 		Email:          email,
 		StripeID:       stripeCustomerID,
-		SubscriptionID: subID,
+		SubscriptionID: "",
 		Plan:           model.PlanIdea,
 		IsActive:       active,
 		Created:        time.Now(),
@@ -134,21 +147,6 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	signUpURL := "no need to sign up in dev mode"
-	if !bypassStripe && len(config.Current.StripeKey) > 0 {
-		params := &stripe.BillingPortalSessionParams{
-			Customer:  stripe.String(stripeCustomerID),
-			ReturnURL: stripe.String(config.Current.StripeRedirectFromPortal),
-		}
-		s, err := session.New(params)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		signUpURL = s.URL
 	}
 
 	token, err := backend.DB.FindUserByEmail(bc.Name, email)
@@ -279,25 +277,30 @@ func (a *accounts) addDatabase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(config.Current.StripeKey) > 0 && len(cust.SubscriptionID) > 0 {
-		curSub, err := sub.Get(cust.SubscriptionID, nil)
+		curSub, err := subscription.Get(cust.SubscriptionID, nil)
 		if err != nil {
 			a.log.Err(err).Msgf("trying to get stripe cust %s sub %s", cust.StripeID, cust.SubscriptionID)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		qty := curSub.Quantity + 1
+		itemID := ""
+		quantity := int64(1)
+		if len(curSub.Items.Data) > 0 {
+			itemID = curSub.Items.Data[0].ID
+			quantity = curSub.Items.Data[0].Quantity + 1
+		}
 
 		params := &stripe.SubscriptionParams{
-			Customer: stripe.String(cust.StripeID),
 			Items: []*stripe.SubscriptionItemsParams{
-				&stripe.SubscriptionItemsParams{
-					Quantity: stripe.Int64(qty),
+				{
+					ID:       stripe.String(itemID),
+					Quantity: stripe.Int64(quantity),
 				},
 			},
 		}
-		//result, err := subscription.New(params)
-		if _, err := sub.Update(cust.SubscriptionID, params); err != nil {
+
+		if _, err := subscription.Update(cust.SubscriptionID, params); err != nil {
 			a.log.Err(err).Msgf("unable to update stripe cust %s sub %s quantity", cust.ID, cust.SubscriptionID)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -406,9 +409,9 @@ func getStripePortalURL(customerID string) (string, error) {
 
 	params := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(cus.StripeID),
-		ReturnURL: stripe.String("https://staticbackend.dev/stripe"),
+		ReturnURL: stripe.String(config.Current.StripeRedirectFromPortal),
 	}
-	s, err := session.New(params)
+	s, err := bp.New(params)
 	if err != nil {
 		return "", err
 	}

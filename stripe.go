@@ -2,19 +2,16 @@ package staticbackend
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
-	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/webhook"
+	"github.com/stripe/stripe-go/v84"
+	"github.com/stripe/stripe-go/v84/webhook"
 )
 
 type stripeWebhook struct {
@@ -64,15 +61,16 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		go wh.handleSubCancelled(sub)
-	} else if event.Type == "payment_method.attached" {
-		var paymentMethod stripe.PaymentMethod
-		err := json.Unmarshal(event.Data.Raw, &paymentMethod)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "STRIPE ERROR: parsing webhook JSON: %v\n", err)
+	} else if event.Type == "checkout.session.completed" {
+		var cs stripe.CheckoutSession
+		if err := json.Unmarshal(event.Data.Raw, &cs); err != nil {
+			wh.log.Error().Err(err).Msg("STRIPE ERROR (checkout session completed JSON))")
+
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		go wh.handlePaymentMethodAttached(paymentMethod)
+
+		wh.handleCheckoutSessionCompleted(cs)
 	} else {
 		log.Printf("received unhandled Stripe webhook: %s\n", event.Type)
 	}
@@ -81,6 +79,10 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
+	if !wh.isSBCustomer(sub.Customer.Metadata) {
+		return
+	}
+
 	stripeID := sub.Customer.ID
 
 	wh.log.Info().Msgf("[Sub Changed]: for StripeID: %s", stripeID)
@@ -108,8 +110,9 @@ func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
 }
 
 func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
-	// To prevent from the customer.subscription.updated events
-	time.Sleep(15 * time.Second)
+	if !wh.isSBCustomer(sub.Customer.Metadata) {
+		return
+	}
 
 	stripeID := sub.Customer.ID
 
@@ -119,13 +122,17 @@ func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
 		return
 	}
 
-	if err := backend.DB.ChangeTenantPlan(cus.ID, model.PlanIdea); err != nil {
-		wh.log.Error().Err(err).Msg("STRIPE ERROR (update cus plan)")
+	if err := backend.DB.ActivateTenant(cus.ID, false); err != nil {
+		wh.log.Error().Err(err).Msg("STRIPE ERROR (sub canceled)")
 	}
 }
 
-func (wh *stripeWebhook) handlePaymentMethodAttached(pm stripe.PaymentMethod) {
-	stripeID := pm.Customer.ID
+func (wh *stripeWebhook) handleCheckoutSessionCompleted(cs stripe.CheckoutSession) {
+	if !wh.isSBCustomer(cs.Customer.Metadata) {
+		return
+	}
+
+	stripeID := cs.Customer.ID
 
 	cus, err := backend.DB.GetTenantByStripeID(stripeID)
 	if err != nil {
@@ -155,4 +162,9 @@ func (wh *stripeWebhook) priceToLevel(priceID string) int {
 	default:
 		return model.PlanIdea
 	}
+}
+
+func (wh *stripeWebhook) isSBCustomer(m map[string]string) bool {
+	v, ok := m["sb"]
+	return ok && v == "yes"
 }

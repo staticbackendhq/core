@@ -15,7 +15,7 @@ require (
 	github.com/lib/pq v1.10.4
 	github.com/markbates/goth v1.73.0
 	github.com/rs/zerolog v1.27.0
-	github.com/stripe/stripe-go/v72 v72.94.0
+	github.com/stripe/stripe-go/v84 v84.2.0
 	go.mongodb.org/mongo-driver v1.7.0
 	golang.org/x/crypto v0.45.0
 	golang.org/x/image v0.18.0
