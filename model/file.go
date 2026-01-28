@@ -6,8 +6,10 @@ import (
 )
 
 type UploadFileData struct {
-	FileKey string
-	File    io.ReadSeeker
+	FileKey  string
+	File     io.ReadSeeker
+	Size     int64
+	Mimetype string
 }
 
 type File struct {

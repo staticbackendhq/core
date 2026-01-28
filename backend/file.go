@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"io"
+	"mime"
 	"path/filepath"
 	"time"
 
@@ -49,7 +50,12 @@ func (f FileStore) Save(filename, name string, file io.ReadSeeker, size int64) (
 		ext,
 	)
 
-	upData := model.UploadFileData{FileKey: fileKey, File: file}
+	upData := model.UploadFileData{
+		FileKey:  fileKey,
+		File:     file,
+		Size:     size,
+		Mimetype: mime.TypeByExtension("." + ext),
+	}
 	url, err := Filestore.Save(upData)
 	if err != nil {
 		return

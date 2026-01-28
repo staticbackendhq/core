@@ -1,38 +1,53 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/model"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type S3 struct{}
 
 func (S3) Save(data model.UploadFileData) (string, error) {
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
+	ctx := context.Background()
+	endpoint := config.Current.S3Endpoint
+	accessKeyID := config.Current.S3AccessKey
+	secretAccessKey := config.Current.S3SecretKey
+	bucketName := config.Current.S3Bucket
+
+	// Initialize minio client object.
+	c, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: true,
+	})
 	if err != nil {
 		return "", err
 	}
 
-	svc := s3.New(sess)
-	obj := &s3.PutObjectInput{}
-	obj.Body = data.File
-	obj.ACL = aws.String(s3.ObjectCannedACLPublicRead)
-	obj.Bucket = aws.String(config.Current.AWSS3Bucket)
-	obj.Key = aws.String(data.FileKey)
+	contentType := data.Mimetype
+	if len(contentType) == 0 {
+		contentType = "application/octet-stream"
+	}
 
-	if _, err := svc.PutObject(obj); err != nil {
+	opts := minio.PutObjectOptions{
+		ContentType: contentType,
+		UserMetadata: map[string]string{
+			"x-amz-acl": "public-read",
+		},
+	}
+	_, err = c.PutObject(ctx, bucketName, data.FileKey, data.File, data.Size, opts)
+	if err != nil {
 		return "", err
 	}
 
 	url := fmt.Sprintf(
 		"%s/%s",
-		config.Current.AWSCDNURL,
+		config.Current.S3CDNURL,
 		data.FileKey,
 	)
 
@@ -40,19 +55,19 @@ func (S3) Save(data model.UploadFileData) (string, error) {
 }
 
 func (S3) Delete(fileKey string) error {
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("ca-central-1")})
+	ctx := context.Background()
+	endpoint := config.Current.S3Endpoint
+	accessKeyID := config.Current.S3AccessKey
+	secretAccessKey := config.Current.S3SecretKey
+
+	// Initialize minio client object.
+	c, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: true,
+	})
 	if err != nil {
 		return err
 	}
 
-	svc := s3.New(sess)
-	obj := &s3.DeleteObjectInput{
-		Bucket: aws.String(config.Current.AWSS3Bucket),
-		Key:    aws.String(fileKey),
-	}
-	if _, err := svc.DeleteObject(obj); err != nil {
-		return err
-	}
-
-	return nil
+	return c.RemoveObject(ctx, config.Current.S3Bucket, fileKey, minio.RemoveObjectOptions{})
 }

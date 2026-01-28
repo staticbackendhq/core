@@ -69,12 +69,18 @@ type AppConfig struct {
 	// RedisPassword if RedisURL is not used, password for Redis
 	RedisPassword string
 
-	// AWSRegion region for AWS
-	AWSRegion string
-	// AWSS3Bucket S3 bucket
-	AWSS3Bucket string
-	// AWSCDNURL CDN URL
-	AWSCDNURL string
+	// S3AccessKey access key for S3 connection
+	S3AccessKey string
+	// S3SecretKey secret key for S3 connection
+	S3SecretKey string
+	// S3Endpoint endpoint for the S3 compat API
+	S3Endpoint string
+	// S3Region region for AWS
+	S3Region string
+	// S3Bucket S3 bucket
+	S3Bucket string
+	// S3CDNURL CDN URL
+	S3CDNURL string
 
 	// KeepPermissionInName if "yes" will keep the repo permission in repo name
 	KeepPermissionInName bool
@@ -124,9 +130,12 @@ func LoadConfig() AppConfig {
 		TwilioAuthToken:          os.Getenv("TWILIO_AUTHTOKEN"),
 		TwilioTestCellNumber:     os.Getenv("MY_CELL"),
 		TwilioNumber:             os.Getenv("TWILIO_NUMBER"),
-		AWSRegion:                os.Getenv("AWS_REGION"),
-		AWSCDNURL:                os.Getenv("AWS_CDN_URL"),
-		AWSS3Bucket:              os.Getenv("AWS_S3_BUCKET"),
+		S3AccessKey:              os.Getenv("S3_ACCESSKEY"),
+		S3SecretKey:              os.Getenv("S3_SECRETKEY"),
+		S3Endpoint:               os.Getenv("S3_ENDPOINT"),
+		S3Region:                 os.Getenv("S3_REGION"),
+		S3Bucket:                 os.Getenv("S3_BUCKET"),
+		S3CDNURL:                 os.Getenv("S3_CDN_URL"),
 		KeepPermissionInName:     os.Getenv("KEEP_PERM_COL_NAME") == "",
 		LogConsoleLevel:          os.Getenv("LOG_CONSOLE_LEVEL"),
 		LogFilename:              os.Getenv("LOG_FILENAME"),
