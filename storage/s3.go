@@ -34,7 +34,12 @@ func (S3) Save(data model.UploadFileData) (string, error) {
 		contentType = "application/octet-stream"
 	}
 
-	opts := minio.PutObjectOptions{ContentType: contentType}
+	opts := minio.PutObjectOptions{
+		ContentType: contentType,
+		UserMetadata: map[string]string{
+			"x-amz-acl": "public-read",
+		},
+	}
 	_, err = c.PutObject(ctx, bucketName, data.FileKey, data.File, data.Size, opts)
 	if err != nil {
 		return "", err
