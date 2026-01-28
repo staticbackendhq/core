@@ -50,6 +50,9 @@ test-cache:
 test-storage:
 	@go test --cover ./storage/...
 
+test-email:
+	@go test --cover ./email/...
+
 test-intl:
 	@go test --cover ./internal
 
