@@ -1,37 +1,51 @@
-version: "3"
+version: "3.8"
+
 services:
   sb:
     image: staticbackend:latest
+    container_name: demo_sb
     ports:
       - "8099:8099"
     env_file:
       - .env
     depends_on:
       - "db"
-    #  - "redis"
+      - "redis"
 
   # For PostgreSQL
   db:
-    image: postgres
+    image: postgres:15-alpine
+    container_name: demo_pg
     restart: always
     ports:
-      - 5432:5432
+      - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    volumes: 
-      - ../postgres-data:/var/lib/postgresql/data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
       - ./sql/0001_bootstrap_db.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # For MongoDB    
+  # For MongoDB
   #mongo:
-  #  image: mongo:3-stretch
+  #  image: mongo:4.4
+  #  container_name: demo_mongo
   #  volumes:
-  #    - ./mongodata:/data/db/mongo
+  #    - mongo_data:/data/db/mongo
   #  ports:
   #    - "27017:27017"
 
   redis:
     image: "redis:alpine"
+    container_name: demo_redis
     ports:
       - "6379:6379"
+
+volumes:
+  postgres_data:
+  #mongo_data:

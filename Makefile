@@ -69,6 +69,9 @@ test-components: test-backend test-cache test-storage test-intl test-extra test-
 stripe-dev:
 	stripe listen --forward-to http://localhost:8099/stripe
 
+lint:
+	@golangci-lint run --timeout=10m
+
 docker: build
 	docker build . -t staticbackend:latest
 
