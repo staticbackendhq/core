@@ -14,6 +14,10 @@ import (
 func TestS3Storage(t *testing.T) {
 	config.Current = config.LoadConfig()
 
+	if !strings.EqualFold(config.Current.StorageProvider, StorageProviderS3) {
+		t.Skip()
+	}
+
 	s3store := S3{}
 
 	f, err := os.Open("s3_test.go")

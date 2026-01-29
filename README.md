@@ -3,12 +3,7 @@
 ![build badge](https://github.com/staticbackendhq/core/actions/workflows/go.yml/badge.svg)
 [![GoReportCard](https://goreportcard.com/badge/github.com/staticbackendhq/core)](https://goreportcard.com/report/github.com/staticbackendhq/core)
 [![Go Reference](https://pkg.go.dev/badge/github.com/staticbackendhq/core/backend.svg)](https://pkg.go.dev/github.com/staticbackendhq/core/backend)
-<a href="https://discord.gg/vgh2PTp9ZB">
-	<img src="https://img.shields.io/discord/872035652944928838?logoColor=%23DD0000">
-</a>
-<a href="https://twitter.com/staticbackend">
-	<img src="https://img.shields.io/twitter/follow/staticbackend?color=DD0000&style=social">
-</a>
+
 
 [StaticBackend](https://staticbackend.dev) is a simple backend server API that 
 helps you create web applications. It handles most of the building blocks you'll 
@@ -26,6 +21,7 @@ need on the backend.
 - [x] Handle forms ([docs →](https://staticbackend.dev/docs/forms))
 - [x] Resize images & convert URL to PDF ([docs →](https://staticbackend.dev/docs/extras/))
 
+_note: The project was archived in June 2024 and active development restarted in January 2026._
 
 ## Table of content
 
@@ -326,7 +322,6 @@ file.
 
 You may use the following channels to get help and support.
 
-* [Discord](https://discord.gg/vgh2PTp9ZB): for any help and joining the conversation.
 * [GitHub issues](https://github.com/staticbackendhq/core/issues): To report bugs / contributing code.
 * [GitHub Discussions](https://github.com/staticbackendhq/core/discussions): For ideas, feature requests and general discussions.
 
@@ -354,4 +349,3 @@ If you're looking to help the project, here are multiple ways:
 * Use it and share your experiences.
 * Sponsor the development via GitHub sponsors.
 * Spread the words, a tweet, a blog post, any mention is helpful.
-* Join the [Discord](https://discord.gg/vgh2PTp9ZB) server.
