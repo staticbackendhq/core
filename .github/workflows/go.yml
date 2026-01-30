@@ -39,7 +39,10 @@ jobs:
       run: |
         docker compose -f "docker-compose-unittest.yml" down -v --remove-orphans
         docker compose -f "docker-compose-unittest.yml" up -d
-        sleep 5
+        echo "Waiting for PostgreSQL to be ready..."
+        timeout 60 sh -c 'until docker exec core_pg pg_isready -U postgres; do sleep 1; done'
+        echo "PostgreSQL is ready"
+        sleep 2
 
     - name: Set up Go
       uses: actions/setup-go@v5
