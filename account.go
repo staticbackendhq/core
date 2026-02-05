@@ -186,6 +186,15 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		TextBody: emailFuncs.StripHTML(body),
 	}
 
+	if memoryMode && fromCLI {
+		// cache the root token so caller can always use
+		// "safe-to-use-in-dev-root-token" as root token instead of
+		// the changing one across CLI start/stop
+		if err := backend.Cache.Set("dev-root-token", rootToken); err != nil {
+			backend.Log.Error().Err(err)
+		}
+	}
+
 	if memoryMode && !bypassStripe {
 		fmt.Printf(`
 Start sending requests with the following credentials:
@@ -208,13 +217,6 @@ Refer to the documentation at https://staticbackend.dev/docs
 `,
 			bc.ID, email, pw, rootToken,
 		)
-
-		// cache the root token so caller can always use
-		// "safe-to-use-in-dev-root-token" as root token instead of
-		// the changing one across CLI start/stop
-		if err := backend.Cache.Set("dev-root-token", rootToken); err != nil {
-			backend.Log.Error().Err(err)
-		}
 	} else if !bypassStripe {
 		err = backend.Emailer.Send(ed)
 		if err != nil {
@@ -447,13 +449,14 @@ func (a *accounts) addUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		mship := backend.Membership(conf)
-		_, _, err = mship.CreateUser(auth.AccountID, data.Email, data.Password, 0)
+		_, newUser, err := mship.CreateUser(auth.AccountID, data.Email, data.Password, 0)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		respond(w, http.StatusOK, true)
+		respond(w, http.StatusOK, newUser)
+		return
 	}
 	users, err := backend.DB.ListUsers(conf.Name, auth.AccountID)
 	if err != nil {
