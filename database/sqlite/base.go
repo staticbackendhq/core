@@ -34,8 +34,13 @@ func (j JSON) Value() (driver.Value, error) {
 }
 
 func (j *JSON) Scan(value interface{}) error {
-	b, ok := value.([]uint8)
-	if !ok {
+	var b []byte
+	switch v := value.(type) {
+	case []uint8:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
 		return errors.New("type assertion to []byte failed")
 	}
 
@@ -291,7 +296,7 @@ func (sl *SQLite) UpdateDocument(auth model.Auth, dbName, col, id string, doc ma
 
 	qry := fmt.Sprintf(`
 		UPDATE %s_%s SET
-			data = json_set(data, '$', $4)
+			data = json($4)
 		%s AND id = $3
 	`, dbName, model.CleanCollectionName(col), where)
 
@@ -300,7 +305,7 @@ func (sl *SQLite) UpdateDocument(auth model.Auth, dbName, col, id string, doc ma
 		return nil, err
 	}
 
-	if _, err := sl.DB.Exec(qry, auth.AccountID, auth.UserID, id, b); err != nil {
+	if _, err := sl.DB.Exec(qry, auth.AccountID, auth.UserID, id, string(b)); err != nil {
 		return nil, err
 	}
 
@@ -346,7 +351,7 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 
 	qry = fmt.Sprintf(`
 		UPDATE %s_%s SET
-			data = json_set(data, '$', $3)
+			data = json($3)
 		%s
 	`, dbName, model.CleanCollectionName(col), where)
 
@@ -354,7 +359,7 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 	if err != nil {
 		return 0, err
 	}
-	res, err := sl.DB.Exec(qry, auth.AccountID, auth.UserID, b)
+	res, err := sl.DB.Exec(qry, auth.AccountID, auth.UserID, string(b))
 	if err != nil {
 		return 0, err
 	}
