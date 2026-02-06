@@ -226,8 +226,6 @@ Refer to the documentation at https://staticbackend.dev/docs
 		}
 	}
 
-	a.log.Debug().Msgf("DEBUG: %s", signUpURL)
-
 	if fromCLI {
 		respond(w, http.StatusOK, signUpURL)
 		return
