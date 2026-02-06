@@ -130,7 +130,7 @@ func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
 func (wh *stripeWebhook) handleCheckoutSessionCompleted(cs stripe.CheckoutSession) {
 	if !wh.isSBCustomer(cs.Customer.Metadata) {
 		wh.log.Warn().Msg("STRIPE: checkout completed, not a sb customer")
-		for k, v := range cs.customer.Metadata {
+		for k, v := range cs.Customer.Metadata {
 			wh.log.Warn().Msgf("-> %s: %s", k, v)
 		}
 		return
