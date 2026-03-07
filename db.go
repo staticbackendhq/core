@@ -476,6 +476,13 @@ func getPagination(u *url.URL) (page int64, size int64) {
 		size = 25
 	}
 
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 {
+		size = 1
+	}
+
 	return
 }
 

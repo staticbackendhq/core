@@ -526,3 +526,36 @@ func TestDBSearchIndexAndQuery(t *testing.T) {
 		t.Errorf("expected task id to be %s got %s", createdTask.ID, tasks[0].ID)
 	}
 }
+
+func TestGetPaginationSanitizesValues(t *testing.T) {
+	tests := []struct {
+		name         string
+		query        string
+		expectedPage int64
+		expectedSize int64
+	}{
+		{"defaults when no params", "", 1, 25},
+		{"valid values", "?page=3&size=10", 3, 10},
+		{"zero page defaults to 1", "?page=0&size=10", 1, 10},
+		{"negative page defaults to 1", "?page=-5&size=10", 1, 10},
+		{"zero size defaults to 1", "?page=2&size=0", 2, 1},
+		{"negative size defaults to 1", "?page=2&size=-3", 2, 1},
+		{"both zero", "?page=0&size=0", 1, 1},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := url.Parse("http://localhost/db/tasks" + tc.query)
+			if err != nil {
+				t.Fatal(err)
+			}
+			page, size := getPagination(u)
+			if page != tc.expectedPage {
+				t.Errorf("expected page %d, got %d", tc.expectedPage, page)
+			}
+			if size != tc.expectedSize {
+				t.Errorf("expected size %d, got %d", tc.expectedSize, size)
+			}
+		})
+	}
+}
