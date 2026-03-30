@@ -1,9 +1,8 @@
 module github.com/staticbackendhq/core
 
-go 1.25
+go 1.25.0
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/service/ses v1.34.18
 	github.com/blevesearch/bleve/v2 v2.5.0
@@ -21,8 +20,8 @@ require (
 	github.com/stripe/stripe-go/v84 v84.2.0
 	go.mongodb.org/mongo-driver v1.7.0
 	golang.org/x/crypto v0.45.0
-	golang.org/x/image v0.18.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/image v0.38.0
+	golang.org/x/sync v0.20.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	modernc.org/sqlite v1.44.3
 )
@@ -30,6 +29,7 @@ require (
 require (
 	cloud.google.com/go v0.75.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.4.5 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.41.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17 // indirect
@@ -100,7 +100,7 @@ require (
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
