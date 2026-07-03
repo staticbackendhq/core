@@ -181,6 +181,12 @@ var (
 
 // Setup initializes the core services based on the configuration received.
 func Setup(cfg config.AppConfig) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if err := Close(ctx); err != nil && Log != nil {
+		Log.Error().Err(err).Msg("error closing existing backend services")
+	}
+	cancel()
+
 	Config = cfg
 	resetLifecycle()
 

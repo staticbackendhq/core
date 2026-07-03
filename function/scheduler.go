@@ -58,6 +58,12 @@ func (t taskAuthCache) auth() model.Auth {
 func (ts *TaskScheduler) Start() {
 	ts.ensureLifecycle()
 	ts.mu.Lock()
+	if ts.stopped {
+		done := ts.done
+		ts.mu.Unlock()
+		close(done)
+		return
+	}
 	ts.running = true
 	done := ts.done
 	stop := ts.stop
@@ -70,11 +76,24 @@ func (ts *TaskScheduler) Start() {
 		close(done)
 	}()
 
+	select {
+	case <-stop:
+		return
+	default:
+	}
+
 	tasks, err := ts.DataStore.ListTasks()
 	if err != nil {
 		ts.Log.Error().Err(err).Msg("error loading tasks")
 		return
 	}
+
+	select {
+	case <-stop:
+		return
+	default:
+	}
+
 	ts.ensureScheduler()
 	if ts.Scheduler == nil {
 		return
@@ -99,25 +118,23 @@ func (ts *TaskScheduler) Stop(ctx context.Context) error {
 	}
 	done := ts.done
 	running := ts.running
-	scheduler := ts.Scheduler
 	ts.mu.Unlock()
 
-	if scheduler != nil {
-		if err := scheduler.Shutdown(); err != nil {
-			return err
+	if running {
+		select {
+		case <-done:
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 
-	if !running {
+	ts.mu.Lock()
+	scheduler := ts.Scheduler
+	ts.mu.Unlock()
+	if scheduler == nil {
 		return nil
 	}
-
-	select {
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	return scheduler.Shutdown()
 }
 
 func (ts *TaskScheduler) AddOnTheFly(task model.Task) {
@@ -152,7 +169,13 @@ func (ts *TaskScheduler) CancelTask(id string) error {
 }
 
 func (ts *TaskScheduler) ensureScheduler() {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
 	if ts.Scheduler != nil {
+		return
+	}
+	if ts.stopped {
 		return
 	}
 

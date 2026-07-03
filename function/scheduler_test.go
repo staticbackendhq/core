@@ -238,6 +238,28 @@ func TestTaskSchedulerStopUnblocksStart(t *testing.T) {
 	}
 }
 
+func TestTaskSchedulerStopBeforeStart(t *testing.T) {
+	ts := &TaskScheduler{Log: logger.Get(config.LoadConfig())}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := ts.Stop(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ts.Start()
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for stopped scheduler start to return")
+	}
+}
+
 func TestTaskSchedulerDoesNotRunCronTaskOnStart(t *testing.T) {
 	baseName := fmt.Sprintf("sched_no_start_%d", time.Now().UnixNano())
 	ds, _ := newSchedulerTestStore(t, baseName)

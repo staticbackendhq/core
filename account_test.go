@@ -256,7 +256,7 @@ func TestCrossAccountUserAssociation(t *testing.T) {
 	// addUser as the admin (testAccountID) with an email from a different account
 	// should create a cross-account association, not a new user record
 	resp := dbReq(t, acct.addUser, "POST", "/account/users", model.Login{Email: crossEmail})
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
@@ -274,7 +274,7 @@ func TestCrossAccountUserAssociation(t *testing.T) {
 	}
 
 	resp = dbReq(t, acct.addUser, "GET", "/account/users", nil)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
@@ -297,7 +297,7 @@ func TestCrossAccountUserAssociation(t *testing.T) {
 	}
 
 	resp = dbReq(t, acct.addUser, "GET", "/account/users?role=0", nil)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
@@ -322,7 +322,7 @@ func TestCrossAccountUserAssociation(t *testing.T) {
 	}
 
 	resp = dbReq(t, acct.addUser, "GET", "/account/users?role=50", nil)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
