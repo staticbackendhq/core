@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"os"
 
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -27,6 +28,10 @@ func Do(body []byte) (buf []byte, err error) {
 		chromedp.Flag("disable-dev-shm-usage", true),
 		chromedp.Headless,
 	)
+
+	if chromePath := os.Getenv("CHROME_BIN"); chromePath != "" {
+		opts = append(opts, chromedp.ExecPath(chromePath))
+	}
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	defer allocCancel()

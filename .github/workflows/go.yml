@@ -17,6 +17,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          google-chrome-stable \
           libnss3 \
           libnspr4 \
           libatk1.0-0 \
@@ -34,6 +35,9 @@ jobs:
           libcairo2 \
           libxshmfence1 \
           libglu1-mesa
+
+    - name: Configure Chrome for chromedp
+      run: echo "CHROME_BIN=/usr/bin/google-chrome-stable" >> "$GITHUB_ENV"
 
     - name: Set up Go
       uses: actions/setup-go@v5
