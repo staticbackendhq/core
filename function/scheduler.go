@@ -201,7 +201,6 @@ func (ts *TaskScheduler) ensureLifecycle() {
 }
 
 func (ts *TaskScheduler) run(task model.Task) {
-	ts.Log.Info().Msgf("executing job:%s typed:%s value:%s", task.Name, task.Type, task.Value)
 	ts.markTaskRan(task)
 
 	// the task must run as the root base user
