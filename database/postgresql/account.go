@@ -76,14 +76,28 @@ func (pg *PostgreSQL) ListAccounts(dbName string) ([]model.Account, error) {
 
 func (pg *PostgreSQL) ListUsers(dbName, accountID string, role ...int) ([]model.User, error) {
 	qry := fmt.Sprintf(`
-	SELECT * 
+	SELECT id, account_id, token, email, password, role, reset_code, created
 	FROM %s.sb_tokens
 	WHERE account_id = $1
-	`, dbName)
+	UNION ALL
+	SELECT t.id, au.account_id, au.token, au.email, t.password, au.role, t.reset_code, au.created
+	FROM %s.sb_account_users au
+	INNER JOIN %s.sb_tokens t ON t.id = au.user_id
+	WHERE au.account_id = $1
+	`, dbName, dbName, dbName)
 
 	args := []any{accountID}
 	if len(role) > 0 {
-		qry += " AND role = $2"
+		qry = fmt.Sprintf(`
+	SELECT id, account_id, token, email, password, role, reset_code, created
+	FROM %s.sb_tokens
+	WHERE account_id = $1 AND role = $2
+	UNION ALL
+	SELECT t.id, au.account_id, au.token, au.email, t.password, au.role, t.reset_code, au.created
+	FROM %s.sb_account_users au
+	INNER JOIN %s.sb_tokens t ON t.id = au.user_id
+	WHERE au.account_id = $1 AND au.role = $2
+	`, dbName, dbName, dbName)
 		args = append(args, role[0])
 	}
 

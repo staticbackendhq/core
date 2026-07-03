@@ -115,6 +115,36 @@ func (m *Memory) ListUsers(dbName, accountID string, role ...int) ([]model.User,
 		return len(role) == 0 || t.Role == role[0]
 	})
 
+	tokensByID := make(map[string]model.User, len(tokens))
+	for _, token := range tokens {
+		tokensByID[token.ID] = token
+	}
+
+	accountUsers, err := all[model.AccountUser](m, dbName, "sb_account_users")
+	if err != nil {
+		return nil, err
+	}
+	for _, accountUser := range accountUsers {
+		if accountUser.AccountID != accountID {
+			continue
+		}
+		if len(role) > 0 && accountUser.Role != role[0] {
+			continue
+		}
+
+		token := tokensByID[accountUser.UserID]
+		matches = append(matches, model.User{
+			ID:        accountUser.UserID,
+			AccountID: accountUser.AccountID,
+			Token:     accountUser.Token,
+			Email:     accountUser.Email,
+			Password:  token.Password,
+			Role:      accountUser.Role,
+			ResetCode: token.ResetCode,
+			Created:   accountUser.Created,
+		})
+	}
+
 	return matches, nil
 }
 

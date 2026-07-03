@@ -191,6 +191,66 @@ func (mg *Mongo) ListUsers(dbName, accountID string, role ...int) ([]model.User,
 		return nil, err
 	}
 
+	accountUserFilter := bson.M{FieldAccountID: id}
+	if len(role) > 0 {
+		accountUserFilter[FieldRole] = role[0]
+	}
+	accountUserCur, err := db.Collection("sb_account_users").Find(mg.Ctx, accountUserFilter)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = accountUserCur.Close(mg.Ctx) }()
+
+	userIDs := []primitive.ObjectID{}
+	accountUsers := []LocalAccountUser{}
+	for accountUserCur.Next(mg.Ctx) {
+		var v LocalAccountUser
+		err := accountUserCur.Decode(&v)
+		if err != nil {
+			return nil, err
+		}
+		accountUsers = append(accountUsers, v)
+		userIDs = append(userIDs, v.UserID)
+	}
+	if err := accountUserCur.Err(); err != nil {
+		return nil, err
+	}
+	if len(accountUsers) == 0 {
+		return list, nil
+	}
+
+	tokenCur, err := db.Collection("sb_tokens").Find(mg.Ctx, bson.M{FieldID: bson.M{"$in": userIDs}})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tokenCur.Close(mg.Ctx) }()
+
+	tokensByID := make(map[primitive.ObjectID]LocalToken, len(accountUsers))
+	for tokenCur.Next(mg.Ctx) {
+		var token LocalToken
+		if err := tokenCur.Decode(&token); err != nil {
+			return nil, err
+		}
+		tokensByID[token.ID] = token
+	}
+	if err := tokenCur.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, accountUser := range accountUsers {
+		token := tokensByID[accountUser.UserID]
+		list = append(list, model.User{
+			ID:        accountUser.UserID.Hex(),
+			AccountID: accountUser.AccountID.Hex(),
+			Token:     accountUser.Token,
+			Email:     accountUser.Email,
+			Password:  token.Password,
+			Role:      accountUser.Role,
+			ResetCode: token.ResetCode,
+			Created:   accountUser.Created,
+		})
+	}
+
 	return list, nil
 }
 

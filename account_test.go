@@ -256,7 +256,7 @@ func TestCrossAccountUserAssociation(t *testing.T) {
 	// addUser as the admin (testAccountID) with an email from a different account
 	// should create a cross-account association, not a new user record
 	resp := dbReq(t, acct.addUser, "POST", "/account/users", model.Login{Email: crossEmail})
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		t.Fatal(GetResponseBody(t, resp))
@@ -271,6 +271,72 @@ func TestCrossAccountUserAssociation(t *testing.T) {
 	}
 	if associatedUser.Email != crossEmail {
 		t.Errorf("expected email %s got %s", crossEmail, associatedUser.Email)
+	}
+
+	resp = dbReq(t, acct.addUser, "GET", "/account/users", nil)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	var users []model.User
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+		t.Fatal("decoding list response:", err)
+	}
+
+	foundAssociatedUser := false
+	for _, user := range users {
+		if user.ID == associatedUser.ID && user.AccountID == testAccountID && user.Email == crossEmail {
+			foundAssociatedUser = true
+			break
+		}
+	}
+	if !foundAssociatedUser {
+		t.Fatalf("expected associated user %s in account user list", crossEmail)
+	}
+
+	resp = dbReq(t, acct.addUser, "GET", "/account/users?role=0", nil)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	users = nil
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+		t.Fatal("decoding role-filtered list response:", err)
+	}
+
+	foundAssociatedUser = false
+	for _, user := range users {
+		if user.Role != 0 {
+			t.Fatalf("expected only role 0 users, got role %d for %s", user.Role, user.Email)
+		}
+		if user.ID == associatedUser.ID && user.AccountID == testAccountID && user.Email == crossEmail {
+			foundAssociatedUser = true
+		}
+	}
+	if !foundAssociatedUser {
+		t.Fatalf("expected associated role 0 user %s in filtered account user list", crossEmail)
+	}
+
+	resp = dbReq(t, acct.addUser, "GET", "/account/users?role=50", nil)
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		t.Fatal(GetResponseBody(t, resp))
+	}
+
+	users = nil
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+		t.Fatal("decoding role-filtered list response:", err)
+	}
+
+	for _, user := range users {
+		if user.ID == associatedUser.ID && user.AccountID == testAccountID && user.Email == crossEmail {
+			t.Fatalf("did not expect associated role 0 user %s in role 50 filtered account user list", crossEmail)
+		}
 	}
 
 	// clean up
