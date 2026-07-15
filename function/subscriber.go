@@ -3,18 +3,17 @@ package function
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 )
 
 type Subscriber struct {
 	PubSub            cache.Volatilizer
 	GetExecEnv        func(msg model.Command) (*ExecutionEnvironment, error)
-	Log               *logger.Logger
 	IsPrimaryInstance bool
 
 	relax sync.Map
@@ -48,7 +47,7 @@ func (sub *Subscriber) StartContext(ctx context.Context) {
 				}()
 			}
 		case <-closeSub:
-			sub.Log.Info().Msg("system event channel closed?!?")
+			slog.Info("system event channel closed")
 		case <-ctx.Done():
 			close(closeSub)
 			wg.Wait()
@@ -82,10 +81,10 @@ func (sub *Subscriber) process(msg model.Command) {
 
 		n, ok := v.(int64)
 		if !ok {
-			sub.Log.Warn().Msgf("subscriber.process(): unable to cast %v into int64", v)
+			slog.Warn("subscriber.process(): unable to cast value into int64", "value", v)
 			return
 		} else if n >= 5 {
-			sub.Log.Warn().Msgf("user exeeded amount of allowed message in 60 second: %d", n)
+			slog.Warn("user exceeded amount of allowed message in 60 seconds", "count", n)
 			//TODO: This silently returns, should this app owner get some
 			// notification about their users flooding the system?
 			return
@@ -101,7 +100,7 @@ func (sub *Subscriber) process(msg model.Command) {
 func (sub *Subscriber) handleRealtimeEvents(msg model.Command, wg *sync.WaitGroup) {
 	exe, err := sub.GetExecEnv(msg)
 	if err != nil {
-		sub.Log.Error().Err(err).Msgf("cannot retrieve base from token: %s", msg.Token)
+		slog.Error("cannot retrieve base from token", "token", msg.Token, "error", err)
 		return
 	}
 
@@ -109,7 +108,7 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command, wg *sync.WaitGrou
 
 	// for msg type error, we do nothing
 	if msg.Type == model.MsgTypeError {
-		sub.Log.Err(err).Msg("receiving msg of type error")
+		slog.Error("receiving msg of type error", "error", err)
 		return
 	}
 
@@ -117,14 +116,14 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command, wg *sync.WaitGrou
 	if err := sub.PubSub.GetTyped(key, &ids); err != nil {
 		funcs, err := exe.DataStore.ListFunctionsByTrigger(exe.BaseName, msg.Channel)
 		if err != nil {
-			sub.Log.Error().Err(err).Msg("error getting functions by trigger")
-			sub.Log.Debug().Msg("channgel: " + msg.Channel + " type: " + msg.Type)
+			slog.Error("error getting functions by trigger", "error", err)
+			slog.Debug("channel and message type", "channel", msg.Channel, "type", msg.Type)
 			return
 		}
 
 		for _, fn := range funcs {
 			if err := sub.PubSub.SetTyped("fn_"+fn.ID, fn); err != nil {
-				sub.Log.Error().Err(err).Msg("error adding function  to cache")
+				slog.Error("error adding function to cache", "error", err)
 				return
 			}
 
@@ -132,19 +131,19 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command, wg *sync.WaitGrou
 		}
 
 		if err := sub.PubSub.SetTyped(key, ids); err != nil {
-			sub.Log.Error().Err(err).Msg("unable to publish message")
+			slog.Error("unable to publish message", "error", err)
 		}
 	}
 
 	for _, id := range ids {
 		var fn model.ExecData
 		if err := sub.PubSub.GetTyped("fn_"+id, &fn); err != nil {
-			sub.Log.Error().Err(err).Msg("error getting function out of cache")
+			slog.Error("error getting function out of cache", "error", err)
 			return
 		}
 		fn, err = exe.DataStore.GetFunctionForExecution(exe.BaseName, fn.FunctionName)
 		if err != nil {
-			sub.Log.Error().Err(err).Msg("error getting function for execution")
+			slog.Error("error getting function for execution", "error", err)
 			return
 		}
 
@@ -153,7 +152,7 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command, wg *sync.WaitGrou
 		go func(ex *ExecutionEnvironment) {
 			defer wg.Done()
 			if err := ex.Execute(msg); err != nil {
-				sub.Log.Error().Err(err).Msgf(`executing "%s" function failed"`, ex.Data.FunctionName)
+				slog.Error("executing function failed", "function", ex.Data.FunctionName, "error", err)
 			}
 		}(exe)
 	}

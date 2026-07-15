@@ -26,9 +26,9 @@ type suite struct {
 
 func TestMain(m *testing.M) {
 	config.Current = config.LoadConfig()
-	logz := logger.Get(config.Current)
-	redisCache = NewCache(logz)
-	devCache = NewDevCache(logz)
+	logger.Setup(config.Current)
+	redisCache = NewCache()
+	devCache = NewDevCache()
 
 	adminAuth = model.Auth{
 		AccountID: "047cfe5b-b91d-4ec6-9bc2-8f68309d8532",
@@ -219,7 +219,7 @@ func TestCachePublishDocument(t *testing.T) {
 }
 
 func TestDevCacheDequeueWorkMissingQueue(t *testing.T) {
-	cache := NewDevCache(logger.Get(config.Current))
+	cache := NewDevCache()
 
 	val, err := cache.DequeueWork("missing_queue")
 	if err != nil {
@@ -231,7 +231,7 @@ func TestDevCacheDequeueWorkMissingQueue(t *testing.T) {
 }
 
 func TestDevCacheDequeueWorkEmptyQueue(t *testing.T) {
-	cache := NewDevCache(logger.Get(config.Current))
+	cache := NewDevCache()
 
 	if err := cache.QueueWork("queue", "work"); err != nil {
 		t.Fatal(err)

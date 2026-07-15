@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -145,7 +146,7 @@ func (pg *PostgreSQL) ListDocuments(auth model.Auth, dbName, col string, params 
 
 	rows, err := pg.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
-		pg.log.Error().Err(err).Msg("error in select")
+		slog.Error("error in select", "error", err)
 		return
 	}
 	defer func() { _ = rows.Close() }()
@@ -307,7 +308,7 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			pg.log.Error().Err(err).Msg("error occurred during scanning id for UpdateDocument event")
+			slog.Error("error occurred during scanning id for UpdateDocument event", "error", err)
 			continue
 		}
 		ids = append(ids, id)
@@ -339,7 +340,7 @@ func (pg *PostgreSQL) UpdateDocuments(auth model.Auth, dbName, col string, filte
 	go func() {
 		docs, err := pg.GetDocumentsByIDs(auth, dbName, col, ids)
 		if err != nil {
-			pg.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
+			slog.Error("the documents are not received for publishDocument event", "ids", ids, "error", err)
 		}
 		for _, doc := range docs {
 			pg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
@@ -409,7 +410,7 @@ func (pg *PostgreSQL) DeleteDocuments(auth model.Auth, dbName, col string, filte
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			pg.log.Error().Err(err).Msg("error occurred during scanning id for DeleteDocuments event")
+			slog.Error("error occurred during scanning id for DeleteDocuments event", "error", err)
 			continue
 		}
 

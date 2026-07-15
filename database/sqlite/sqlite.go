@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
-	"os"
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
@@ -17,32 +16,24 @@ var migrationFS embed.FS
 type SQLite struct {
 	DB              *sql.DB
 	PublishDocument cache.PublishDocumentEvent
-	log             *logger.Logger
 
 	collections map[string]bool
 }
 
-func New(db *sql.DB, pubdoc cache.PublishDocumentEvent, log *logger.Logger) database.Persister {
+func New(db *sql.DB, pubdoc cache.PublishDocumentEvent) database.Persister {
 	if _, err := db.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
-		fmt.Println("=== SQLITE PRAGMA FAILED ===")
-		fmt.Println(err)
-		fmt.Println("=== /SQLITE PRAGMA FAILED ===")
-		os.Exit(1)
+		logger.FatalError("SQLITE PRAGMA FAILED", err)
 	}
 
 	// run migrations
 	if err := migrate(db); err != nil {
-		fmt.Println("=== MIGRATION FAILED ===")
-		fmt.Println(err)
-		fmt.Println("=== /MIGRATION FAILED ===")
-		os.Exit(1)
+		logger.FatalError("MIGRATION FAILED", err)
 	}
 
 	return &SQLite{
 		DB:              db,
 		PublishDocument: pubdoc,
 		collections:     make(map[string]bool),
-		log:             log,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
@@ -36,8 +38,9 @@ const (
 var content embed.FS
 
 // Start starts the web server and all dependencies services
-func Start(c config.AppConfig, log *logger.Logger) {
-	log.Info().Str("Addr", c.AppURL).Msg("server started")
+func Start(c config.AppConfig) {
+	logger.Setup(c)
+	slog.Info("server started", "Addr", c.AppURL)
 
 	config.Current = c
 
@@ -46,7 +49,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	if err := loadTemplates(); err != nil {
 		// if we're running from the CLI, no need to load templates
 		if len(config.Current.FromCLI) == 0 {
-			log.Fatal().Err(err).Msg("error loading templates")
+			logger.FatalError("error loading templates", err)
 		}
 	}
 

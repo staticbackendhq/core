@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/email"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/search"
 
@@ -30,7 +30,6 @@ type ExecutionEnvironment struct {
 	Data      model.ExecData
 
 	CurrentRun model.ExecHistory
-	Log        *logger.Logger
 }
 
 type Result struct {
@@ -1202,6 +1201,6 @@ func (env *ExecutionEnvironment) complete(err error) {
 
 	//TODO: this needs to be regrouped and ran un batch
 	if err := env.DataStore.RanFunction(env.BaseName, env.Data.ID, env.CurrentRun); err != nil {
-		env.Log.Error().Err(err).Msg("error logging function complete")
+		slog.Error("error logging function complete", "error", err)
 	}
 }

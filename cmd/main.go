@@ -7,13 +7,11 @@ import (
 
 	backend "github.com/staticbackendhq/core"
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/logger"
 )
 
 func main() {
 	c := config.LoadConfig()
 
-	log := logger.Get(c)
 
 	var v bool
 	flag.BoolVar(&v, "v", false, "Display the version and build info")
@@ -31,5 +29,5 @@ func main() {
 		c.Port = "8099"
 	}
 
-	backend.Start(c, log)
+	backend.Start(c)
 }

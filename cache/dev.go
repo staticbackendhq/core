@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/staticbackendhq/core/cache/observer"
 	"github.com/staticbackendhq/core/internal"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 )
 
@@ -18,17 +18,15 @@ var ErrKeyNotFound = errors.New("key not found in cache")
 // CacheDev used in local dev mode and is memory-based
 type CacheDev struct {
 	data     map[string]string
-	log      *logger.Logger
 	observer observer.Observer
 	m        *sync.RWMutex
 }
 
 // NewDevCache returns a memory-based Volatilizer
-func NewDevCache(log *logger.Logger) *CacheDev {
+func NewDevCache() *CacheDev {
 	return &CacheDev{
 		data:     make(map[string]string),
-		observer: observer.NewObserver(log),
-		log:      log,
+		observer: observer.NewObserver(),
 		m:        &sync.RWMutex{},
 	}
 }
@@ -115,7 +113,7 @@ func (d *CacheDev) Subscribe(send chan model.Command, token, channel string, clo
 		case m := <-ch:
 			var msg model.Command
 			if err := json.Unmarshal([]byte(m.(string)), &msg); err != nil {
-				d.log.Error().Err(err).Msg("error parsing JSON message")
+				slog.Error("error parsing JSON message", "error", err)
 				_ = pubsub.Close()
 				_ = d.observer.Unsubscribe(channel, pubsub)
 				return
@@ -153,11 +151,11 @@ func (d *CacheDev) Publish(msg model.Command) error {
 			sysmsg.IsSystemEvent = true
 			b, err := json.Marshal(sysmsg)
 			if err != nil {
-				d.log.Error().Err(err).Msg("error marshaling the system msg")
+				slog.Error("error marshaling the system msg", "error", err)
 				return
 			}
 			if err := d.observer.Publish("sbsys", string(b)); err != nil {
-				d.log.Error().Err(err).Msg("error occurred during publishing to 'sbsys' channel")
+				slog.Error("error occurred during publishing to 'sbsys' channel", "error", err)
 			}
 		}(msg)
 	}
@@ -166,7 +164,7 @@ func (d *CacheDev) Publish(msg model.Command) error {
 
 	count, ok := subs[msg.Channel]
 	if !ok {
-		d.log.Warn().Msgf("cannot find channel in subs: %s", msg.Channel)
+		slog.Warn("cannot find channel in subs", "channel", msg.Channel)
 		return nil
 	} else if count == 0 {
 		return nil
@@ -179,7 +177,7 @@ func (d *CacheDev) Publish(msg model.Command) error {
 func (d *CacheDev) PublishDocument(auth model.Auth, dbName, channel, typ string, v any) {
 	b, err := json.Marshal(v)
 	if err != nil {
-		d.log.Error().Err(err).Msg("error publishing db doc")
+		slog.Error("error publishing db doc", "error", err)
 		return
 	}
 
@@ -192,7 +190,7 @@ func (d *CacheDev) PublishDocument(auth model.Auth, dbName, channel, typ string,
 	}
 
 	if err := d.Publish(msg); err != nil {
-		d.log.Error().Err(err).Msg("unable to publish db doc events")
+		slog.Error("unable to publish db doc events", "error", err)
 	}
 }
 
@@ -209,7 +207,7 @@ func (d *CacheDev) HasPermission(token, repo, payload string) bool {
 
 	docs := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(payload), &docs); err != nil {
-		d.log.Error().Err(err).Msg("error decoding docs for permissions check")
+		slog.Error("error decoding docs for permissions check", "error", err)
 
 		return false
 	}

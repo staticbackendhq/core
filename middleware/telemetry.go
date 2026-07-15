@@ -2,12 +2,12 @@ package middleware
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"slices"
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 )
 
@@ -48,7 +48,7 @@ func (w *telemetryResponseWriter) Write(b []byte) (int, error) {
 
 // LongRequestTelemetry publishes a tenant event for requests exceeding
 // SlowRequestThreshold. Publishing is best effort and does not affect responses.
-func LongRequestTelemetry(volatile cache.Volatilizer, log *logger.Logger) Middleware {
+func LongRequestTelemetry(volatile cache.Volatilizer) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			started := time.Now()
@@ -91,7 +91,7 @@ func LongRequestTelemetry(volatile cache.Volatilizer, log *logger.Logger) Middle
 
 				b, err := json.Marshal(data)
 				if err != nil {
-					log.Error().Err(err).Msg("error marshaling slow request telemetry")
+					slog.Error("error marshaling slow request telemetry", "error", err)
 					return
 				}
 
@@ -105,7 +105,7 @@ func LongRequestTelemetry(volatile cache.Volatilizer, log *logger.Logger) Middle
 					Base:    conf.Name,
 				}
 				if err := volatile.Publish(msg); err != nil {
-					log.Error().Err(err).Msg("error publishing slow request telemetry")
+					slog.Error("error publishing slow request telemetry", "error", err)
 				}
 			}()
 

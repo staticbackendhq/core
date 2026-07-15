@@ -17,7 +17,7 @@ import (
 func TestTaskSchedulerUsesRootAuthForFunctionTask(t *testing.T) {
 	baseName := fmt.Sprintf("sched_%d", time.Now().UnixNano())
 	ds, rootAuth := newSchedulerTestStore(t, baseName)
-	vol := cache.NewDevCache(logger.Get(config.LoadConfig()))
+	vol := cache.NewDevCache()
 
 	fn := model.ExecData{
 		FunctionName: "scheduled-create",
@@ -39,7 +39,6 @@ func TestTaskSchedulerUsesRootAuthForFunctionTask(t *testing.T) {
 	ts := &TaskScheduler{
 		Volatile:  vol,
 		DataStore: ds,
-		Log:       logger.Get(config.LoadConfig()),
 	}
 	task := model.Task{
 		ID:       "task-root-auth",
@@ -107,7 +106,7 @@ func TestTaskSchedulerUsesRootAuthForFunctionTask(t *testing.T) {
 func TestTaskSchedulerFunctionTaskWithoutMetaUsesEmptyData(t *testing.T) {
 	baseName := fmt.Sprintf("sched_empty_meta_%d", time.Now().UnixNano())
 	ds, rootAuth := newSchedulerTestStore(t, baseName)
-	vol := cache.NewDevCache(logger.Get(config.LoadConfig()))
+	vol := cache.NewDevCache()
 
 	fn := model.ExecData{
 		FunctionName: "empty-meta",
@@ -150,7 +149,6 @@ func TestTaskSchedulerFunctionTaskWithoutMetaUsesEmptyData(t *testing.T) {
 	ts := &TaskScheduler{
 		Volatile:  vol,
 		DataStore: ds,
-		Log:       logger.Get(config.LoadConfig()),
 	}
 	ts.run(task)
 

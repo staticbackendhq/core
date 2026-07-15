@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 	"sync"
@@ -165,7 +166,7 @@ func (sl *SQLite) ListDocuments(auth model.Auth, dbName, col string, params mode
 
 	rows, err := sl.DB.Query(qry, auth.AccountID, auth.UserID)
 	if err != nil {
-		sl.log.Error().Err(err).Msg("error in select")
+		slog.Error("error in select", "error", err)
 		return
 	}
 	defer func() { _ = rows.Close() }()
@@ -339,7 +340,7 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			sl.log.Error().Err(err).Msg("error occurred during scanning id for UpdateDocument event")
+			slog.Error("error occurred during scanning id for UpdateDocument event", "error", err)
 			continue
 		}
 		ids = append(ids, id)
@@ -371,7 +372,7 @@ func (sl *SQLite) UpdateDocuments(auth model.Auth, dbName, col string, filters m
 	go func() {
 		docs, err := sl.GetDocumentsByIDs(auth, dbName, col, ids)
 		if err != nil {
-			sl.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
+			slog.Error("the documents are not received for publishDocument event", "ids", ids, "error", err)
 		}
 		for _, doc := range docs {
 			sl.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
@@ -449,7 +450,7 @@ func (sl *SQLite) DeleteDocuments(auth model.Auth, dbName, col string, filters m
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			sl.log.Error().Err(err).Msg("error occurred during scanning id for DeleteDocuments event")
+			slog.Error("error occurred during scanning id for DeleteDocuments event", "error", err)
 			continue
 		}
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/staticbackendhq/core/config"
@@ -26,18 +27,17 @@ const (
 type Cache struct {
 	Rdb *redis.Client
 	Ctx context.Context
-	log *logger.Logger
 }
 
 // NewCache returns an initiated Redis client
-func NewCache(log *logger.Logger) *Cache {
+func NewCache() *Cache {
 	var err error
 	var opt *redis.Options
 
 	if uri := config.Current.RedisURL; len(uri) > 0 {
 		opt, err = redis.ParseURL(uri)
 		if err != nil {
-			log.Fatal().Err(err).Msg("invalid REDIS_URL value")
+			logger.FatalError("invalid REDIS_URL value", err)
 		}
 	} else {
 		opt = &redis.Options{
@@ -51,7 +51,6 @@ func NewCache(log *logger.Logger) *Cache {
 	return &Cache{
 		Rdb: rdb,
 		Ctx: context.Background(),
-		log: log,
 	}
 }
 
@@ -113,12 +112,12 @@ func (c *Cache) Subscribe(send chan model.Command, token, channel string, close 
 	pubsub := c.Rdb.Subscribe(c.Ctx, channel)
 
 	if _, err := pubsub.Receive(c.Ctx); err != nil {
-		c.log.Error().Err(err).Msg("error establishing PubSub subscription")
+		slog.Error("error establishing PubSub subscription", "error", err)
 		return
 	}
 	defer func() {
 		if err := pubsub.Close(); err != nil && !errors.Is(err, redis.ErrClosed) {
-			c.log.Warn().Err(err).Msg("error closing PubSub subscription")
+			slog.Warn("error closing PubSub subscription", "error", err)
 		}
 	}()
 
@@ -132,13 +131,13 @@ func (c *Cache) Subscribe(send chan model.Command, token, channel string, close 
 		select {
 		case m, ok := <-ch:
 			if !ok {
-				c.log.Warn().Msgf("PubSub channel closed: %s", channel)
+				slog.Warn("PubSub channel closed", "channel", channel)
 				return
 			}
 
 			var msg model.Command
 			if err := json.Unmarshal([]byte(m.Payload), &msg); err != nil {
-				c.log.Error().Err(err).Msg("error parsing JSON message")
+				slog.Error("error parsing JSON message", "error", err)
 				return
 			}
 
@@ -169,7 +168,7 @@ func (c *Cache) sendMessage(send chan model.Command, close chan bool, msg model.
 	case <-close:
 		return false
 	case <-timer.C:
-		c.log.Warn().Msgf("dropping PubSub message after blocked receiver timeout: %s", msg.Channel)
+		slog.Warn("dropping PubSub message after blocked receiver timeout", "channel", msg.Channel)
 		return true
 	}
 }
@@ -192,27 +191,27 @@ func (c *Cache) Publish(msg model.Command) error {
 			sysmsg.IsSystemEvent = true
 			b, err := json.Marshal(sysmsg)
 			if err != nil {
-				c.log.Error().Err(err).Msg("error marshaling the system msg")
+				slog.Error("error marshaling the system msg", "error", err)
 				return
 			}
 
 			sysctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
 			if err := c.Rdb.Publish(sysctx, "sbsys", string(b)).Err(); err != nil {
-				c.log.Error().Err(err).Msg("error publishing to system channel")
+				slog.Error("error publishing to system channel", "error", err)
 			}
 		}(msg)
 	}
 
 	subs, err := c.Rdb.PubSubNumSub(c.Ctx, msg.Channel).Result()
 	if err != nil {
-		c.log.Error().Err(err).Msgf("error getting db subscribers for %s", msg.Channel)
+		slog.Error("error getting db subscribers for", "channel", msg.Channel)
 		return err
 	}
 
 	count, ok := subs[msg.Channel]
 	if !ok {
-		c.log.Warn().Msgf("cannot find channel in subs: %s", msg.Channel)
+		slog.Warn("cannot find channel in subs", "channel", msg.Channel)
 		return nil
 	} else if count == 0 {
 		return nil
@@ -226,7 +225,7 @@ func (c *Cache) Publish(msg model.Command) error {
 func (c *Cache) PublishDocument(auth model.Auth, dbName, channel, typ string, v interface{}) {
 	b, err := json.Marshal(v)
 	if err != nil {
-		c.log.Error().Err(err).Msg("error publishing db doc")
+		slog.Error("error publishing db doc", "error", err)
 		return
 	}
 
@@ -239,7 +238,7 @@ func (c *Cache) PublishDocument(auth model.Auth, dbName, channel, typ string, v 
 	}
 
 	if err := c.Publish(msg); err != nil {
-		c.log.Error().Err(err).Msg("unable to publish db doc events")
+		slog.Error("unable to publish db doc events", "error", err)
 	}
 }
 
@@ -258,7 +257,7 @@ func (c *Cache) HasPermission(token, repo, payload string) bool {
 
 	docs := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(payload), &docs); err != nil {
-		c.log.Error().Err(err).Msg("error decoding docs for permissions check")
+		slog.Error("error decoding docs for permissions check", "error", err)
 
 		return false
 	}

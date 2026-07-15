@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 
 	"github.com/google/uuid"
@@ -38,15 +38,13 @@ type Broker struct {
 
 	pubsub cache.Volatilizer
 
-	log *logger.Logger
-
 	shutdown chan struct{}
 	done     chan struct{}
 	once     sync.Once
 }
 
 // NewBroker returns a ready to use Broker for accepting web socket connections
-func NewBroker(v Validator, pubsub cache.Volatilizer, log *logger.Logger) *Broker {
+func NewBroker(v Validator, pubsub cache.Volatilizer) *Broker {
 	b := &Broker{
 		Broadcast:          make(chan model.Command, 1),
 		newConnections:     make(chan ConnectionData),
@@ -57,7 +55,6 @@ func NewBroker(v Validator, pubsub cache.Volatilizer, log *logger.Logger) *Broke
 		subscriptions:      make(map[string][]chan bool),
 		validateAuth:       v,
 		pubsub:             pubsub,
-		log:                log,
 		shutdown:           make(chan struct{}),
 		done:               make(chan struct{}),
 	}
@@ -75,7 +72,7 @@ func (b *Broker) start() {
 		case data := <-b.newConnections:
 			id, err := uuid.NewUUID()
 			if err != nil {
-				b.log.Error().Err(err)
+				slog.Error("error creating connection id", "error", err)
 			}
 
 			b.clients[data.messages] = id.String()
@@ -128,7 +125,7 @@ func (b *Broker) unsub(c chan model.Command) {
 
 	id, ok := b.clients[c]
 	if !ok {
-		b.log.Info().Msg("cannot find connection id")
+		slog.Info("cannot find connection id")
 	}
 
 	subs, ok := b.subscriptions[id]
@@ -193,13 +190,13 @@ func (b *Broker) Accept(w http.ResponseWriter, r *http.Request) {
 			// write Server Sent Event data
 			bytes, err := json.Marshal(msg)
 			if err != nil {
-				b.log.Warn().Err(err).Msg("error converting to JSON")
+				slog.Warn("error converting to JSON", "error", err)
 
 				continue
 			}
 
 			if _, err := fmt.Fprintf(w, "data: %s\n\n", bytes); err != nil {
-				b.log.Warn().Err(err).Msg("error writing server sent event")
+				slog.Warn("error writing server sent event", "error", err)
 				continue
 			}
 
@@ -221,7 +218,7 @@ func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, pa
 	if msg.SID != model.SystemID {
 		s, ok := b.ids[msg.SID]
 		if !ok {
-			b.log.Info().Msgf("cannot find sender socket: %s", msg.SID)
+			slog.Info("cannot find sender socket", "sid", msg.SID)
 			return
 		}
 		sender = s
@@ -267,7 +264,7 @@ func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, pa
 		go func(m model.Command) {
 			time.Sleep(250 * time.Millisecond)
 			if err := b.pubsub.Publish(joinedMsg); err != nil {
-				b.log.Error().Err(err)
+				slog.Error("error publishing joined message", "error", err)
 			}
 		}(joinedMsg)
 
@@ -294,7 +291,7 @@ func (b *Broker) getTargets(msg model.Command) (sockets []chan model.Command, pa
 
 		go func() {
 			if err := b.pubsub.Publish(msg); err != nil {
-				b.log.Error().Err(err)
+				slog.Error("error publishing channel message", "error", err)
 			}
 		}()
 

@@ -118,6 +118,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -158,8 +159,6 @@ var (
 	// Cache initialized Volatilizer for cache and pub/sub
 	Cache  cache.Volatilizer
 	Search *search.Search
-	// Log initialized Logger for all logging
-	Log *logger.Logger
 
 	// Membership exposes Account and User functionalities like register, login, etc
 	// account and user functionalities.
@@ -181,21 +180,20 @@ var (
 
 // Setup initializes the core services based on the configuration received.
 func Setup(cfg config.AppConfig) {
+	logger.Setup(cfg)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	if err := Close(ctx); err != nil && Log != nil {
-		Log.Error().Err(err).Msg("error closing existing backend services")
+	if err := Close(ctx); err != nil {
+		slog.Error("error closing existing backend services", "error", err)
 	}
 	cancel()
 
 	Config = cfg
 	resetLifecycle()
 
-	Log = logger.Get(cfg)
-
 	if strings.EqualFold(cfg.DatabaseURL, "mem") || strings.EqualFold(cfg.RedisHost, "mem") {
-		Cache = cache.NewDevCache(Log)
+		Cache = cache.NewDevCache()
 	} else {
-		Cache = cache.NewCache(Log)
+		Cache = cache.NewCache()
 	}
 
 	persister := config.Current.DataStore
@@ -204,23 +202,23 @@ func Setup(cfg config.AppConfig) {
 	} else if strings.EqualFold(persister, "mongo") {
 		cl, err := openMongoDatabase(cfg.DatabaseURL)
 		if err != nil {
-			Log.Fatal().Err(err).Msg("failed to create connection with mongodb")
+			logger.FatalError("failed to create connection with mongodb", err)
 		}
-		DB = mongo.New(cl, Cache.PublishDocument, Log)
+		DB = mongo.New(cl, Cache.PublishDocument)
 	} else if strings.EqualFold(persister, "sqlite") {
 		cl, err := openSQLite(cfg.DatabaseURL)
 		if err != nil {
-			Log.Fatal().Err(err).Msg("failed to create connection with SQLite")
+			logger.FatalError("failed to create connection with SQLite", err)
 		}
 
-		DB = sqlite.New(cl, Cache.PublishDocument, Log)
+		DB = sqlite.New(cl, Cache.PublishDocument)
 	} else {
 		cl, err := openPGDatabase(cfg.DatabaseURL)
 		if err != nil {
-			Log.Fatal().Err(err).Msg("failed to create connection with postgres")
+			logger.FatalError("failed to create connection with postgres", err)
 		}
 
-		DB = postgresql.New(cl, Cache.PublishDocument, Log)
+		DB = postgresql.New(cl, Cache.PublishDocument)
 	}
 
 	mp := cfg.MailProvider
@@ -246,14 +244,14 @@ func Setup(cfg config.AppConfig) {
 		}
 		src, err := search.New(ftsFilename, Cache)
 		if err != nil {
-			Log.Fatal().Err(err).Msg("unable to start full-text search")
+			logger.FatalError("unable to start full-text search", err)
 			return
 		}
 
 		Search = src
 	}
 
-	sub := &function.Subscriber{Log: Log}
+	sub := &function.Subscriber{}
 	sub.PubSub = Cache
 	sub.GetExecEnv = func(msg model.Command) (*function.ExecutionEnvironment, error) {
 		exe := &function.ExecutionEnvironment{
@@ -263,7 +261,6 @@ func Setup(cfg config.AppConfig) {
 			Volatile:  Cache,
 			Search:    Search,
 			Email:     Emailer,
-			Log:       Log,
 		}
 
 		return exe, nil
@@ -274,7 +271,7 @@ func Setup(cfg config.AppConfig) {
 		// if no value is provided, like on GH action for tests, we assume primary
 		isPrimary = true
 	} else if hostname, err := os.Hostname(); err != nil {
-		Log.Warn().Err(err).Msg("cannot determine if it's primary instance")
+		slog.Warn("cannot determine if it's primary instance", "error", err)
 	} else if strings.EqualFold(hostname, cfg.PrimaryInstanceHostname) {
 		isPrimary = true
 	}
@@ -300,12 +297,11 @@ func Setup(cfg config.AppConfig) {
 			DataStore: DB,
 			Search:    Search,
 			Email:     Emailer,
-			Log:       Log,
 		}
 
 		Scheduler = runner
 		go runner.Start()
-		Log.Info().Msg("job scheduler / runner started on primary instance")
+		slog.Info("job scheduler / runner started on primary instance")
 	}
 
 	Membership = newUser
