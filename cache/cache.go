@@ -205,7 +205,7 @@ func (c *Cache) Publish(msg model.Command) error {
 
 	subs, err := c.Rdb.PubSubNumSub(c.Ctx, msg.Channel).Result()
 	if err != nil {
-		slog.Error("error getting db subscribers for", "channel", msg.Channel)
+		slog.Error("error getting db subscribers for", "channel", msg.Channel, "error", err)
 		return err
 	}
 

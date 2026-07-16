@@ -34,7 +34,6 @@
 //   - [Filestore]: raw blob storage
 //   - [Emailer]: to send emails
 //   - [Config]: the config that was passed to [Setup]
-//   - [Log]: logger
 //
 // You may see those services as raw building blocks that give you the most
 // flexibility to build on top.

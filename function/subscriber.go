@@ -108,7 +108,7 @@ func (sub *Subscriber) handleRealtimeEvents(msg model.Command, wg *sync.WaitGrou
 
 	// for msg type error, we do nothing
 	if msg.Type == model.MsgTypeError {
-		slog.Error("receiving msg of type error", "error", err)
+		slog.Error("receiving msg of type error")
 		return
 	}
 
