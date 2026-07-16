@@ -7,10 +7,8 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/database/memory"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 )
 
@@ -172,7 +170,7 @@ func TestTaskSchedulerFunctionTaskWithoutMetaUsesEmptyData(t *testing.T) {
 }
 
 func TestTaskSchedulerAddAndCancelOnTheFly(t *testing.T) {
-	ts := &TaskScheduler{Log: logger.Get(config.LoadConfig())}
+	ts := &TaskScheduler{}
 	task := model.Task{
 		ID:       "task-on-the-fly",
 		Name:     "on-the-fly",
@@ -201,9 +199,8 @@ func TestTaskSchedulerStopUnblocksStart(t *testing.T) {
 	baseName := fmt.Sprintf("sched_stop_%d", time.Now().UnixNano())
 	ds, _ := newSchedulerTestStore(t, baseName)
 	ts := &TaskScheduler{
-		Volatile:  cache.NewDevCache(logger.Get(config.LoadConfig())),
+		Volatile:  cache.NewDevCache(),
 		DataStore: ds,
-		Log:       logger.Get(config.LoadConfig()),
 	}
 
 	done := make(chan struct{})
@@ -237,7 +234,7 @@ func TestTaskSchedulerStopUnblocksStart(t *testing.T) {
 }
 
 func TestTaskSchedulerStopBeforeStart(t *testing.T) {
-	ts := &TaskScheduler{Log: logger.Get(config.LoadConfig())}
+	ts := &TaskScheduler{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -291,9 +288,8 @@ func TestTaskSchedulerDoesNotRunCronTaskOnStart(t *testing.T) {
 	task.ID = taskID
 
 	ts := &TaskScheduler{
-		Volatile:  cache.NewDevCache(logger.Get(config.LoadConfig())),
+		Volatile:  cache.NewDevCache(),
 		DataStore: ds,
-		Log:       logger.Get(config.LoadConfig()),
 	}
 	ts.AddOnTheFly(task)
 	ts.Scheduler.Start()

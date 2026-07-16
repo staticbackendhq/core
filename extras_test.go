@@ -12,7 +12,6 @@ import (
 
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/sms"
 )
@@ -63,8 +62,6 @@ func TestUploadAndResizeImage(t *testing.T) {
 		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
 		middleware.RequireAuth(backend.DB, backend.Cache),
 	}
-
-	extexec.log = logger.Get(config.Current)
 
 	h := middleware.Chain(http.HandlerFunc(extexec.resizeImage), stdAuth...)
 

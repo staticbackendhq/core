@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 )
 
@@ -35,7 +33,7 @@ func (c *telemetryCache) DequeueWork(key string) (string, error)                
 
 func TestLongRequestTelemetryDoesNotPublishBelowThreshold(t *testing.T) {
 	vol := &telemetryCache{}
-	h := LongRequestTelemetry(vol, logger.Get(config.LoadConfig()))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := LongRequestTelemetry(vol)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 
@@ -51,7 +49,7 @@ func TestLongRequestTelemetryDoesNotPublishBelowThreshold(t *testing.T) {
 
 func TestLongRequestTelemetryPublishesTenantMetadata(t *testing.T) {
 	vol := &telemetryCache{}
-	h := LongRequestTelemetry(vol, logger.Get(config.LoadConfig()))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := LongRequestTelemetry(vol)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(SlowRequestThreshold + 10*time.Millisecond)
 		http.Error(w, "nope", http.StatusTeapot)
 	}))

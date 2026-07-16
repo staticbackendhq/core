@@ -9,24 +9,22 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/backend"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
 )
 
 type ui struct {
-	log *logger.Logger
 }
 
 func (x *ui) login(w http.ResponseWriter, r *http.Request) {
-	render(w, r, "login.html", nil, nil, nil)
+	render(w, r, "login.html", nil, nil)
 }
 
 /*
 TODO: this function is not used ?!?
 func (x *ui) createApp(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -51,7 +49,7 @@ func (x *ui) createApp(w http.ResponseWriter, r *http.Request) {
 
 func (x ui) auth(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -60,12 +58,12 @@ func (x ui) auth(w http.ResponseWriter, r *http.Request) {
 
 	conf, err := backend.DB.FindDatabase(pk)
 	if err != nil {
-		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "This app does not exists"}, x.log)
+		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "This app does not exists"})
 		return
 	}
 
 	if _, err := middleware.ValidateRootToken(backend.DB, conf.Name, token); err != nil {
-		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "invalid public key / token"}, x.log)
+		render(w, r, "login.html", nil, &Flash{Type: "danger", Message: "invalid public key / token"})
 		return
 	}
 
@@ -93,40 +91,40 @@ func (x ui) auth(w http.ResponseWriter, r *http.Request) {
 func (x ui) logins(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	cus, err := backend.DB.FindTenant(conf.TenantID)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	logins, err := cus.GetExternalLogins()
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "logins.html", logins, nil, x.log)
+	render(w, r, "logins.html", logins, nil)
 }
 
 func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	cus, err := backend.DB.FindTenant(conf.TenantID)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -136,7 +134,7 @@ func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 
 	logins, err := cus.GetExternalLogins()
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -151,18 +149,18 @@ func (x ui) enableExternalLogin(w http.ResponseWriter, r *http.Request) {
 	logins[provider] = keys
 
 	if err := backend.DB.EnableExternalLogin(cus.ID, logins); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	flash := &Flash{Type: "success", Message: "OAuth provider successfully added"}
-	render(w, r, "logins.html", logins, flash, x.log)
+	render(w, r, "logins.html", logins, flash)
 }
 
 func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -179,7 +177,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 	allNames, err := backend.DB.ListCollections(conf.Name)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -194,7 +192,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(names) == 0 {
-		render(w, r, "db_cols.html", data, nil, x.log)
+		render(w, r, "db_cols.html", data, nil)
 		return
 	}
 
@@ -212,7 +210,7 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 	// handle post
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
@@ -226,13 +224,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 
 			var clauses [][]interface{}
 			if err := json.Unmarshal([]byte(query), &clauses); err != nil {
-				renderErr(w, r, err, x.log)
+				renderErr(w, r, err)
 				return
 			}
 
 			filter, err = backend.DB.ParseQuery(clauses)
 			if err != nil {
-				renderErr(w, r, err, x.log)
+				renderErr(w, r, err)
 				return
 			}
 		}
@@ -243,13 +241,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		if len(filter) == 0 {
 			list, err = backend.DB.ListDocuments(auth, conf.Name, col, params)
 			if err != nil {
-				renderErr(w, r, err, x.log)
+				renderErr(w, r, err)
 				return
 			}
 		} else {
 			list, err = backend.DB.QueryDocuments(auth, conf.Name, col, filter, params)
 			if err != nil {
-				renderErr(w, r, err, x.log)
+				renderErr(w, r, err)
 				return
 			}
 		}
@@ -268,13 +266,13 @@ func (x *ui) dbCols(w http.ResponseWriter, r *http.Request) {
 		data.SortDescending = "0"
 	}
 
-	render(w, r, "db_cols.html", data, nil, x.log)
+	render(w, r, "db_cols.html", data, nil)
 }
 
 func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -283,7 +281,7 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 
 	doc, err := backend.DB.GetDocumentByID(auth, conf.Name, col, id)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -300,18 +298,18 @@ func (x ui) dbDoc(w http.ResponseWriter, r *http.Request) {
 	data.Columns = x.readColumnNames(docs)
 	data.Doc = doc
 
-	render(w, r, "db_doc.html", data, nil, x.log)
+	render(w, r, "db_doc.html", data, nil)
 }
 
 func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -327,7 +325,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 	case "int":
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
@@ -335,7 +333,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 	case "float":
 		f, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
@@ -347,7 +345,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := backend.DB.UpdateDocument(auth, conf.Name, col, id, update); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -358,7 +356,7 @@ func (x ui) dbSave(w http.ResponseWriter, r *http.Request) {
 func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -366,7 +364,7 @@ func (x ui) dbDel(w http.ResponseWriter, r *http.Request) {
 	id := getURLPart(r.URL.Path, 4)
 
 	if _, err := backend.DB.DeleteDocument(auth, conf.Name, col, id); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -398,7 +396,7 @@ func (ui) readColumnNames(docs []map[string]interface{}) []string {
 func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -406,13 +404,13 @@ func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 
 	forms, err := backend.DB.GetForms(conf.Name)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	entries, err := backend.DB.ListFormSubmissions(conf.Name, formName)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -426,20 +424,20 @@ func (x ui) forms(w http.ResponseWriter, r *http.Request) {
 	data.Forms = forms
 	data.Entries = entries
 
-	render(w, r, "forms.html", data, nil, x.log)
+	render(w, r, "forms.html", data, nil)
 }
 
 func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
 	conf, auth, err := middleware.Extract(r, true)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	id := getURLPart(r.URL.Path, 4)
 
 	if _, err := backend.DB.DeleteDocument(auth, conf.Name, "sb_forms", id); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -449,28 +447,28 @@ func (x ui) formDel(w http.ResponseWriter, r *http.Request) {
 func (x ui) fnList(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	results, err := backend.DB.ListFunctions(conf.Name)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "fn_list.html", results, nil, x.log)
+	render(w, r, "fn_list.html", results, nil)
 }
 
 func (x *ui) fnNew(w http.ResponseWriter, r *http.Request) {
 	fn := model.ExecData{}
-	render(w, r, "fn_edit.html", fn, nil, x.log)
+	render(w, r, "fn_edit.html", fn, nil)
 }
 
 func (x *ui) fnEdit(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -478,22 +476,22 @@ func (x *ui) fnEdit(w http.ResponseWriter, r *http.Request) {
 
 	fn, err := backend.DB.GetFunctionByID(conf.Name, id)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "fn_edit.html", fn, nil, x.log)
+	render(w, r, "fn_edit.html", fn, nil)
 }
 
 func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 	}
 
 	id := r.Form.Get("id")
@@ -509,7 +507,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 		}
 		newID, err := backend.DB.AddFunction(conf.Name, fn)
 		if err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
@@ -522,7 +520,7 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 		Code:         code,
 		TriggerTopic: trigger,
 	}); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -532,12 +530,12 @@ func (x *ui) fnSave(w http.ResponseWriter, r *http.Request) {
 func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 	name := getURLPart(r.URL.Path, 4)
 	if err := backend.DB.DeleteFunction(conf.Name, name); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -547,7 +545,7 @@ func (x *ui) fnDel(w http.ResponseWriter, r *http.Request) {
 func (x *ui) fsList(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -555,24 +553,24 @@ func (x *ui) fsList(w http.ResponseWriter, r *http.Request) {
 
 	results, err := backend.DB.ListAllFiles(conf.Name, accountID)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "fs_list.html", results, nil, x.log)
+	render(w, r, "fs_list.html", results, nil)
 }
 
 func (x *ui) fsDel(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	fileID := getURLPart(r.URL.Path, 4)
 
 	if err := backend.DB.DeleteFile(conf.Name, fileID); err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -582,23 +580,23 @@ func (x *ui) fsDel(w http.ResponseWriter, r *http.Request) {
 func (x ui) accounts(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	accounts, err := backend.DB.ListAccounts(conf.Name)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "accounts_list.html", accounts, nil, nil)
+	render(w, r, "accounts_list.html", accounts, nil)
 }
 
 func (x ui) users(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
@@ -606,39 +604,39 @@ func (x ui) users(w http.ResponseWriter, r *http.Request) {
 
 	users, err := backend.DB.ListUsers(conf.Name, id)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "users_list.html", users, nil, nil)
+	render(w, r, "users_list.html", users, nil)
 }
 
 func (x ui) tasks(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	allTasks, err := backend.DB.ListTasksByBase(conf.Name)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "tasks_list.html", allTasks, nil, x.log)
+	render(w, r, "tasks_list.html", allTasks, nil)
 }
 
 func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		conf, _, err := middleware.Extract(r, false)
 		if err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
 		if err := r.ParseForm(); err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
@@ -653,7 +651,7 @@ func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
 
 		taskID, err := backend.DB.AddTask(conf.Name, task)
 		if err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
@@ -664,25 +662,25 @@ func (x ui) taskNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render(w, r, "tasks_new.html", nil, nil, nil)
+	render(w, r, "tasks_new.html", nil, nil)
 }
 
 func (x ui) myAccount(w http.ResponseWriter, r *http.Request) {
 	conf, _, err := middleware.Extract(r, false)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
 		url, err := getStripePortalURL(conf.TenantID)
 		if err != nil {
-			renderErr(w, r, err, x.log)
+			renderErr(w, r, err)
 			return
 		}
 
@@ -692,9 +690,9 @@ func (x ui) myAccount(w http.ResponseWriter, r *http.Request) {
 
 	tenant, err := backend.DB.FindTenant(conf.TenantID)
 	if err != nil {
-		renderErr(w, r, err, x.log)
+		renderErr(w, r, err)
 		return
 	}
 
-	render(w, r, "customer.html", tenant, nil, x.log)
+	render(w, r, "customer.html", tenant, nil)
 }

@@ -6,15 +6,13 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/logger"
 )
 
 func TestBrokerCloseIsIdempotent(t *testing.T) {
-	log := logger.Get(config.LoadConfig())
+
 	b := NewBroker(func(context.Context, string) (string, error) {
 		return "", nil
-	}, cache.NewDevCache(log), log)
+	}, cache.NewDevCache())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

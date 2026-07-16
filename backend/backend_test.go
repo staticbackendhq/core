@@ -40,19 +40,22 @@ func TestMain(t *testing.M) {
 	// initializes all core services basesd on config
 	backend.Setup(config.Current)
 
-	setup()
+	if err := setup(); err != nil {
+		panic(err)
+	}
 
 	os.Exit(t.Run())
 }
 
-func setup() {
+func setup() error {
 	if err := createTenantAndDatabase(); err != nil {
-		backend.Log.Fatal().Err(err)
+		return err
 	}
 
 	if err := createUser(); err != nil {
-		backend.Log.Fatal().Err(err)
+		return err
 	}
+	return nil
 }
 
 func createTenantAndDatabase() error {

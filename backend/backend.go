@@ -182,10 +182,12 @@ var (
 func Setup(cfg config.AppConfig) {
 	logger.Setup(cfg)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
 	if err := Close(ctx); err != nil {
 		slog.Error("error closing existing backend services", "error", err)
 	}
-	cancel()
+	
 
 	Config = cfg
 	resetLifecycle()

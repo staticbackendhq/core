@@ -3,19 +3,17 @@ package staticbackend
 import (
 	"encoding/json"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/webhook"
 )
 
 type stripeWebhook struct {
-	log *logger.Logger
 }
 
 func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
@@ -23,7 +21,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		wh.log.Error().Err(err).Msg("STRIPE ERROR (read body)")
+		slog.Error("STRIPE ERROR (read body)", "error", err)
 
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
@@ -35,7 +33,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 	// See https://stripe.com/docs/webhooks/signatures for more information.
 	event, err := webhook.ConstructEvent(body, r.Header.Get("Stripe-Signature"), endpointSecret)
 	if err != nil {
-		wh.log.Error().Err(err).Msg("STRIPE ERROR (verify secret)")
+		slog.Error("STRIPE ERROR (verify secret)", "error", err)
 
 		w.WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature.
 		return
@@ -46,7 +44,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 		var sub stripe.Subscription
 		err := json.Unmarshal(event.Data.Raw, &sub)
 		if err != nil {
-			wh.log.Error().Err(err).Msg("STRIPE ERROR (sub update json))")
+			slog.Error("STRIPE ERROR (sub update json)", "error", err)
 
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -56,7 +54,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 		var sub stripe.Subscription
 		err := json.Unmarshal(event.Data.Raw, &sub)
 		if err != nil {
-			wh.log.Error().Err(err).Msg("STRIPE ERROR (sub del json))")
+			slog.Error("STRIPE ERROR (sub del json)", "error", err)
 
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -65,7 +63,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 	case "checkout.session.completed":
 		var cs stripe.CheckoutSession
 		if err := json.Unmarshal(event.Data.Raw, &cs); err != nil {
-			wh.log.Error().Err(err).Msg("STRIPE ERROR (checkout session completed JSON))")
+			slog.Error("STRIPE ERROR (checkout session completed JSON)", "error", err)
 
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -73,7 +71,7 @@ func (wh *stripeWebhook) process(w http.ResponseWriter, r *http.Request) {
 
 		wh.handleCheckoutSessionCompleted(cs)
 	default:
-		log.Printf("received unhandled Stripe webhook: %s\n", event.Type)
+		slog.Info("received unhandled Stripe webhook", "type", event.Type)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -86,25 +84,25 @@ func (wh *stripeWebhook) handleSubChanged(sub stripe.Subscription) {
 
 	stripeID := sub.Customer.ID
 
-	wh.log.Info().Msgf("[Sub Changed]: for StripeID: %s", stripeID)
+	slog.Info("[Sub Changed]: for StripeID", "stripe_id", stripeID)
 
 	// find the customer
 	cus, err := backend.DB.GetTenantByStripeID(stripeID)
 	if err != nil {
-		wh.log.Error().Err(err).Msg("STRIPE ERROR (find cus by stripe id)")
+		slog.Error("STRIPE ERROR (find cus by stripe id)", "stripe_id", stripeID, "error", err)
 		return
 	}
 
-	wh.log.Info().Msgf("[Sub Changed]: found account: %s", cus.Email)
+	slog.Info("[Sub Changed]: found account", "email", cus.Email)
 
 	if sub.Items != nil && len(sub.Items.Data) > 0 {
-		wh.log.Info().Msg("[Sub Changed]: there's at least 1 sub")
+		slog.Info("[Sub Changed]: there's at least 1 sub")
 
 		priceID := sub.Items.Data[0].Price.ID
 		newLevel := wh.priceToLevel(priceID)
 
 		if err := backend.DB.ChangeTenantPlan(cus.ID, newLevel); err != nil {
-			wh.log.Error().Err(err).Msg("STRIPE ERROR (update cus plan)")
+			slog.Error("STRIPE ERROR (update cus plan)", "error", err)
 			return
 		}
 	}
@@ -119,20 +117,20 @@ func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
 
 	cus, err := backend.DB.GetTenantByStripeID(stripeID)
 	if err != nil {
-		wh.log.Error().Err(err).Msg("STRIPE ERROR (find cus by id)")
+		slog.Error("STRIPE ERROR (find cus by id)", "stripe_id", stripeID, "error", err)
 		return
 	}
 
 	if err := backend.DB.ActivateTenant(cus.ID, false); err != nil {
-		wh.log.Error().Err(err).Msg("STRIPE ERROR (sub canceled)")
+		slog.Error("STRIPE ERROR (sub canceled)", "tenant_id", cus.ID, "error", err)
 	}
 }
 
 func (wh *stripeWebhook) handleCheckoutSessionCompleted(cs stripe.CheckoutSession) {
 	if !wh.isSBCustomer(cs.Customer.Metadata) {
-		wh.log.Warn().Msg("STRIPE: checkout completed, not a sb customer")
+		slog.Warn("STRIPE: checkout completed, not a sb customer")
 		for k, v := range cs.Customer.Metadata {
-			wh.log.Warn().Msgf("-> %s: %s", k, v)
+			slog.Warn("Stripe customer metadata", "key", k, "value", v)
 		}
 		return
 	}
@@ -141,7 +139,7 @@ func (wh *stripeWebhook) handleCheckoutSessionCompleted(cs stripe.CheckoutSessio
 
 	cus, err := backend.DB.GetTenantByStripeID(stripeID)
 	if err != nil {
-		wh.log.Error().Err(err).Msg("STRIPE ERROR (get cus by stripe id)")
+		slog.Error("STRIPE ERROR (get cus by stripe id)", "stripe_id", stripeID, "error", err)
 		return
 	}
 
@@ -150,7 +148,7 @@ func (wh *stripeWebhook) handleCheckoutSessionCompleted(cs stripe.CheckoutSessio
 	}
 
 	if err := backend.DB.ActivateTenant(cus.ID, true); err != nil {
-		wh.log.Error().Err(err).Msgf("STRIPE ERROR (activate cus): %s", stripeID)
+		slog.Error("STRIPE ERROR (activate cus)", "stripe_id", stripeID, "tenant_id", cus.ID, "error", err)
 	}
 }
 

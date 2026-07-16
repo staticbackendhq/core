@@ -3,9 +3,8 @@ package staticbackend
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
-
-	"github.com/staticbackendhq/core/backend"
 )
 
 func respond(w http.ResponseWriter, code int, v interface{}) {
@@ -18,7 +17,7 @@ func respond(w http.ResponseWriter, code int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	if _, err := w.Write(b); err != nil {
-		backend.Log.Error().Err(err)
+		slog.Error(err.Error())
 	}
 }
 

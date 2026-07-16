@@ -2,6 +2,7 @@ package staticbackend
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/staticbackendhq/core/config"
 	emailFuncs "github.com/staticbackendhq/core/email"
 	"github.com/staticbackendhq/core/internal"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
 
@@ -23,7 +23,6 @@ import (
 )
 
 type accounts struct {
-	log *logger.Logger
 }
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
@@ -192,7 +191,7 @@ func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
 		// "safe-to-use-in-dev-root-token" as root token instead of
 		// the changing one across CLI start/stop
 		if err := backend.Cache.Set("dev-root-token", rootToken); err != nil {
-			backend.Log.Error().Err(err)
+			slog.Error(err.Error())
 		}
 	}
 
@@ -221,7 +220,7 @@ Refer to the documentation at https://staticbackend.dev/docs
 	} else if !bypassStripe {
 		err = backend.Emailer.Send(ed)
 		if err != nil {
-			a.log.Error().Err(err).Msg("error sending email")
+			slog.Error("error sending email", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -250,7 +249,7 @@ Refer to the documentation at https://staticbackend.dev/docs
 		return
 	}
 
-	render(w, r, "login.html", nil, &Flash{Type: "sucess", Message: "We've emailed you all the information you need to get started."}, a.log)
+	render(w, r, "login.html", nil, &Flash{Type: "sucess", Message: "We've emailed you all the information you need to get started."})
 }
 
 func (a *accounts) addDatabase(w http.ResponseWriter, r *http.Request) {
@@ -280,7 +279,12 @@ func (a *accounts) addDatabase(w http.ResponseWriter, r *http.Request) {
 	if len(config.Current.StripeKey) > 0 && len(cust.SubscriptionID) > 0 {
 		curSub, err := subscription.Get(cust.SubscriptionID, nil)
 		if err != nil {
-			a.log.Err(err).Msgf("trying to get stripe cust %s sub %s", cust.StripeID, cust.SubscriptionID)
+			slog.Error(
+				"trying to get stripe customer subscription",
+				"stripe_customer_id", cust.StripeID,
+				"subscription_id", cust.SubscriptionID,
+				"error", err,
+			)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -302,7 +306,12 @@ func (a *accounts) addDatabase(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if _, err := subscription.Update(cust.SubscriptionID, params); err != nil {
-			a.log.Err(err).Msgf("unable to update stripe cust %s sub %s quantity", cust.ID, cust.SubscriptionID)
+			slog.Error(
+				"unable to update stripe customer subscription quantity",
+				"tenant_id", cust.ID,
+				"subscription_id", cust.SubscriptionID,
+				"error", err,
+			)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

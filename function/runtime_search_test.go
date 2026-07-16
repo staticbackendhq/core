@@ -458,7 +458,6 @@ func newRuntimeTestContext(t *testing.T, dbName, code string) runtimeTestContext
 		Volatile:  pubsub,
 		Search:    src,
 		Data:      fn,
-		Log:       log,
 	}
 
 	return runtimeTestContext{

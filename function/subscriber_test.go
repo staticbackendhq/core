@@ -8,16 +8,14 @@ import (
 	"time"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/database/memory"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 )
 
 func TestSubscriberDBTriggerRecordsHistoryAndLastRun(t *testing.T) {
 	baseName := "subscriber_db_trigger"
-	log := logger.Get(config.LoadConfig())
-	vol := cache.NewDevCache(log)
+
+	vol := cache.NewDevCache()
 	ds := memory.New(vol.PublishDocument)
 
 	fnID, err := ds.AddFunction(baseName, model.ExecData{
@@ -35,14 +33,12 @@ func TestSubscriberDBTriggerRecordsHistoryAndLastRun(t *testing.T) {
 
 	sub := &Subscriber{
 		PubSub: vol,
-		Log:    log,
 		GetExecEnv: func(msg model.Command) (*ExecutionEnvironment, error) {
 			return &ExecutionEnvironment{
 				Auth:      msg.Auth,
 				BaseName:  msg.Base,
 				DataStore: ds,
 				Volatile:  vol,
-				Log:       log,
 			}, nil
 		},
 	}
@@ -90,14 +86,13 @@ func TestSubscriberDBTriggerRecordsHistoryAndLastRun(t *testing.T) {
 
 func TestSubscriberTelemetryBypassesUserMessageThrottle(t *testing.T) {
 	baseName := "subscriber_telemetry_trigger"
-	log := logger.Get(config.LoadConfig())
-	vol := cache.NewDevCache(log)
+
+	vol := cache.NewDevCache()
 	ds := memory.New(vol.PublishDocument)
 
 	called := false
 	sub := &Subscriber{
 		PubSub: vol,
-		Log:    log,
 		GetExecEnv: func(msg model.Command) (*ExecutionEnvironment, error) {
 			called = true
 			return &ExecutionEnvironment{
@@ -105,7 +100,6 @@ func TestSubscriberTelemetryBypassesUserMessageThrottle(t *testing.T) {
 				BaseName:  msg.Base,
 				DataStore: ds,
 				Volatile:  vol,
-				Log:       log,
 			}, nil
 		},
 	}
@@ -130,8 +124,8 @@ func TestSubscriberTelemetryBypassesUserMessageThrottle(t *testing.T) {
 
 func TestSubscriberTelemetryTriggerRecordsHistory(t *testing.T) {
 	baseName := "subscriber_telemetry_history"
-	log := logger.Get(config.LoadConfig())
-	vol := cache.NewDevCache(log)
+
+	vol := cache.NewDevCache()
 	ds := memory.New(vol.PublishDocument)
 
 	fnID, err := ds.AddFunction(baseName, model.ExecData{
@@ -149,14 +143,12 @@ func TestSubscriberTelemetryTriggerRecordsHistory(t *testing.T) {
 
 	sub := &Subscriber{
 		PubSub: vol,
-		Log:    log,
 		GetExecEnv: func(msg model.Command) (*ExecutionEnvironment, error) {
 			return &ExecutionEnvironment{
 				Auth:      msg.Auth,
 				BaseName:  msg.Base,
 				DataStore: ds,
 				Volatile:  vol,
-				Log:       log,
 			}, nil
 		},
 	}
@@ -200,13 +192,12 @@ func TestSubscriberTelemetryTriggerRecordsHistory(t *testing.T) {
 }
 
 func TestSubscriberStartContextStopsOnCancel(t *testing.T) {
-	log := logger.Get(config.LoadConfig())
+
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 
 	sub := &Subscriber{
-		PubSub: cache.NewDevCache(log),
-		Log:    log,
+		PubSub: cache.NewDevCache(),
 		GetExecEnv: func(msg model.Command) (*ExecutionEnvironment, error) {
 			t.Fatal("unexpected message processing")
 			return nil, nil
