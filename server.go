@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/staticbackendhq/core/backend"
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/internal"
@@ -317,7 +316,7 @@ func Start(c config.AppConfig) {
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Error().Err(err).Msg("exit reason")
+		slog.Error("exit reason", "error", err)
 	}
 }
 

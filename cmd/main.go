@@ -12,7 +12,6 @@ import (
 func main() {
 	c := config.LoadConfig()
 
-
 	var v bool
 	flag.BoolVar(&v, "v", false, "Display the version and build info")
 	flag.Parse()

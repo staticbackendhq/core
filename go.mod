@@ -16,7 +16,6 @@ require (
 	github.com/markbates/goth v1.73.0
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/redis/go-redis/v9 v9.19.0
-	github.com/rs/zerolog v1.27.0
 	github.com/stripe/stripe-go/v84 v84.2.0
 	go.mongodb.org/mongo-driver v1.17.7
 	golang.org/x/crypto v0.48.0
@@ -78,7 +77,6 @@ require (
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/magefile/mage v1.9.0 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
