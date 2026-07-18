@@ -20,7 +20,7 @@ require (
 	github.com/stripe/stripe-go/v84 v84.2.0
 	go.mongodb.org/mongo-driver v1.17.7
 	golang.org/x/crypto v0.52.0
-	golang.org/x/image v0.38.0
+	golang.org/x/image v0.41.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	modernc.org/sqlite v1.44.3
