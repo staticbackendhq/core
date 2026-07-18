@@ -19,7 +19,7 @@ require (
 	github.com/rs/zerolog v1.27.0
 	github.com/stripe/stripe-go/v84 v84.2.0
 	go.mongodb.org/mongo-driver v1.17.7
-	golang.org/x/crypto v0.51.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/image v0.38.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
