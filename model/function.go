@@ -120,10 +120,8 @@ func (ex ExecData) GetSecrets() (map[string]string, error) {
 	return secrets, nil
 }
 
-func KeepFunctionHistory(h ExecHistory) bool {
-	cutoff := time.Now().AddDate(0, 0, -config.Current.FunctionHistoryRetentionDays)
-
-	return h.Completed.IsZero() || !h.Completed.Before(cutoff)
+func FunctionHistoryRetentionCutoff() time.Time {
+	return time.Now().AddDate(0, 0, -config.Current.FunctionHistoryRetentionDays)
 }
 
 func newFunctionSecretsCipher() (cipher.Block, error) {

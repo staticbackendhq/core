@@ -114,7 +114,7 @@ func (m *Memory) RanFunction(dbName, id string, rh model.ExecHistory) error {
 
 	history := make([]model.ExecHistory, 0, len(exists.History))
 	for _, h := range exists.History {
-		if model.KeepFunctionHistory(h) {
+		if h.Completed.IsZero() || !h.Completed.Before(model.FunctionHistoryRetentionCutoff()) {
 			history = append(history, h)
 		}
 	}

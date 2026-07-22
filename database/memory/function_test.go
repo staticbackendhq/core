@@ -310,5 +310,4 @@ func TestRanFunctionRemoveOldHistory(t *testing.T) {
 	if fn.LastRun.IsZero() {
 		t.Fatal("expected last run time to be set")
 	}
-
 }
