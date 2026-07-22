@@ -112,5 +112,13 @@ func (m *Memory) RanFunction(dbName, id string, rh model.ExecHistory) error {
 	exists.LastRun = rh.Completed
 	exists.History = append(exists.History, rh)
 
+	history := make([]model.ExecHistory, 0, len(exists.History))
+	for _, h := range exists.History {
+		if model.KeepFunctionHistory(h) {
+			history = append(history, h)
+		}
+	}
+	exists.History = history
+
 	return create(m, dbName, "sb_functions", id, exists)
 }

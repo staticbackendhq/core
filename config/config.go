@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 var Current AppConfig
 
@@ -105,51 +108,70 @@ type AppConfig struct {
 	ActivateFlag string
 	// PluginsPath is the full qualified path where plugins are stored
 	PluginsPath string
+	// FunctionHistoryRetentionDays is the number of days to keep function execution history before cleanup.
+	FunctionHistoryRetentionDays int
 }
 
 func LoadConfig() AppConfig {
 	return AppConfig{
-		PrimaryInstanceHostname:  os.Getenv("PRIMARY_INSTANCE_HOSTNAME"),
-		Port:                     os.Getenv("PORT"),
-		AppEnv:                   os.Getenv("APP_ENV"),
-		AppSecret:                os.Getenv("APP_SECRET"),
-		AppURL:                   os.Getenv("APP_URL"),
-		FromCLI:                  os.Getenv("SB_FROM_CLI"),
-		DataStore:                os.Getenv("DATA_STORE"),
-		DatabaseURL:              os.Getenv("DATABASE_URL"),
-		MailProvider:             os.Getenv("MAIL_PROVIDER"),
-		MailpitSMTPAddr:          os.Getenv("MAILPIT_SMTP_ADDR"),
-		MailpitAPIURL:            os.Getenv("MAILPIT_API_URL"),
-		FromEmail:                os.Getenv("FROM_EMAIL"),
-		FromName:                 os.Getenv("FROM_NAME"),
-		StorageProvider:          os.Getenv("STORAGE_PROVIDER"),
-		LocalStorageURL:          os.Getenv("LOCAL_STORAGE_URL"),
-		RedisURL:                 os.Getenv("REDIS_URL"),
-		RedisHost:                os.Getenv("REDIS_HOST"),
-		RedisPassword:            os.Getenv("REDIS_PASSWORD"),
-		StripeKey:                os.Getenv("STRIPE_KEY"),
-		StripePriceIDIdea:        os.Getenv("STRIPE_PRICEID_IDEA"),
-		StripePriceIDLaunch:      os.Getenv("STRIPE_PRICEID_LAUNCH"),
-		StripePriceIDTraction:    os.Getenv("STRIPE_PRICEID_TRACTION"),
-		StripePriceIDGrowth:      os.Getenv("STRIPE_PRICEID_GROWTH"),
-		StripeWebhookSecret:      os.Getenv("STRIPE_WEBHOOK_SECRET"),
-		StripeRedirectFromPortal: os.Getenv("STRIPE_REDIRECT"),
-		TwilioAccountID:          os.Getenv("TWILIO_ACCOUNTSID"),
-		TwilioAuthToken:          os.Getenv("TWILIO_AUTHTOKEN"),
-		TwilioTestCellNumber:     os.Getenv("MY_CELL"),
-		TwilioNumber:             os.Getenv("TWILIO_NUMBER"),
-		S3AccessKey:              os.Getenv("S3_ACCESSKEY"),
-		S3SecretKey:              os.Getenv("S3_SECRETKEY"),
-		S3Endpoint:               os.Getenv("S3_ENDPOINT"),
-		S3Region:                 os.Getenv("S3_REGION"),
-		S3Bucket:                 os.Getenv("S3_BUCKET"),
-		S3CDNURL:                 os.Getenv("S3_CDN_URL"),
-		KeepPermissionInName:     os.Getenv("KEEP_PERM_COL_NAME") == "",
-		RoleAwareRowPermissions:  os.Getenv("ROLE_AWARE_ROW_PERMISSIONS") == "true",
-		LogConsoleLevel:          os.Getenv("LOG_CONSOLE_LEVEL"),
-		LogFilename:              os.Getenv("LOG_FILENAME"),
-		FullTextIndexFile:        os.Getenv("FTS_INDEX_FILE"),
-		ActivateFlag:             os.Getenv("ACTIVATE_FLAG"),
-		PluginsPath:              os.Getenv("PLUGINS_PATH"),
+		PrimaryInstanceHostname:      os.Getenv("PRIMARY_INSTANCE_HOSTNAME"),
+		Port:                         os.Getenv("PORT"),
+		AppEnv:                       os.Getenv("APP_ENV"),
+		AppSecret:                    os.Getenv("APP_SECRET"),
+		AppURL:                       os.Getenv("APP_URL"),
+		FromCLI:                      os.Getenv("SB_FROM_CLI"),
+		DataStore:                    os.Getenv("DATA_STORE"),
+		DatabaseURL:                  os.Getenv("DATABASE_URL"),
+		MailProvider:                 os.Getenv("MAIL_PROVIDER"),
+		MailpitSMTPAddr:              os.Getenv("MAILPIT_SMTP_ADDR"),
+		MailpitAPIURL:                os.Getenv("MAILPIT_API_URL"),
+		FromEmail:                    os.Getenv("FROM_EMAIL"),
+		FromName:                     os.Getenv("FROM_NAME"),
+		StorageProvider:              os.Getenv("STORAGE_PROVIDER"),
+		LocalStorageURL:              os.Getenv("LOCAL_STORAGE_URL"),
+		RedisURL:                     os.Getenv("REDIS_URL"),
+		RedisHost:                    os.Getenv("REDIS_HOST"),
+		RedisPassword:                os.Getenv("REDIS_PASSWORD"),
+		StripeKey:                    os.Getenv("STRIPE_KEY"),
+		StripePriceIDIdea:            os.Getenv("STRIPE_PRICEID_IDEA"),
+		StripePriceIDLaunch:          os.Getenv("STRIPE_PRICEID_LAUNCH"),
+		StripePriceIDTraction:        os.Getenv("STRIPE_PRICEID_TRACTION"),
+		StripePriceIDGrowth:          os.Getenv("STRIPE_PRICEID_GROWTH"),
+		StripeWebhookSecret:          os.Getenv("STRIPE_WEBHOOK_SECRET"),
+		StripeRedirectFromPortal:     os.Getenv("STRIPE_REDIRECT"),
+		TwilioAccountID:              os.Getenv("TWILIO_ACCOUNTSID"),
+		TwilioAuthToken:              os.Getenv("TWILIO_AUTHTOKEN"),
+		TwilioTestCellNumber:         os.Getenv("MY_CELL"),
+		TwilioNumber:                 os.Getenv("TWILIO_NUMBER"),
+		S3AccessKey:                  os.Getenv("S3_ACCESSKEY"),
+		S3SecretKey:                  os.Getenv("S3_SECRETKEY"),
+		S3Endpoint:                   os.Getenv("S3_ENDPOINT"),
+		S3Region:                     os.Getenv("S3_REGION"),
+		S3Bucket:                     os.Getenv("S3_BUCKET"),
+		S3CDNURL:                     os.Getenv("S3_CDN_URL"),
+		KeepPermissionInName:         os.Getenv("KEEP_PERM_COL_NAME") == "",
+		RoleAwareRowPermissions:      os.Getenv("ROLE_AWARE_ROW_PERMISSIONS") == "true",
+		LogConsoleLevel:              os.Getenv("LOG_CONSOLE_LEVEL"),
+		LogFilename:                  os.Getenv("LOG_FILENAME"),
+		FullTextIndexFile:            os.Getenv("FTS_INDEX_FILE"),
+		ActivateFlag:                 os.Getenv("ACTIVATE_FLAG"),
+		PluginsPath:                  os.Getenv("PLUGINS_PATH"),
+		FunctionHistoryRetentionDays: functionHistoryRetentionDays(),
 	}
+}
+
+func functionHistoryRetentionDays() int {
+	const defaultDays = 7
+
+	value := os.Getenv("FUNCTION_HISTORY_RETENTION_DAYS")
+	if len(value) == 0 {
+		return defaultDays
+	}
+
+	days, err := strconv.Atoi(value)
+	if err != nil || days <= 0 {
+		return defaultDays
+	}
+
+	return days
 }
