@@ -314,6 +314,24 @@ your first application.
 For production, you'll want to configure environment variables found in `.env` 
 file.
 
+### PostgreSQL connection pool
+
+StaticBackend limits its PostgreSQL pool per running process. The defaults are
+intended for a small shared database:
+
+```
+POSTGRES_MAX_OPEN_CONNS=10
+POSTGRES_MAX_IDLE_CONNS=5
+POSTGRES_CONN_MAX_LIFETIME_SECONDS=1800
+POSTGRES_CONN_MAX_IDLE_TIME_SECONDS=300
+```
+
+The sum of `POSTGRES_MAX_OPEN_CONNS` across every StaticBackend replica and
+other applications must remain below the provider's usable connection limit.
+Set `application_name=staticbackend` in the PostgreSQL DSN to make its sessions
+identifiable in `pg_stat_activity`. When investigating saturation, group active
+sessions by database, user, application name, and state before changing limits.
+
 * [Self-hosting guide](https://staticbackend.dev/getting-started/self-hosting/)
 * [Video showing how to self-host](https://www.youtube.com/watch?v=vQjfaMxidx4)
 * [Detailed blog post on how to self-host](https://staticbackend.dev/blog/get-started-self-hosted-version/)
