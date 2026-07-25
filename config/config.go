@@ -1,6 +1,16 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
+
+const (
+	defaultPostgresMaxOpenConns           = 10
+	defaultPostgresMaxIdleConns           = 5
+	defaultPostgresConnMaxLifetimeSeconds = 1800
+	defaultPostgresConnMaxIdleTimeSeconds = 300
+)
 
 var Current AppConfig
 
@@ -25,6 +35,14 @@ type AppConfig struct {
 	DataStore string
 	// DatabaseURL is the database URL
 	DatabaseURL string
+	// PostgresMaxOpenConns is the maximum number of PostgreSQL connections this process opens.
+	PostgresMaxOpenConns int
+	// PostgresMaxIdleConns is the maximum number of idle PostgreSQL connections retained.
+	PostgresMaxIdleConns int
+	// PostgresConnMaxLifetimeSeconds is the maximum lifetime of a PostgreSQL connection.
+	PostgresConnMaxLifetimeSeconds int
+	// PostgresConnMaxIdleTimeSeconds is the maximum idle lifetime of a PostgreSQL connection.
+	PostgresConnMaxIdleTimeSeconds int
 
 	// StorageProvider used as the file storage implementation
 	StorageProvider string
@@ -109,14 +127,22 @@ type AppConfig struct {
 
 func LoadConfig() AppConfig {
 	return AppConfig{
-		PrimaryInstanceHostname:  os.Getenv("PRIMARY_INSTANCE_HOSTNAME"),
-		Port:                     os.Getenv("PORT"),
-		AppEnv:                   os.Getenv("APP_ENV"),
-		AppSecret:                os.Getenv("APP_SECRET"),
-		AppURL:                   os.Getenv("APP_URL"),
-		FromCLI:                  os.Getenv("SB_FROM_CLI"),
-		DataStore:                os.Getenv("DATA_STORE"),
-		DatabaseURL:              os.Getenv("DATABASE_URL"),
+		PrimaryInstanceHostname: os.Getenv("PRIMARY_INSTANCE_HOSTNAME"),
+		Port:                    os.Getenv("PORT"),
+		AppEnv:                  os.Getenv("APP_ENV"),
+		AppSecret:               os.Getenv("APP_SECRET"),
+		AppURL:                  os.Getenv("APP_URL"),
+		FromCLI:                 os.Getenv("SB_FROM_CLI"),
+		DataStore:               os.Getenv("DATA_STORE"),
+		DatabaseURL:             os.Getenv("DATABASE_URL"),
+		PostgresMaxOpenConns:    envInt("POSTGRES_MAX_OPEN_CONNS", defaultPostgresMaxOpenConns),
+		PostgresMaxIdleConns:    envInt("POSTGRES_MAX_IDLE_CONNS", defaultPostgresMaxIdleConns),
+		PostgresConnMaxLifetimeSeconds: envInt(
+			"POSTGRES_CONN_MAX_LIFETIME_SECONDS", defaultPostgresConnMaxLifetimeSeconds,
+		),
+		PostgresConnMaxIdleTimeSeconds: envInt(
+			"POSTGRES_CONN_MAX_IDLE_TIME_SECONDS", defaultPostgresConnMaxIdleTimeSeconds,
+		),
 		MailProvider:             os.Getenv("MAIL_PROVIDER"),
 		MailpitSMTPAddr:          os.Getenv("MAILPIT_SMTP_ADDR"),
 		MailpitAPIURL:            os.Getenv("MAILPIT_API_URL"),
@@ -152,4 +178,13 @@ func LoadConfig() AppConfig {
 		ActivateFlag:             os.Getenv("ACTIVATE_FLAG"),
 		PluginsPath:              os.Getenv("PLUGINS_PATH"),
 	}
+}
+
+func envInt(name string, fallback int) int {
+	value, err := strconv.Atoi(os.Getenv(name))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+
+	return value
 }
