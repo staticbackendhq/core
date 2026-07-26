@@ -128,7 +128,7 @@ func (wh *stripeWebhook) handleSubCancelled(sub stripe.Subscription) {
 
 func (wh *stripeWebhook) handleCheckoutSessionCompleted(cs stripe.CheckoutSession) {
 	if cs.Customer == nil {
-		wh.log.Warn().Msg("STRIPE: checkout completed without an expanded customer")
+		slog.Warn("STRIPE: checkout completed without an expanded customer")
 		return
 	}
 

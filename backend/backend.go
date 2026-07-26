@@ -218,12 +218,11 @@ func Setup(cfg config.AppConfig) {
 			logger.FatalError("failed to create connection with postgres", err)
 		}
 		pool := normalizedPostgresPoolConfig(cfg)
-		Log.Info().
-			Int("max_open_connections", pool.maxOpenConns).
-			Int("max_idle_connections", pool.maxIdleConns).
-			Int("max_lifetime_seconds", pool.maxLifetimeSeconds).
-			Int("max_idle_time_seconds", pool.maxIdleTimeSeconds).
-			Msg("postgres connection pool configured")
+		slog.Info("postgres connection pool configured",
+			"max_open_connections", pool.maxOpenConns,
+			"max_idle_connections", pool.maxIdleConns,
+			"max_lifetime_seconds", pool.maxLifetimeSeconds,
+			"max_idle_time_seconds", pool.maxIdleTimeSeconds)
 
 		DB = postgresql.New(cl, Cache.PublishDocument)
 	}
