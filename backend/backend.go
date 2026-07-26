@@ -215,10 +215,17 @@ func Setup(cfg config.AppConfig) {
 
 		DB = sqlite.New(cl, Cache.PublishDocument, Log)
 	} else {
-		cl, err := openPGDatabase(cfg.DatabaseURL)
+		cl, err := openPGDatabase(cfg.DatabaseURL, cfg)
 		if err != nil {
 			Log.Fatal().Err(err).Msg("failed to create connection with postgres")
 		}
+		pool := normalizedPostgresPoolConfig(cfg)
+		Log.Info().
+			Int("max_open_connections", pool.maxOpenConns).
+			Int("max_idle_connections", pool.maxIdleConns).
+			Int("max_lifetime_seconds", pool.maxLifetimeSeconds).
+			Int("max_idle_time_seconds", pool.maxIdleTimeSeconds).
+			Msg("postgres connection pool configured")
 
 		DB = postgresql.New(cl, Cache.PublishDocument, Log)
 	}
@@ -398,14 +405,67 @@ func openMongoDatabase(dbHost string) (*mongodrv.Client, error) {
 	return cl, nil
 }
 
-func openPGDatabase(dbHost string) (*sql.DB, error) {
+const (
+	defaultPostgresMaxOpenConns           = 10
+	defaultPostgresMaxIdleConns           = 5
+	defaultPostgresConnMaxLifetimeSeconds = 1800
+	defaultPostgresConnMaxIdleTimeSeconds = 300
+)
+
+type postgresPoolConfig struct {
+	maxOpenConns       int
+	maxIdleConns       int
+	maxLifetimeSeconds int
+	maxIdleTimeSeconds int
+}
+
+func normalizedPostgresPoolConfig(cfg config.AppConfig) postgresPoolConfig {
+	pool := postgresPoolConfig{
+		maxOpenConns:       cfg.PostgresMaxOpenConns,
+		maxIdleConns:       cfg.PostgresMaxIdleConns,
+		maxLifetimeSeconds: cfg.PostgresConnMaxLifetimeSeconds,
+		maxIdleTimeSeconds: cfg.PostgresConnMaxIdleTimeSeconds,
+	}
+
+	if pool.maxOpenConns <= 0 {
+		pool.maxOpenConns = defaultPostgresMaxOpenConns
+	}
+	if pool.maxIdleConns <= 0 {
+		pool.maxIdleConns = defaultPostgresMaxIdleConns
+	}
+	if pool.maxIdleConns > pool.maxOpenConns {
+		pool.maxIdleConns = pool.maxOpenConns
+	}
+	if pool.maxLifetimeSeconds <= 0 {
+		pool.maxLifetimeSeconds = defaultPostgresConnMaxLifetimeSeconds
+	}
+	if pool.maxIdleTimeSeconds <= 0 {
+		pool.maxIdleTimeSeconds = defaultPostgresConnMaxIdleTimeSeconds
+	}
+
+	return pool
+}
+
+func configurePostgresPool(db *sql.DB, cfg config.AppConfig) postgresPoolConfig {
+	pool := normalizedPostgresPoolConfig(cfg)
+	db.SetMaxOpenConns(pool.maxOpenConns)
+	db.SetMaxIdleConns(pool.maxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(pool.maxLifetimeSeconds) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(pool.maxIdleTimeSeconds) * time.Second)
+
+	return pool
+}
+
+func openPGDatabase(dbHost string, cfg config.AppConfig) (*sql.DB, error) {
 	//connStr := "user=postgres password=example dbname=test sslmode=disable"
 	dbConn, err := sql.Open("postgres", dbHost)
 	if err != nil {
 		return nil, err
 	}
+	configurePostgresPool(dbConn, cfg)
 
 	if err := dbConn.Ping(); err != nil {
+		_ = dbConn.Close()
 		return nil, err
 	}
 
