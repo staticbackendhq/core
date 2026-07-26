@@ -11,20 +11,18 @@ import (
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
 	sbquery "github.com/staticbackendhq/core/internal/query"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 )
 
 type PostgreSQL struct {
 	DB              *sql.DB
 	PublishDocument cache.PublishDocumentEvent
-	log             *logger.Logger
 }
 
 //go:embed sql
 var migrationFS embed.FS
 
-func New(db *sql.DB, pubdoc cache.PublishDocumentEvent, log *logger.Logger) database.Persister {
+func New(db *sql.DB, pubdoc cache.PublishDocumentEvent) database.Persister {
 	// run migrations
 	if err := migrate(db); err != nil {
 		fmt.Println("=== MIGRATION FAILED ===")
@@ -33,7 +31,7 @@ func New(db *sql.DB, pubdoc cache.PublishDocumentEvent, log *logger.Logger) data
 		os.Exit(1)
 	}
 
-	return &PostgreSQL{DB: db, PublishDocument: pubdoc, log: log}
+	return &PostgreSQL{DB: db, PublishDocument: pubdoc}
 }
 
 func (pg *PostgreSQL) Ping() error {

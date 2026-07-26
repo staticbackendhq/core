@@ -2,23 +2,16 @@ package logger
 
 import (
 	"io"
+	"log/slog"
 	"os"
+	"strings"
 	"sync"
-	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/staticbackendhq/core/config"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-type Logger struct {
-	*zerolog.Logger
-}
-
-var (
-	logger Logger
-	once   sync.Once
-)
+var once sync.Once
 
 func newFileWriter(filename string) io.Writer {
 	return &lumberjack.Logger{
@@ -27,34 +20,45 @@ func newFileWriter(filename string) io.Writer {
 	}
 }
 
-func Get(cfg config.AppConfig) *Logger {
+func Setup(cfg config.AppConfig) {
 	once.Do(func() {
+		level := parseLevel(cfg.LogConsoleLevel)
+		if cfg.AppEnv == "dev" {
+			level = slog.LevelDebug
+		}
 		// By default create console writer
-		writers := []io.Writer{zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.Stamp}}
+		writers := []io.Writer{os.Stdout}
 
 		if cfg.LogFilename != "" {
 			writers = append(writers, newFileWriter(cfg.LogFilename))
 		}
 
-		if cfg.LogConsoleLevel != "" {
-			level, err := zerolog.ParseLevel(cfg.LogConsoleLevel)
-			if err != nil {
-				panic(err)
-			}
-
-			zerolog.SetGlobalLevel(level)
-		}
-
-		if cfg.AppEnv == "dev" {
-			zerolog.SetGlobalLevel(zerolog.TraceLevel)
-		}
-
 		multiWriters := io.MultiWriter(writers...)
 
-		zeroLogger := zerolog.New(multiWriters).With().Timestamp().Logger()
+		handler := slog.NewTextHandler(multiWriters, &slog.HandlerOptions{Level: level})
 
-		logger = Logger{&zeroLogger}
+		slog.SetDefault(slog.New(handler))
 	})
+}
 
-	return &logger
+// FatalError logs a structured error message and exits the process.
+func FatalError(msg string, err error, args ...any) {
+	if err != nil {
+		args = append(args, "error", err)
+	}
+	slog.Error(msg, args...)
+	os.Exit(1)
+}
+
+func parseLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug", "trace":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }

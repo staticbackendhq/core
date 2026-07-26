@@ -7,7 +7,6 @@ import (
 
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,15 +17,13 @@ type Mongo struct {
 	Client          *mongo.Client
 	Ctx             context.Context
 	PublishDocument cache.PublishDocumentEvent
-	log             *logger.Logger
 }
 
-func New(client *mongo.Client, pubdoc cache.PublishDocumentEvent, log *logger.Logger) database.Persister {
+func New(client *mongo.Client, pubdoc cache.PublishDocumentEvent) database.Persister {
 	return &Mongo{
 		Client:          client,
 		Ctx:             context.Background(),
 		PublishDocument: pubdoc,
-		log:             log,
 	}
 }
 

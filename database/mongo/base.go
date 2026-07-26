@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -72,7 +73,7 @@ func (mg *Mongo) ensureIndex(dbName, col string) {
 
 	cur, err := dbCol.Indexes().List(mg.Ctx)
 	if err != nil {
-		mg.log.Warn().Err(err).Msg("error getting col indexes")
+		slog.Warn("error getting col indexes", "error", err)
 
 		return
 	}
@@ -81,13 +82,13 @@ func (mg *Mongo) ensureIndex(dbName, col string) {
 	for cur.Next(mg.Ctx) {
 		var v bson.M
 		if err := cur.Decode(&v); err != nil {
-			mg.log.Warn().Err(err).Msg("cannot cast to IndexModel")
+			slog.Warn("cannot cast to IndexModel", "error", err)
 			return
 		}
 
 		keys, ok := v["key"].(bson.M)
 		if !ok {
-			mg.log.Warn().Msg("unable to cast IndexModel Key to map")
+			slog.Warn("unable to cast IndexModel Key to map")
 
 			return
 		}
@@ -113,7 +114,7 @@ func (mg *Mongo) ensureIndex(dbName, col string) {
 	}
 
 	if err := mg.CreateIndex(dbName, col, FieldAccountID); err != nil {
-		mg.log.Warn().Err(err).Msg("error creating accountId idx")
+		slog.Warn("error creating accountId idx", "error", err)
 	}
 }
 
@@ -430,7 +431,7 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 	for cur.Next(mg.Ctx) {
 		var v map[string]interface{}
 		if err := cur.Decode(&v); err != nil {
-			mg.log.Error().Err(err).Msg("")
+			slog.Error("error decoding document id for bulk update", "error", err)
 		}
 		id, ok := v[FieldID].(primitive.ObjectID)
 		if ok {
@@ -457,7 +458,7 @@ func (mg *Mongo) UpdateDocuments(auth model.Auth, dbName, col string, filters ma
 	go func() {
 		docs, err := mg.GetDocumentsByIDs(auth, dbName, col, ids)
 		if err != nil {
-			mg.log.Error().Err(err).Msgf("the documents with ids=%s are not received for publishDocument event", ids)
+			slog.Error("the documents are not received for publishDocument event", "ids", ids, "error", err)
 		}
 		for _, doc := range docs {
 			mg.PublishDocument(auth, dbName, "db-"+col, model.MsgTypeDBUpdated, doc)
@@ -547,13 +548,13 @@ func (mg *Mongo) DeleteDocuments(auth model.Auth, dbName, col string, filters ma
 		findOpts := options.Find().SetProjection(bson.M{FieldID: 1})
 		cur, err := db.Collection(model.CleanCollectionName(col)).Find(mg.Ctx, filters, findOpts)
 		if err != nil {
-			mg.log.Error().Err(err).Msg("trying to get list of ids for bulk delete")
+			slog.Error("trying to get list of ids for bulk delete", "error", err)
 			return
 		}
 		for cur.Next(mg.Ctx) {
 			var v map[string]interface{}
 			if err := cur.Decode(&v); err != nil {
-				mg.log.Error().Err(err).Msg("")
+				slog.Error("error decoding document id for bulk delete", "error", err)
 			}
 			id, ok := v[FieldID].(primitive.ObjectID)
 			if ok {

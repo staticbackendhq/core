@@ -424,8 +424,8 @@ func newRuntimeTestContext(t *testing.T, dbName, code string) runtimeTestContext
 	t.Helper()
 
 	cfg := config.AppConfig{}
-	log := logger.Get(cfg)
-	pubsub := cache.NewDevCache(log)
+	logger.Setup(cfg)
+	pubsub := cache.NewDevCache()
 	datastore := memory.New(pubsub.PublishDocument).(*memory.Memory)
 
 	src, err := search.New(filepath.Join(t.TempDir(), "test.fts"), pubsub)
@@ -458,7 +458,6 @@ func newRuntimeTestContext(t *testing.T, dbName, code string) runtimeTestContext
 		Volatile:  pubsub,
 		Search:    src,
 		Data:      fn,
-		Log:       log,
 	}
 
 	return runtimeTestContext{
