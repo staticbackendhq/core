@@ -287,5 +287,18 @@ func (mg *Mongo) RanFunction(dbName, id string, rh model.ExecHistory) error {
 	if err := res.Err(); err != nil {
 		return err
 	}
+
+	update = bson.M{
+		"$pull": bson.M{
+			"h": bson.M{
+				"c": bson.M{"$lt": model.FunctionHistoryRetentionCutoff()},
+			},
+		},
+	}
+
+	res = db.Collection("sb_functions").FindOneAndUpdate(mg.Ctx, filter, update)
+	if err := res.Err(); err != nil {
+		return err
+	}
 	return nil
 }

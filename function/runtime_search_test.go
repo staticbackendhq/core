@@ -423,7 +423,8 @@ type runtimeTestContext struct {
 func newRuntimeTestContext(t *testing.T, dbName, code string) runtimeTestContext {
 	t.Helper()
 
-	cfg := config.AppConfig{}
+	cfg := config.LoadConfig()
+	config.Current = cfg
 	logger.Setup(cfg)
 	pubsub := cache.NewDevCache()
 	datastore := memory.New(pubsub.PublishDocument).(*memory.Memory)

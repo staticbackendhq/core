@@ -120,6 +120,10 @@ func (ex ExecData) GetSecrets() (map[string]string, error) {
 	return secrets, nil
 }
 
+func FunctionHistoryRetentionCutoff() time.Time {
+	return time.Now().AddDate(0, 0, -config.Current.FunctionHistoryRetentionDays)
+}
+
 func newFunctionSecretsCipher() (cipher.Block, error) {
 	key := []byte(config.Current.AppSecret)
 	switch len(key) {

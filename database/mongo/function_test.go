@@ -204,3 +204,52 @@ func TestRanFunction(t *testing.T) {
 		t.Fatal("expected last run time to be set")
 	}
 }
+
+func TestRanFunctionRemoveOldHistory(t *testing.T) {
+	id, err := createFunction("test-run-retention-cleanup", "test-retention-cleanup")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	old := model.ExecHistory{
+		FunctionID: id,
+		Version:    1,
+		Started:    time.Now().AddDate(0, 0, -8),
+		Completed:  time.Now().AddDate(0, 0, -8),
+		Success:    true,
+		Output:     []string{"old"},
+	}
+	if err := datastore.RanFunction(confDBName, id, old); err != nil {
+		t.Fatal(err)
+	}
+
+	recent := model.ExecHistory{
+		FunctionID: id,
+		Version:    2,
+		Started:    time.Now().Add(-2 * time.Second),
+		Completed:  time.Now(),
+		Success:    true,
+		Output:     []string{"recent"},
+	}
+
+	if err := datastore.RanFunction(confDBName, id, recent); err != nil {
+		t.Fatal(err)
+	}
+
+	fn, err := datastore.GetFunctionByID(confDBName, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(fn.History) != 1 {
+		t.Fatalf("expected history to have 1 item, got %d", len(fn.History))
+	}
+
+	if fn.History[0].Version != 2 {
+		t.Fatalf("expected recent history to remain, got version %d", fn.History[0].Version)
+	}
+
+	if fn.LastRun.IsZero() {
+		t.Fatal("expected last run time to be set")
+	}
+}

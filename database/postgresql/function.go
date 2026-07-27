@@ -244,6 +244,17 @@ func (pg *PostgreSQL) RanFunction(dbName, id string, rh model.ExecHistory) error
 		pq.Array(rh.Output),
 	)
 
+	if err != nil {
+		return err
+	}
+
+	qry = fmt.Sprintf(`
+		DELETE FROM %s.sb_function_logs
+		WHERE function_id = $1 AND completed < $2
+		`, dbName)
+
+	_, err = pg.DB.Exec(qry, id, model.FunctionHistoryRetentionCutoff())
+
 	return err
 }
 
