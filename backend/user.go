@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"strings"
 	"time"
@@ -249,7 +250,7 @@ func (u User) publishAccountCreated(accountID, email string, tok model.User) {
 	}
 	b, err := json.Marshal(data)
 	if err != nil {
-		Log.Error().Err(err).Msg("error marshaling system account event")
+		slog.Error("error marshaling system account event", "error", err)
 		return
 	}
 
@@ -260,7 +261,7 @@ func (u User) publishAccountCreated(accountID, email string, tok model.User) {
 		Auth:    auth,
 		Base:    u.conf.Name,
 	}); err != nil {
-		Log.Error().Err(err).Msg("error publishing system account event")
+		slog.Error("error publishing system account event", "error", err)
 	}
 }
 

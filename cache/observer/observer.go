@@ -2,10 +2,9 @@ package observer
 
 import (
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/staticbackendhq/core/logger"
 )
 
 type Observer interface {
@@ -47,12 +46,11 @@ func (ps *memSubscriber) Close() error {
 type memObserver struct {
 	Subscriptions map[string][]*memSubscriber
 	mx            sync.Mutex
-	log           *logger.Logger
 }
 
-func NewObserver(log *logger.Logger) Observer {
+func NewObserver() Observer {
 	subs := make(map[string][]*memSubscriber)
-	return &memObserver{Subscriptions: subs, mx: sync.Mutex{}, log: log}
+	return &memObserver{Subscriptions: subs, mx: sync.Mutex{}}
 }
 
 func (o *memObserver) Subscribe(channel string) Subscriber {
@@ -85,7 +83,7 @@ func (o *memObserver) Publish(channel string, msg interface{}) error {
 					<-timer.C
 				}
 			case <-timer.C:
-				o.log.Error().Msg("the previous message is not read; dropping this message")
+				slog.Error("the previous message is not read; dropping this message")
 				timer.Stop()
 			}
 		}(sub, msg)

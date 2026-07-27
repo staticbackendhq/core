@@ -3,13 +3,12 @@ package staticbackend
 import (
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/staticbackendhq/core/logger"
 )
 
 var (
@@ -68,11 +67,11 @@ type ViewData struct {
 	Data       interface{}
 }
 
-func render(w http.ResponseWriter, r *http.Request, view string, data interface{}, flash *Flash, log *logger.Logger) {
-	renderWithMenu(w, r, view, data, flash, "", log)
+func render(w http.ResponseWriter, r *http.Request, view string, data interface{}, flash *Flash) {
+	renderWithMenu(w, r, view, data, flash, "")
 }
 
-func renderWithMenu(w http.ResponseWriter, r *http.Request, view string, data interface{}, flash *Flash, menu string, log *logger.Logger) {
+func renderWithMenu(w http.ResponseWriter, r *http.Request, view string, data interface{}, flash *Flash, menu string) {
 	vd := ViewData{
 		ActiveMenu: menu,
 		Data:       data,
@@ -86,18 +85,18 @@ func renderWithMenu(w http.ResponseWriter, r *http.Request, view string, data in
 	}
 
 	if err := tmpl.Execute(w, vd); err != nil {
-		log.Error().Err(err).Msgf(`error executing template "%s"`, view)
+		slog.Error("error executing template", "template", view, "error", err)
 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func renderErr(w http.ResponseWriter, r *http.Request, err error, log *logger.Logger) {
+func renderErr(w http.ResponseWriter, r *http.Request, err error) {
 	if err != nil {
-		log.Error().Err(err).Stack().Msg("err in ui")
+		slog.Error("err in ui", "error", err)
 	}
 
-	render(w, r, "err.html", nil, nil, log)
+	render(w, r, "err.html", nil, nil)
 }
 
 func customFuncs() template.FuncMap {

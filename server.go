@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,8 +37,9 @@ const (
 var content embed.FS
 
 // Start starts the web server and all dependencies services
-func Start(c config.AppConfig, log *logger.Logger) {
-	log.Info().Str("Addr", c.AppURL).Msg("server started")
+func Start(c config.AppConfig) {
+	logger.Setup(c)
+	slog.Info("server started", "Addr", c.AppURL)
 
 	config.Current = c
 
@@ -46,7 +48,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	if err := loadTemplates(); err != nil {
 		// if we're running from the CLI, no need to load templates
 		if len(config.Current.FromCLI) == 0 {
-			log.Fatal().Err(err).Msg("error loading templates")
+			logger.FatalError("error loading templates", err)
 		}
 	}
 
@@ -102,11 +104,10 @@ func Start(c config.AppConfig, log *logger.Logger) {
 		}
 
 		return key, nil
-	}, backend.Cache, log)
+	}, backend.Cache)
 
 	database := &Database{
 		cache: backend.Cache,
-		log:   log,
 	}
 
 	stdPub := []middleware.Middleware{
@@ -116,26 +117,26 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	pubWithDB := []middleware.Middleware{
 		middleware.Cors(),
 		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
-		middleware.LongRequestTelemetry(backend.Cache, log),
+		middleware.LongRequestTelemetry(backend.Cache),
 	}
 
 	stdAuth := []middleware.Middleware{
 		middleware.Cors(),
 		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
 		middleware.RequireAuth(backend.DB, backend.Cache),
-		middleware.LongRequestTelemetry(backend.Cache, log),
+		middleware.LongRequestTelemetry(backend.Cache),
 	}
 
 	stdRoot := []middleware.Middleware{
 		middleware.WithDB(backend.DB, backend.Cache, getStripePortalURL),
 		middleware.RequireRoot(backend.DB, backend.Cache),
-		middleware.LongRequestTelemetry(backend.Cache, log),
+		middleware.LongRequestTelemetry(backend.Cache),
 	}
 
 	// static assets
 	http.Handle("/static/", http.StripPrefix("/", http.FileServer(http.FS(content))))
 
-	m := &membership{log: log}
+	m := &membership{}
 
 	http.Handle("/login/magic", middleware.Chain(http.HandlerFunc(m.magicLink), pubWithDB...))
 	http.Handle("/login", middleware.Chain(http.HandlerFunc(m.login), pubWithDB...))
@@ -149,7 +150,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/account", middleware.Chain(http.HandlerFunc(m.deleteAccount), stdAuth...))
 
 	// oauth handlers
-	el := &ExternalLogins{log: log}
+	el := &ExternalLogins{}
 	http.Handle("/oauth/login", middleware.Chain(el.login(), pubWithDB...))
 	http.Handle("/oauth/callback/", middleware.Chain(el.callback(), stdPub...))
 	http.Handle("/oauth/get-user", middleware.Chain(http.HandlerFunc(el.getUser), pubWithDB...))
@@ -185,7 +186,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/sudo/cache", middleware.Chain(http.HandlerFunc(sudoCache), stdRoot...))
 
 	// account
-	acct := &accounts{log: log}
+	acct := &accounts{}
 	http.Handle("/account/init", middleware.Chain(http.HandlerFunc(acct.create), stdPub...))
 	http.Handle("/account/auth", middleware.Chain(http.HandlerFunc(acct.auth), stdRoot...))
 	http.Handle("/account/portal", middleware.Chain(http.HandlerFunc(acct.portal), stdRoot...))
@@ -197,7 +198,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/account/user-accounts", middleware.Chain(http.HandlerFunc(acct.getUserAccounts), stdRoot...))
 
 	// stripe webhooks
-	swh := stripeWebhook{log: log}
+	swh := stripeWebhook{}
 	http.HandleFunc("/stripe", swh.process)
 
 	http.HandleFunc("/ping", ping)
@@ -241,7 +242,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	http.Handle("/publish-message", middleware.Chain(http.HandlerFunc(publishMessage), stdRoot...))
 
 	// extras routes
-	ex := &extras{log: log}
+	ex := &extras{}
 	http.Handle("/extra/resizeimg", middleware.Chain(http.HandlerFunc(ex.resizeImage), stdAuth...))
 	http.Handle("/extra/sms", middleware.Chain(http.HandlerFunc(ex.sudoSendSMS), stdRoot...))
 	http.Handle("/extra/htmltox", middleware.Chain(http.HandlerFunc(ex.htmlToX), stdAuth...))
@@ -255,7 +256,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	}
 
 	// ui routes
-	webUI := ui{log: log}
+	webUI := ui{}
 	http.HandleFunc("/ui/login", webUI.auth)
 	http.Handle("/ui/accounts", middleware.Chain(http.HandlerFunc(webUI.accounts), stdRoot...))
 	http.Handle("/ui/users/", middleware.Chain(http.HandlerFunc(webUI.users), stdRoot...))
@@ -315,7 +316,7 @@ func Start(c config.AppConfig, log *logger.Logger) {
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Error().Err(err).Msg("exit reason")
+		slog.Error("exit reason", "error", err)
 	}
 }
 

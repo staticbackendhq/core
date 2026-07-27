@@ -43,11 +43,11 @@ func TestMain(m *testing.M) {
 
 	backend.Setup(config.Current)
 
-	db = &Database{cache: backend.Cache, log: backend.Log}
+	db = &Database{cache: backend.Cache}
 
-	acct = &accounts{log: backend.Log}
+	acct = &accounts{}
 
-	mship = &membership{log: backend.Log}
+	mship = &membership{}
 
 	deleteAndSetupTestAccount()
 

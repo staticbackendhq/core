@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/staticbackendhq/core/cache"
-	"github.com/staticbackendhq/core/config"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/search"
 )
 
@@ -124,9 +122,7 @@ func TestSearchDelete(t *testing.T) {
 func newSearch(t *testing.T) *search.Search {
 	t.Helper()
 
-	c := config.AppConfig{}
-	l := logger.Get(c)
-	pubsub := cache.NewDevCache(l)
+	pubsub := cache.NewDevCache()
 
 	s, err := search.New(filepath.Join(t.TempDir(), "test.fts"), pubsub)
 	if err != nil {

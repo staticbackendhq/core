@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/staticbackendhq/core/cache"
 	"github.com/staticbackendhq/core/database"
 	"github.com/staticbackendhq/core/email"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/search"
 
@@ -26,7 +26,6 @@ type TaskScheduler struct {
 	DataStore database.Persister
 	Search    *search.Search
 	Email     email.Mailer
-	Log       *logger.Logger
 
 	Scheduler gocron.Scheduler
 
@@ -84,7 +83,7 @@ func (ts *TaskScheduler) Start() {
 
 	tasks, err := ts.DataStore.ListTasks()
 	if err != nil {
-		ts.Log.Error().Err(err).Msg("error loading tasks")
+		slog.Error("error loading tasks", "error", err)
 		return
 	}
 
@@ -144,7 +143,7 @@ func (ts *TaskScheduler) AddOnTheFly(task model.Task) {
 
 func (ts *TaskScheduler) addTask(task model.Task) {
 	if ts.Scheduler == nil {
-		ts.Log.Error().Msgf("scheduler is not initialized; cannot schedule task: %s", task.ID)
+		slog.Error("scheduler is not initialized; cannot schedule task", "task_id", task.ID)
 		return
 	}
 
@@ -154,7 +153,7 @@ func (ts *TaskScheduler) addTask(task model.Task) {
 		gocron.WithTags(task.ID),
 	)
 	if err != nil {
-		ts.Log.Error().Err(err).Msgf("error scheduling this task: %s", task.ID)
+		slog.Error("error scheduling task", "task_id", task.ID, "error", err)
 	}
 }
 
@@ -181,7 +180,7 @@ func (ts *TaskScheduler) ensureScheduler() {
 
 	scheduler, err := gocron.NewScheduler(gocron.WithLocation(time.UTC))
 	if err != nil {
-		ts.Log.Error().Err(err).Msg("error creating task scheduler")
+		slog.Error("error creating task scheduler", "error", err)
 		return
 	}
 
@@ -211,7 +210,7 @@ func (ts *TaskScheduler) run(task model.Task) {
 	} else {
 		tok, err := ts.DataStore.GetRootForBase(task.BaseName)
 		if err != nil {
-			ts.Log.Error().Err(err).Msgf("error finding root token for base %s", task.BaseName)
+			slog.Error("error finding root token for base", "base", task.BaseName, "error", err)
 
 			return
 		}
@@ -231,7 +230,7 @@ func (ts *TaskScheduler) run(task model.Task) {
 			Role:      auth.Role,
 			Token:     auth.Token,
 		}); err != nil {
-			ts.Log.Error().Err(err).Msg("error setting auth inside TaskScheduler.run")
+			slog.Error("error setting auth inside TaskScheduler.run", "error", err)
 			return
 		}
 	}
@@ -249,20 +248,20 @@ func (ts *TaskScheduler) run(task model.Task) {
 func (ts *TaskScheduler) markTaskRan(task model.Task) {
 	stored, err := ts.DataStore.GetTask(task.BaseName, task.ID)
 	if err != nil {
-		ts.Log.Error().Err(err).Msgf("error loading task before updating last run: %s", task.ID)
+		slog.Error("error loading task before updating last run", "task_id", task.ID, "error", err)
 		return
 	}
 
 	stored.LastRun = time.Now().UTC()
 	if err := ts.DataStore.UpdateTask(task.BaseName, stored); err != nil {
-		ts.Log.Error().Err(err).Msgf("error updating last run for task: %s", task.ID)
+		slog.Error("error updating last run for task", "task_id", task.ID, "error", err)
 	}
 }
 
 func (ts *TaskScheduler) execFunction(auth model.Auth, task model.Task) {
 	fn, err := ts.DataStore.GetFunctionForExecution(task.BaseName, task.Value)
 	if err != nil {
-		ts.Log.Error().Err(err).Msgf("cannot find function %s on task %s", task.Value, task.ID)
+		slog.Error("cannot find function on task", "function", task.Value, "task_id", task.ID, "error", err)
 		return
 	}
 
@@ -274,14 +273,13 @@ func (ts *TaskScheduler) execFunction(auth model.Auth, task model.Task) {
 		Search:    ts.Search,
 		Email:     ts.Email,
 		Data:      fn,
-		Log:       ts.Log,
 	}
 
 	var meta model.MetaMessage
 
 	if len(task.Meta) > 0 {
 		if err := json.Unmarshal([]byte(task.Meta), &meta); err != nil {
-			ts.Log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %s", task.ID)
+			slog.Warn("unable to get meta data for type MetaMessage", "task_id", task.ID, "error", err)
 			return
 		}
 	}
@@ -296,7 +294,7 @@ func (ts *TaskScheduler) execFunction(auth model.Auth, task model.Task) {
 	}
 
 	if err := exe.Execute(msg); err != nil {
-		ts.Log.Error().Err(err).Msgf("error executing function %s", task.Value)
+		slog.Error("error executing function", "function", task.Value, "error", err)
 	}
 }
 
@@ -307,7 +305,7 @@ func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 
 	if len(task.Meta) > 0 {
 		if err := json.Unmarshal([]byte(task.Meta), &meta); err != nil {
-			ts.Log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %s", task.ID)
+			slog.Warn("unable to get meta data for type MetaMessage", "task_id", task.ID, "error", err)
 			return
 		}
 	}
@@ -323,7 +321,7 @@ func (ts *TaskScheduler) sendMessage(auth model.Auth, task model.Task) {
 	}
 
 	if err := ts.Volatile.Publish(msg); err != nil {
-		ts.Log.Error().Err(err).Msgf("error publishing message from task: %s", task.ID)
+		slog.Error("error publishing message from task", "task_id", task.ID, "error", err)
 	}
 }
 
@@ -335,12 +333,12 @@ func (ts *TaskScheduler) httpRequest(auth model.Auth, task model.Task) {
 
 	if len(task.Meta) > 0 {
 		if err := json.Unmarshal([]byte(task.Meta), &meta); err != nil {
-			ts.Log.Warn().Msgf("unable to get meta data for type MetaMessage for task: %s", task.ID)
+			slog.Warn("unable to get meta data for type MetaMessage", "task_id", task.ID, "error", err)
 			return
 		}
 
 		if err := json.Unmarshal([]byte(meta.HTTPHeaders), &headers); err != nil {
-			ts.Log.Err(err).Msg("unable to parse HTTP headers from meta data")
+			slog.Error("unable to parse HTTP headers from meta data", "error", err)
 			return
 		}
 	}
@@ -359,7 +357,7 @@ func (ts *TaskScheduler) httpRequest(auth model.Auth, task model.Task) {
 	} else {
 		var v map[string]any
 		if err := json.Unmarshal([]byte(meta.Data), &v); err != nil {
-			ts.Log.Warn().Err(err).Msg("unable to parse meta data")
+			slog.Warn("unable to parse meta data", "error", err)
 			return
 		}
 
@@ -373,7 +371,7 @@ func (ts *TaskScheduler) httpRequest(auth model.Auth, task model.Task) {
 
 	req, err := http.NewRequest(meta.HTTPMethod, task.Value, strings.NewReader(body))
 	if err != nil {
-		ts.Log.Err(err).Msg("unable to construct the HTTP request")
+		slog.Error("unable to construct the HTTP request", "error", err)
 		return
 	}
 
@@ -385,14 +383,14 @@ func (ts *TaskScheduler) httpRequest(auth model.Auth, task model.Task) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		ts.Log.Err(err).Msg("error executing HTTP request")
+		slog.Error("error executing HTTP request", "error", err)
 		return
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		ts.Log.Err(err).Msg("unable to read HTTP response body")
+		slog.Error("unable to read HTTP response body", "error", err)
 		return
 	}
 
@@ -407,6 +405,6 @@ func (ts *TaskScheduler) httpRequest(auth model.Auth, task model.Task) {
 	}
 
 	if err := ts.Volatile.Publish(msg); err != nil {
-		ts.Log.Error().Err(err).Msgf("error publishing message from task: %s", task.ID)
+		slog.Error("error publishing message from task", "task_id", task.ID, "error", err)
 	}
 }

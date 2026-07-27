@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -16,19 +17,17 @@ import (
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/extra"
 	"github.com/staticbackendhq/core/internal"
-	"github.com/staticbackendhq/core/logger"
 	"github.com/staticbackendhq/core/middleware"
 	"github.com/staticbackendhq/core/model"
 	"github.com/staticbackendhq/core/sms"
 )
 
 type extras struct {
-	log *logger.Logger
 }
 
 func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		ex.log.Error().Err(err).Msg("cannot parse form")
+		slog.Error("cannot parse form", "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -84,7 +83,7 @@ func (ex *extras) resizeImage(w http.ResponseWriter, r *http.Request) {
 
 	resizedBytes := buf.Bytes()
 
-	ex.log.Info().Msgf("resized bytes: %d", len(resizedBytes))
+	slog.Info("resized bytes", "length", len(resizedBytes))
 	upData := model.UploadFileData{FileKey: fileKey, File: bytes.NewReader(resizedBytes)}
 	url, err := backend.Filestore.Save(upData)
 	if err != nil {

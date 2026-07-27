@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/staticbackendhq/core/logger"
-
 	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/model"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -63,7 +61,6 @@ func TestMain(m *testing.M) {
 		Client:          cl,
 		Ctx:             context.Background(),
 		PublishDocument: fakePubDocEvent,
-		log:             logger.Get(config.Current),
 	}
 
 	if err := datastore.Ping(); err != nil {
