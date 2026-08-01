@@ -2,6 +2,18 @@ package config
 
 import "testing"
 
+func TestLoadConfigNoCustomerCreation(t *testing.T) {
+	t.Setenv("SB_NO_CUSTOMER_CREATION", "true")
+	if !LoadConfig().NoCustomerCreation {
+		t.Fatal("expected customer creation to be disabled")
+	}
+
+	t.Setenv("SB_NO_CUSTOMER_CREATION", "false")
+	if LoadConfig().NoCustomerCreation {
+		t.Fatal("expected customer creation to be enabled")
+	}
+}
+
 func TestLoadConfigPostgresPoolDefaults(t *testing.T) {
 	t.Setenv("POSTGRES_MAX_OPEN_CONNS", "")
 	t.Setenv("POSTGRES_MAX_IDLE_CONNS", "")

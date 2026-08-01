@@ -26,6 +26,11 @@ type accounts struct {
 }
 
 func (a *accounts) create(w http.ResponseWriter, r *http.Request) {
+	if config.Current.NoCustomerCreation {
+		http.Error(w, "customer creation is disabled", http.StatusForbidden)
+		return
+	}
+
 	var email string
 	fromCLI := true
 	memoryMode := false

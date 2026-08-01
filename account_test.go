@@ -3,12 +3,28 @@ package staticbackend
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/staticbackendhq/core/backend"
+	"github.com/staticbackendhq/core/config"
 	"github.com/staticbackendhq/core/model"
 )
+
+func TestCustomerCreationCanBeDisabled(t *testing.T) {
+	original := config.Current.NoCustomerCreation
+	config.Current.NoCustomerCreation = true
+	t.Cleanup(func() { config.Current.NoCustomerCreation = original })
+
+	req := httptest.NewRequest(http.MethodPost, "/account/init", nil)
+	resp := httptest.NewRecorder()
+	acct.create(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, resp.Code)
+	}
+}
 
 func TestUserAddRemoveFromAccount(t *testing.T) {
 	u := model.Login{Email: "newuser@test.com", Password: "newuser1234"}

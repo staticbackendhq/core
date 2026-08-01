@@ -50,6 +50,12 @@
 
 			<div class="column is-half">
 				<!-- sign-up -->
+				{{if .NoCustomerCreation}}
+				<div class="box">
+					<h4 class="title is-4">New app creation is unavailable</h4>
+					<p>Please check back later.</p>
+				</div>
+				{{else}}
 				<div class="box">
 					<h4 class="title is-4">Create a new app</h4>
 					<form action="/account/init" method="POST">
@@ -66,6 +72,7 @@
 
 					</form>
 				</div>
+				{{end}}
 				<!-- /sign-up -->-->
 			</div>
 		</div>

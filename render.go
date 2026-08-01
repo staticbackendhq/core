@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/staticbackendhq/core/config"
 )
 
 var (
@@ -60,11 +62,12 @@ type Flash struct {
 }
 
 type ViewData struct {
-	Title      string
-	Language   string
-	ActiveMenu string
-	Flash      *Flash
-	Data       interface{}
+	Title              string
+	Language           string
+	ActiveMenu         string
+	Flash              *Flash
+	Data               interface{}
+	NoCustomerCreation bool
 }
 
 func render(w http.ResponseWriter, r *http.Request, view string, data interface{}, flash *Flash) {
@@ -73,9 +76,10 @@ func render(w http.ResponseWriter, r *http.Request, view string, data interface{
 
 func renderWithMenu(w http.ResponseWriter, r *http.Request, view string, data interface{}, flash *Flash, menu string) {
 	vd := ViewData{
-		ActiveMenu: menu,
-		Data:       data,
-		Flash:      flash,
+		ActiveMenu:         menu,
+		Data:               data,
+		Flash:              flash,
+		NoCustomerCreation: config.Current.NoCustomerCreation,
 	}
 
 	tmpl, ok := views[view]
