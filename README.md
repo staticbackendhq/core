@@ -1,5 +1,7 @@
 # <img src="https://staticbackend.dev/img/logo-sb-no-text.png" style="height: 35px" alt="StaticBackend logo" /> StaticBackend
 
+[![Deploy to Railyard](https://app.railyard.run/deploy/badge)](https://app.railyard.run/deploy?repo=https://github.com/staticbackendhq/core)
+
 ![build badge](https://github.com/staticbackendhq/core/actions/workflows/go.yml/badge.svg)
 [![GoReportCard](https://goreportcard.com/badge/github.com/staticbackendhq/core)](https://goreportcard.com/report/github.com/staticbackendhq/core)
 [![Go Reference](https://pkg.go.dev/badge/github.com/staticbackendhq/core/backend.svg)](https://pkg.go.dev/github.com/staticbackendhq/core/backend)
